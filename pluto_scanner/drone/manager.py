@@ -9,11 +9,13 @@ from typing import Any
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..scanner.recorder import ranges_overlap
+from .background import DroneBackgroundStore
 from .bands import DroneBand, MonitorChunk, chunks_for_bands
 from .controller import DroneWatchController
 from .features import DroneObservation
 from .recorder import DroneRecorder, make_drone_id
 from .tracker import DroneEvent, DroneTracker
+from .whitelist import DroneWhitelist
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +51,8 @@ class DroneMonitorManager(QObject):
         self._record_iq = True
         self._max_clips = 100
         self._clip_count = 0
+        self._whitelist: DroneWhitelist | None = None
+        self._background_store: DroneBackgroundStore | None = None
         self._expire = QTimer(self)
         self._expire.setInterval(2000)
         self._expire.timeout.connect(self._expire_events)
@@ -79,6 +83,8 @@ class DroneMonitorManager(QObject):
         min_alarm_conf: float = 0.70,
         record_iq: bool = True,
         max_clips: int = 100,
+        whitelist: DroneWhitelist | None = None,
+        background_store: DroneBackgroundStore | None = None,
         use_all_devices: bool = True,
         out_dir: str | Path = "drone_logs",
     ) -> bool:
@@ -135,6 +141,8 @@ class DroneMonitorManager(QObject):
         self._record_iq = bool(record_iq)
         self._max_clips = max(0, int(max_clips))
         self._clip_count = 0
+        self._whitelist = whitelist
+        self._background_store = background_store
         self._finalized = False
         self._stopping = False
         self._starting = True
@@ -152,6 +160,7 @@ class DroneMonitorManager(QObject):
                 sample_rate=sample_rate,
                 dwell_ms=dwell_ms,
                 threshold_db=threshold_db,
+                background_store=background_store,
                 parent=self,
             )
             controller.observation.connect(self._on_observation)
@@ -187,6 +196,11 @@ class DroneMonitorManager(QObject):
         event, is_new = self._tracker.update(obs)
         if event is None:
             return
+        if self._whitelist is not None:
+            entry = self._whitelist.match(event)
+            if entry is not None:
+                event.whitelisted = True
+                event.whitelist_name = entry.name
         self._maybe_record_iq(event, obs)
         now = time.monotonic()
         if is_new:
@@ -231,7 +245,7 @@ class DroneMonitorManager(QObject):
         self._clip_count += 1
 
     def _maybe_alarm(self, event: DroneEvent, now: float) -> None:
-        if not event.drone_like:
+        if not event.drone_like or event.whitelisted:
             return
         # A single short observation is usually Wi-Fi/Bluetooth/Zigbee or a
         # noise burst.  Only alarm after the event is confirmed by several
@@ -327,6 +341,9 @@ class DroneMonitorManager(QObject):
         summary["alarm_hits"] = int(self._min_alarm_hits)
         summary["alarm_confidence"] = round(float(self._min_alarm_conf), 3)
         summary["iq_clips"] = int(self._clip_count)
+        summary["whitelisted_events"] = sum(
+            1 for event in self._tracker.events() if event.whitelisted
+        )
         if self._failure_message:
             summary["failure"] = self._failure_message
         if self._recorder is not None:

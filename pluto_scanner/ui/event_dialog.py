@@ -22,14 +22,17 @@ from ..config import format_bw, format_freq
 from ..drone.report import export_event_bundle
 from ..drone.tracker import DroneEvent
 from ..signatures import SignatureStore, match_event
+from ..drone.whitelist import DroneWhitelist
 
 
 class DroneEventDialog(QDialog):
     def __init__(self, event: DroneEvent, parent: QWidget | None = None,
-                 store: SignatureStore | None = None) -> None:
+                 store: SignatureStore | None = None,
+                 whitelist: DroneWhitelist | None = None) -> None:
         super().__init__(parent)
         self.drone_event = event
         self.store = store or SignatureStore()
+        self.whitelist = whitelist
         self.matches = match_event(event, self.store.all())
         self.setWindowTitle(f"Событие {event.event_id}")
         self.resize(980, 820)
@@ -60,6 +63,14 @@ class DroneEventDialog(QDialog):
         )
         subtitle.setStyleSheet("color:#d7e2f0; font-size:13px;")
         root.addWidget(subtitle)
+
+        self.whitelist_label = QLabel(self._whitelist_text())
+        self.whitelist_label.setWordWrap(True)
+        self.whitelist_label.setStyleSheet(
+            "color:#4ade80; font-size:11px;" if event.whitelisted
+            else "color:#64748b; font-size:11px;"
+        )
+        root.addWidget(self.whitelist_label)
 
         grid = QGridLayout()
         grid.setHorizontalSpacing(18)
@@ -162,15 +173,52 @@ class DroneEventDialog(QDialog):
         self.folder_btn = QPushButton("Папка IQ")
         self.folder_btn.setEnabled(bool(event.clip_path))
         self.folder_btn.clicked.connect(self._open_clip_folder)
+        self.white_btn = QPushButton("В белый список")
+        self.white_btn.setEnabled(
+            self.whitelist is not None and not event.whitelisted
+        )
+        if event.whitelisted:
+            self.white_btn.setText("Уже в белом списке")
+        self.white_btn.clicked.connect(self._add_to_whitelist)
         close_btn = QPushButton("Закрыть")
         close_btn.clicked.connect(self.accept)
         buttons.addWidget(self.export_btn)
         buttons.addWidget(self.folder_btn)
+        buttons.addWidget(self.white_btn)
         buttons.addStretch(1)
         buttons.addWidget(close_btn)
         root.addLayout(buttons)
 
     # ------------------------------------------------------------------ helpers
+    def _whitelist_text(self) -> str:
+        if self.drone_event.whitelisted:
+            return (
+                "В белом списке: "
+                f"{self.drone_event.whitelist_name or 'известный сигнал'} — "
+                "тревога подавлена."
+            )
+        return "В белом списке нет — событие может поднимать тревогу."
+
+    def _add_to_whitelist(self) -> None:
+        if self.whitelist is None:
+            return
+        try:
+            entry = self.whitelist.add_event(self.drone_event)
+        except Exception as exc:
+            self.status.setStyleSheet("color:#f87171; font-size:11px;")
+            self.status.setText(f"Не удалось добавить в белый список: {exc}")
+            return
+        self.drone_event.whitelisted = True
+        self.drone_event.whitelist_name = entry.name
+        self.whitelist_label.setText(self._whitelist_text())
+        self.whitelist_label.setStyleSheet(
+            "color:#4ade80; font-size:11px;"
+        )
+        self.white_btn.setText("Уже в белом списке")
+        self.white_btn.setEnabled(False)
+        self.status.setStyleSheet("color:#4ade80; font-size:11px;")
+        self.status.setText(f"Добавлено в белый список: {entry.name}")
+
     def _matches_html(self) -> str:
         if not self.matches:
             return ("Нет уверенных совпадений. Это может быть неизвестный "

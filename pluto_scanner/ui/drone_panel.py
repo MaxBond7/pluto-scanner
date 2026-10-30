@@ -54,6 +54,7 @@ class DronePanel(QWidget):
     start_requested = Signal()
     stop_requested = Signal()
     event_activated = Signal(str)
+    whitelist_requested = Signal()
 
     HEADERS = [
         "Время", "Полоса", "Класс", "Частота", "Ширина",
@@ -211,8 +212,11 @@ class DronePanel(QWidget):
         self.start_btn.clicked.connect(self._toggle)
         self.folder_btn = QPushButton("Журнал")
         self.folder_btn.clicked.connect(self._open_folder)
+        self.whitelist_btn = QPushButton("Белый список…")
+        self.whitelist_btn.clicked.connect(self.whitelist_requested)
         actions.addWidget(self.start_btn, 1)
         actions.addWidget(self.folder_btn)
+        actions.addWidget(self.whitelist_btn)
         root.addLayout(actions)
 
         self.alarm = QLabel("")
@@ -317,6 +321,10 @@ class DronePanel(QWidget):
     def find_event(self, event_id: str) -> DroneEvent | None:
         return self._events.get(event_id)
 
+    def refresh_events(self) -> None:
+        for event in list(self._events.values()):
+            self.add_event(event, False)
+
     def extended_allowed(self) -> bool:
         return bool(self.extended_check.isChecked())
 
@@ -394,7 +402,9 @@ class DronePanel(QWidget):
             for column in range(len(self.HEADERS)):
                 self.table.setItem(row, column, QTableWidgetItem(""))
         color = QColor(_CLASS_COLORS.get(event.class_key, "#d7e2f0"))
-        if self.is_confirmed(event):
+        if event.whitelisted:
+            color = QColor("#64748b")
+        elif self.is_confirmed(event):
             color = QColor("#f87171")
         elif event.drone_like:
             color = QColor("#fb923c")
@@ -422,6 +432,10 @@ class DronePanel(QWidget):
             item.setText(text)
             item.setData(Qt.ItemDataRole.UserRole, event.event_id)
             item.setForeground(color)
+            if event.whitelisted:
+                item.setToolTip(
+                    f"В белом списке: {event.whitelist_name or 'да'}"
+                )
             if column in (5, 6, 7, 8):
                 item.setTextAlignment(
                     Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter

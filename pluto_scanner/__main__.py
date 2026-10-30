@@ -7,9 +7,11 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from .config import APP_NAME, DEFAULT_CENTER_FREQ, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE
+from .paths import ICON_PATH
 from .ui.main_window import MainWindow
 from .ui.theme import apply_theme
 
@@ -98,6 +100,8 @@ def main(argv: list[str] | None = None) -> int:
     app = QApplication([sys.argv[0]])
     app.setApplicationName(APP_NAME)
     app.setOrganizationName("PlutoScanner")
+    if ICON_PATH.exists():
+        app.setWindowIcon(QIcon(str(ICON_PATH)))
     apply_theme(app)
 
     window = MainWindow(args)

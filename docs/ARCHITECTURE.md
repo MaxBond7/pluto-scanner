@@ -36,6 +36,8 @@ IQ (Pluto / симулятор)
 | `drone_logs/drone_*/` | события, `summary.json`, `clips/*.cf32` |
 | `user_data/known_contacts.json` | известные контакты |
 | `user_data/signatures.db` | локальная библиотека сигнатур |
+| `user_data/drone_whitelist.json` | известные сигналы дрон-монитора |
+| `user_data/drone_background.json` | профили шума по устройству/полосе/усилению |
 
 `scan_logs`, `drone_logs` и `user_data` исключены из Git.
 
@@ -57,6 +59,9 @@ IQ (Pluto / симулятор)
 - Классы: FHSS, TELEMETRY, VIDEO_ANALOG, VIDEO_DIGITAL, WIFI, NARROW,
   UNKNOWN.
 - Тревога только после N подтверждений и порога уверенности.
+- Белый список подавляет тревогу, но оставляет событие в таблице.
+- Шумовые профили сохраняются и загружаются по устройству, полосе,
+  усилению и полосе захвата.
 - IQ-клип ~20 мс на событие; лимит 100 клипов за сессию.
 
 ### Библиотека сигнатур

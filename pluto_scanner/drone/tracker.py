@@ -37,6 +37,8 @@ class DroneEvent:
     clip_samples: int = 0
     clip_sample_rate: float = 0.0
     clip_center_hz: float = 0.0
+    whitelisted: bool = False
+    whitelist_name: str = ""
 
     @property
     def duration_s(self) -> float:
@@ -74,6 +76,8 @@ class DroneEvent:
             "clip_samples": int(self.clip_samples),
             "clip_sample_rate": round(float(self.clip_sample_rate), 1),
             "clip_center_hz": round(float(self.clip_center_hz), 1),
+            "whitelisted": bool(self.whitelisted),
+            "whitelist_name": self.whitelist_name,
         }
         if include_spectrum:
             payload["spectrum_freqs_hz"] = list(self.spectrum_freqs_hz)

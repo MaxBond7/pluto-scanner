@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QFont
+from PySide6.QtGui import QCloseEvent, QFont, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -37,10 +37,13 @@ from ..config import (
 )
 from ..dsp.audio import AudioSink
 from ..devices import scan_pluto_uris
+from ..drone.background import DroneBackgroundStore
 from ..drone.bands import chunks_for_bands, selected_bands
 from ..drone.manager import DroneMonitorManager
+from ..drone.whitelist import DroneWhitelist
 from ..engine import DeviceSession
 from ..model import Contact, DeviceConfig, SpectrumFrame, VFOConfig
+from ..paths import ICON_PATH
 from ..scanner.compare import compare_background_files
 from ..scanner.controller import ScanController
 from ..scanner.recorder import find_latest_background
@@ -55,6 +58,7 @@ from .vfo_panel import VFOPanel
 from .scan_panel import ScanPanel
 from .signature_panel import SignaturePanel
 from .waterfall_view import WaterfallView
+from .whitelist_dialog import WhitelistDialog
 
 log = logging.getLogger(__name__)
 
@@ -82,9 +86,13 @@ class MainWindow(QMainWindow):
 
     def __init__(self, args) -> None:
         super().__init__()
+        if ICON_PATH.exists():
+            self.setWindowIcon(QIcon(str(ICON_PATH)))
         self.args = args
         self.store = ContactStore()
         self.signature_store = SignatureStore()
+        self.drone_whitelist = DroneWhitelist()
+        self.drone_background = DroneBackgroundStore()
         self.audio_sink = AudioSink()
         self.audio_enabled = False
         self._audio_guard = False
@@ -286,6 +294,7 @@ class MainWindow(QMainWindow):
         self.drone_panel.start_requested.connect(self._start_drone)
         self.drone_panel.stop_requested.connect(self._stop_drone)
         self.drone_panel.event_activated.connect(self._open_drone_event)
+        self.drone_panel.whitelist_requested.connect(self._open_whitelist)
 
     def _initial_devices(self) -> None:
         devices = list(getattr(self.args, "device", []) or [])
@@ -1140,6 +1149,8 @@ class MainWindow(QMainWindow):
             min_alarm_hits=self.drone_panel.alarm_hits(),
             min_alarm_conf=self.drone_panel.alarm_confidence(),
             record_iq=self.drone_panel.record_iq(),
+            whitelist=self.drone_whitelist,
+            background_store=self.drone_background,
             use_all_devices=True,
         ):
             self._drone_manager = None
@@ -1171,8 +1182,17 @@ class MainWindow(QMainWindow):
         event = self.drone_panel.find_event(event_id)
         if event is None:
             return
-        dialog = DroneEventDialog(event, self, store=self.signature_store)
+        dialog = DroneEventDialog(
+            event, self,
+            store=self.signature_store,
+            whitelist=self.drone_whitelist,
+        )
         dialog.exec()
+
+    def _open_whitelist(self) -> None:
+        dialog = WhitelistDialog(self.drone_whitelist, self)
+        dialog.exec()
+        self.drone_panel.refresh_events()
 
     def _on_drone_event(self, event, is_new: bool) -> None:
         self.drone_panel.add_event(event, is_new)

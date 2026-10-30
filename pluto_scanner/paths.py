@@ -10,3 +10,5 @@ from pathlib import Path
 
 APP_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = APP_ROOT / "user_data"
+ASSETS_DIR = APP_ROOT / "assets"
+ICON_PATH = ASSETS_DIR / "pluto_scanner.ico"

@@ -2,14 +2,20 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [0.2.0] - 2026-10-30
 
 - Signal-signature library with SQLite storage, open-reference seed catalog,
   JSON/CSV import/export and top-3 matching in the event card.
 - IQ evidence clips for drone events (`clips/*.cf32` + metadata).
 - Event evidence card: spectrum, envelope, parameters, clip info and export.
+- Persistent drone white list with an event-card action and a management
+  dialog; whitelisted events stay visible but do not alarm.
+- Learned per-band noise-floor profiles keyed by device, band, gain and sample
+  rate (`user_data/drone_background.json`).
 - Portable local data directory (`NEW/user_data`) so the project can be moved
   without writing to the user profile.
+- Application icon for the window and Windows shortcut.
+- Packaging plan for a portable Windows `.exe` and installer.
 - Stricter alarm confirmation (3 hits / 70% confidence).
 
 ## [0.1.0] - 2026-10-30

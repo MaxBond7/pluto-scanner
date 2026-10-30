@@ -14,6 +14,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..config import format_freq
 from ..dsp.spectrum import SpectrumAnalyzer
+from .background import DroneBackgroundStore
 from .bands import MonitorChunk
 from .features import DroneObservation, QUIET, analyze_iq
 
@@ -36,6 +37,7 @@ class DroneWatchController(QObject):
         dwell_ms: float = 40.0,
         threshold_db: float = 6.0,
         min_blocks: int = 2,
+        background_store: DroneBackgroundStore | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -55,6 +57,9 @@ class DroneWatchController(QObject):
         self._analyzed_current = False
         self._original: dict | None = None
         self._noise_floors: dict[str, float] = {}
+        self._background_store = background_store
+        self._bg_updates: dict[str, int] = {}
+        self._bg_saved: dict[str, float] = {}
         self._analyzer = SpectrumAnalyzer(nfft=4096)
 
         self._timer = QTimer(self)
@@ -89,6 +94,20 @@ class DroneWatchController(QObject):
             "gain": float(config.gain),
             "audio": bool(self.session.audio_enabled),
         }
+        self._noise_floors.clear()
+        self._bg_updates.clear()
+        self._bg_saved.clear()
+        if self._background_store is not None:
+            for band_key in {chunk.band.key for chunk in self.chunks}:
+                stored = self._background_store.get(
+                    device_id=self.device_id,
+                    band_key=band_key,
+                    gain_db=float(config.gain),
+                    sample_rate=self.sample_rate,
+                )
+                if stored is not None:
+                    self._noise_floors[band_key] = stored
+                    self._bg_saved[band_key] = stored
         try:
             self.session.set_monitor_mode(True)
             self.session.set_audio_enabled(False)
@@ -194,11 +213,25 @@ class DroneWatchController(QObject):
 
     def _update_baseline(self, obs: DroneObservation) -> None:
         raw = float(obs.extra.get("median_floor_db", obs.noise_floor_db))
-        if obs.class_key == QUIET or obs.busy_fraction < 0.15:
-            old = self._noise_floors.get(obs.band_key)
-            self._noise_floors[obs.band_key] = (
-                raw if old is None else 0.8 * old + 0.2 * raw
+        if obs.class_key != QUIET and obs.busy_fraction >= 0.15:
+            return
+        old = self._noise_floors.get(obs.band_key)
+        floor = raw if old is None else 0.8 * old + 0.2 * raw
+        self._noise_floors[obs.band_key] = floor
+        if self._background_store is None:
+            return
+        count = self._bg_updates.get(obs.band_key, 0) + 1
+        self._bg_updates[obs.band_key] = count
+        saved = self._bg_saved.get(obs.band_key)
+        if count % 5 == 0 or saved is None or abs(saved - floor) >= 1.0:
+            self._background_store.update(
+                device_id=obs.device_id,
+                band_key=obs.band_key,
+                gain_db=float(self.session.config.gain),
+                sample_rate=self.sample_rate,
+                noise_floor_db=floor,
             )
+            self._bg_saved[obs.band_key] = floor
 
     def _next_chunk(self) -> None:
         if not self._running:
@@ -224,6 +257,20 @@ class DroneWatchController(QObject):
             self.session.set_monitor_mode(False)
         except Exception:
             pass
+        if self._background_store is not None:
+            for band_key, floor in self._noise_floors.items():
+                saved = self._bg_saved.get(band_key)
+                if saved is None or abs(saved - floor) >= 0.5:
+                    try:
+                        self._background_store.update(
+                            device_id=self.device_id,
+                            band_key=band_key,
+                            gain_db=float(self.session.config.gain),
+                            sample_rate=self.sample_rate,
+                            noise_floor_db=floor,
+                        )
+                    except Exception:
+                        log.warning("cannot save noise profile for %s", band_key)
         self._restore_device()
         self.finished.emit(self.device_id)
 
