@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use Pluto Scanner in academic work, cite this repository."
+title: "Pluto Scanner"
+abstract: >-
+  Desktop SDR application for ADALM-PLUTO / Pluto+ with spectrum and waterfall
+  analysis, software VFO, demodulation, full-range band scanning, JSON
+  background comparison, passive drone-band monitoring, IQ evidence clips and
+  a local signal-signature library.
+authors:
+  - name: "Pluto Scanner contributors"
+type: software
+license: MIT
+version: 0.1.0
+date-released: "2026-10-30"
+keywords:
+  - SDR
+  - ADALM-PLUTO
+  - Pluto+
+  - spectrum
+  - drone detection
+  - RF
