@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pluto-scanner"
-version = "0.3.0"
+version = "0.4.0"
 description = "Desktop SDR scanner and passive drone-band monitor for ADALM-PLUTO / Pluto+"
 readme = "README.md"
 license = {text = "MIT"}

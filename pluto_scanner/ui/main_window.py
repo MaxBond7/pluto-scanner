@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QSlider,
     QSplitter,
@@ -43,7 +44,15 @@ from ..drone.manager import DroneMonitorManager
 from ..drone.whitelist import DroneWhitelist
 from ..engine import DeviceSession
 from ..model import Contact, DeviceConfig, SpectrumFrame, VFOConfig
-from ..paths import ICON_PATH
+from ..paths import ICON_PATH, RECORDINGS_DIR
+from ..recordings import (
+    IqRecorder,
+    delete_recording,
+    format_size,
+    list_recordings,
+    load_info,
+    new_recording_info,
+)
 from ..scanner.compare import compare_background_files
 from ..scanner.controller import ScanController
 from ..scanner.recorder import find_latest_background
@@ -57,6 +66,7 @@ from .spectrum_view import SpectrumView
 from .vfo_panel import VFOPanel
 from .scan_panel import ScanPanel
 from .signature_panel import SignaturePanel
+from .recording_panel import RecordingPanel
 from .waterfall_view import WaterfallView
 from .whitelist_dialog import WhitelistDialog
 
@@ -83,6 +93,7 @@ _STATUS_COLOR = {
 class MainWindow(QMainWindow):
     scan_done = Signal(object)
     drone_done = Signal(object, str)
+    record_done = Signal(object)
 
     def __init__(self, args) -> None:
         super().__init__()
@@ -93,6 +104,12 @@ class MainWindow(QMainWindow):
         self.signature_store = SignatureStore()
         self.drone_whitelist = DroneWhitelist()
         self.drone_background = DroneBackgroundStore()
+        self.recorder = IqRecorder(RECORDINGS_DIR)
+        self._recording = False
+        self._record_expected_s = 0.0
+        self._record_timer = QTimer(self)
+        self._record_timer.setInterval(200)
+        self._record_timer.timeout.connect(self._recording_tick)
         self.audio_sink = AudioSink()
         self.audio_enabled = False
         self._audio_guard = False
@@ -121,6 +138,7 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._connect()
+        self._refresh_recordings()
         self._table_timer = QTimer(self)
         self._table_timer.setInterval(400)
         self._table_timer.timeout.connect(self._refresh_contacts)
@@ -253,10 +271,13 @@ class MainWindow(QMainWindow):
         self.drone_panel.setMinimumWidth(520)
         self.signature_panel = SignaturePanel(self.signature_store)
         self.signature_panel.setMinimumWidth(520)
+        self.recording_panel = RecordingPanel(RECORDINGS_DIR)
+        self.recording_panel.setMinimumWidth(520)
         self.right_tabs = QTabWidget()
         self.right_tabs.addTab(self.contact_table, "Контакты")
         self.right_tabs.addTab(self.scan_panel, "Сканер диапазона")
         self.right_tabs.addTab(self.drone_panel, "Дрон-монитор")
+        self.right_tabs.addTab(self.recording_panel, "Запись IQ")
         self.right_tabs.addTab(self.signature_panel, "Сигнатуры")
         self.splitter.addWidget(self.right_tabs)
         self.splitter.setSizes([350, 860, 640])
@@ -295,6 +316,14 @@ class MainWindow(QMainWindow):
         self.drone_panel.stop_requested.connect(self._stop_drone)
         self.drone_panel.event_activated.connect(self._open_drone_event)
         self.drone_panel.whitelist_requested.connect(self._open_whitelist)
+        self.recording_panel.record_requested.connect(self._start_recording)
+        self.recording_panel.stop_requested.connect(self._stop_recording)
+        self.recording_panel.play_requested.connect(self._play_recording)
+        self.recording_panel.stop_playback_requested.connect(
+            self._stop_playback
+        )
+        self.recording_panel.delete_requested.connect(self._delete_recording)
+        self.recording_panel.refresh_requested.connect(self._refresh_recordings)
 
     def _initial_devices(self) -> None:
         devices = list(getattr(self.args, "device", []) or [])
@@ -354,6 +383,33 @@ class MainWindow(QMainWindow):
         )
         self._add_session(config)
 
+    def _make_iqfile(self, path: str | Path) -> bool:
+        info = load_info(path)
+        if info is None or not info.path.exists():
+            self.status_label.setText("Запись не найдена или повреждена.")
+            self.status_label.setStyleSheet("color:#f87171;")
+            return False
+        for session in self.sessions.values():
+            if (session.config.kind == "iqfile"
+                    and Path(session.config.uri) == info.path):
+                self._select_device(session.config.device_id)
+                return True
+        config = DeviceConfig(
+            device_id=self._next_id("iq"),
+            name=f"Запись {info.recording_id}",
+            kind="iqfile",
+            uri=str(info.path),
+            center_freq=float(info.center_freq),
+            sample_rate=float(info.sample_rate),
+            bandwidth=float(info.sample_rate),
+            gain=float(info.gain_db),
+            fft_size=DEFAULT_FFT_SIZE,
+            seed=1,
+        )
+        self._add_session(config)
+        self._select_device(config.device_id)
+        return True
+
     def _add_session(self, config: DeviceConfig) -> None:
         session = DeviceSession(config, self.store, self)
         session.spectrum_updated.connect(self._on_spectrum)
@@ -362,6 +418,7 @@ class MainWindow(QMainWindow):
         session.error.connect(self._on_error)
         session.audio_ready.connect(self._on_audio)
         session.info_updated.connect(self._on_info)
+        session.iq_ready.connect(self._on_iq_record)
         self.sessions[config.device_id] = session
         self.contacts_by_device.setdefault(config.device_id, {})
         self.device_panel.add_device(config)
@@ -399,6 +456,10 @@ class MainWindow(QMainWindow):
             self.status_label.setStyleSheet("color:#facc15;")
 
     def _remove_device(self, device_id: str) -> None:
+        if self._recording and self.recorder.info is not None and (
+            self.recorder.info.device_id == device_id
+        ):
+            self._stop_recording()
         if self._drone_active:
             self._stop_drone()
         if self._scanning and device_id == self.selected_id:
@@ -428,6 +489,10 @@ class MainWindow(QMainWindow):
     def _select_device(self, device_id: str) -> None:
         if device_id not in self.sessions:
             return
+        if self._recording and self.recorder.info is not None and (
+            device_id != self.recorder.info.device_id
+        ):
+            self._stop_recording()
         if self._drone_active:
             self._stop_drone()
         if self._scanning:
@@ -485,24 +550,206 @@ class MainWindow(QMainWindow):
     def _update_controls(self) -> None:
         has = self.selected_id is not None
         active = has and not self._drone_active
-        self.rx_group.setEnabled(active)
-        self.band_group.setEnabled(active)
+        self.rx_group.setEnabled(active and not self._recording)
+        self.band_group.setEnabled(active and not self._recording)
         self.vfo_panel.setEnabled(active)
-        self.audio_btn.setEnabled(active)
-        self.scan_panel.set_device_enabled(active)
+        self.audio_btn.setEnabled(active and not self._recording)
+        self.scan_panel.set_device_enabled(active and not self._recording)
         if not has:
             self.sim_group.setEnabled(False)
+            self.recording_panel.set_device("", "", DEFAULT_SAMPLE_RATE)
             return
         session = self.sessions[self.selected_id]
-        self.sim_group.setEnabled(session.config.kind == "sim")
-        self.inject_btn.setEnabled(session.config.kind == "sim")
+        self.sim_group.setEnabled(
+            session.config.kind == "sim" and not self._recording
+        )
+        self.inject_btn.setEnabled(
+            session.config.kind == "sim" and not self._recording
+        )
         self.scan_panel.set_context(
             session.config.center_freq, session.config.sample_rate
+        )
+        self.recording_panel.set_device(
+            session.config.name,
+            session.config.kind,
+            session.config.sample_rate,
         )
         self.setWindowTitle(
             f"{APP_NAME} — {session.config.name} — "
             f"{format_freq(session.config.center_freq)}"
         )
+
+    # ------------------------------------------------------------------ recording
+    def _on_iq_record(self, _device_id: str, block) -> None:
+        if self._recording:
+            self.recorder.write(block)
+
+    def start_recording(self, seconds: float) -> None:
+        self._start_recording(seconds)
+
+    def _start_recording(self, seconds: float) -> None:
+        if self._recording:
+            return
+        if self._scanning or self._drone_active:
+            self.status_label.setText(
+                "Сначала остановите сканер или дрон-монитор."
+            )
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
+        if self.selected_id is None:
+            self.status_label.setText("Нет устройства для записи.")
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
+        session = self.sessions[self.selected_id]
+        if session.config.kind == "iqfile":
+            self.status_label.setText("Нельзя записывать воспроизведение.")
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
+        info = new_recording_info(
+            RECORDINGS_DIR,
+            device_id=session.config.device_id,
+            device_name=session.config.name,
+            device_kind=session.config.kind,
+            sample_rate=session.config.sample_rate,
+            center_freq=session.config.center_freq,
+            gain_db=session.config.gain,
+            bandwidth_hz=session.config.bandwidth,
+        )
+        seconds = max(1.0, min(60.0, float(seconds)))
+        try:
+            self.recorder.start(info, expected_seconds=seconds)
+        except Exception as exc:
+            delete_recording(info)
+            self.status_label.setText(f"Запись не началась: {exc}")
+            self.status_label.setStyleSheet("color:#f87171;")
+            return
+        self._recording = True
+        self._record_expected_s = seconds
+        self.recording_panel.begin_recording(info, seconds)
+        self._record_timer.start()
+        self._update_controls()
+        self.status_label.setText(
+            f"Запись IQ: {session.config.name}, {seconds:.1f} с"
+        )
+        self.status_label.setStyleSheet("color:#a78bfa;")
+
+    def _recording_tick(self) -> None:
+        if not self._recording:
+            self._record_timer.stop()
+            return
+        elapsed = self.recorder.elapsed_s()
+        progress = elapsed / max(0.1, self._record_expected_s)
+        self.recording_panel.set_progress(
+            elapsed, progress, self.recorder.dropped_samples
+        )
+        if not self.recorder.active or (
+            elapsed >= self._record_expected_s + 0.2
+        ):
+            self._stop_recording()
+
+    def _stop_recording(self) -> None:
+        if not self._recording and not self.recorder.active:
+            return
+        self._record_timer.stop()
+        info = self.recorder.stop()
+        self._recording = False
+        self.recording_panel.finish_recording(info)
+        self._refresh_recordings()
+        self._update_controls()
+        if info is not None and info.complete:
+            self.status_label.setText(
+                f"Запись сохранена: {info.recording_id} "
+                f"({format_size(info.size_bytes)})"
+            )
+            self.status_label.setStyleSheet("color:#4ade80;")
+        elif info is not None:
+            self.status_label.setText(
+                f"Запись не завершена: {info.error or 'нет данных'}"
+            )
+            self.status_label.setStyleSheet("color:#facc15;")
+        self.record_done.emit(info)
+
+    def _refresh_recordings(self) -> None:
+        infos = list_recordings(RECORDINGS_DIR)
+        self.recording_panel.set_recordings(infos)
+
+    def _play_recording(self, recording_id: str) -> None:
+        if self._recording:
+            self.status_label.setText("Сначала остановите запись.")
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
+        info = next(
+            (item for item in list_recordings(RECORDINGS_DIR)
+             if item.recording_id == recording_id),
+            None,
+        )
+        if info is None:
+            self._refresh_recordings()
+            return
+        if self._make_iqfile(info.path):
+            self.right_tabs.setCurrentWidget(self.contact_table)
+            self.status_label.setText(
+                f"Воспроизведение: {info.recording_id} "
+                f"({info.duration_s:.1f} с)"
+            )
+            self.status_label.setStyleSheet("color:#22d3ee;")
+
+    def play_recording_path(self, path: str | Path) -> bool:
+        if self._make_iqfile(path):
+            self.right_tabs.setCurrentWidget(self.contact_table)
+            return True
+        return False
+
+    def _stop_playback(self) -> None:
+        target = None
+        if self.selected_id and self.selected_id in self.sessions:
+            session = self.sessions[self.selected_id]
+            if session.config.kind == "iqfile":
+                target = session.config.device_id
+        if target is None:
+            for device_id, session in self.sessions.items():
+                if session.config.kind == "iqfile":
+                    target = device_id
+                    break
+        if target is None:
+            self.status_label.setText("Воспроизведение не запущено.")
+            self.status_label.setStyleSheet("color:#94a3b8;")
+            return
+        self._remove_device(target)
+        self.status_label.setText("Воспроизведение остановлено.")
+        self.status_label.setStyleSheet("color:#94a3b8;")
+
+    def _delete_recording(self, recording_id: str) -> None:
+        info = next(
+            (item for item in list_recordings(RECORDINGS_DIR)
+             if item.recording_id == recording_id),
+            None,
+        )
+        if info is None:
+            self._refresh_recordings()
+            return
+        if self._recording and self.recorder.info is not None and (
+            self.recorder.info.recording_id == recording_id
+        ):
+            self.status_label.setText("Эта запись ещё пишется.")
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
+        answer = QMessageBox.question(
+            self,
+            "Удалить запись",
+            f"Удалить {recording_id} и файл {format_size(info.size_bytes)}?",
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        for device_id, session in list(self.sessions.items()):
+            if session.config.kind == "iqfile" and (
+                Path(session.config.uri) == info.path
+            ):
+                self._remove_device(device_id)
+        delete_recording(info)
+        self._refresh_recordings()
+        self.status_label.setText("Запись удалена.")
+        self.status_label.setStyleSheet("color:#94a3b8;")
 
     # ------------------------------------------------------------------- spectrum
     def _on_spectrum(self, device_id: str, frame: SpectrumFrame) -> None:
@@ -840,6 +1087,10 @@ class MainWindow(QMainWindow):
         self._start_scan()
 
     def _start_scan(self) -> None:
+        if self._recording:
+            self.status_label.setText("Сначала остановите запись IQ.")
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
         if self._drone_active:
             self._stop_drone()
         if self._scanning:
@@ -1040,6 +1291,9 @@ class MainWindow(QMainWindow):
         self._stop_drone()
 
     def _start_drone(self) -> None:
+        if self._recording:
+            self._fail_drone("Сначала остановите запись IQ.")
+            return
         if self._drone_active:
             return
         if self._scanning:
@@ -1400,6 +1654,13 @@ class MainWindow(QMainWindow):
         if self._shutting_down:
             return
         self._shutting_down = True
+        try:
+            self._record_timer.stop()
+            if self._recording or self.recorder.active:
+                self.recorder.stop()
+                self._recording = False
+        except Exception:
+            pass
         if self._drone_manager is not None:
             try:
                 self._drone_manager.stop()

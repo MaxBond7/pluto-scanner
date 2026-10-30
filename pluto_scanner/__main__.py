@@ -80,6 +80,15 @@ def build_parser() -> argparse.ArgumentParser:
                    help="save a screenshot after the drone monitor stops")
     p.add_argument("--screenshot", type=str, default=None,
                    help="save a screenshot after startup and quit")
+    p.add_argument("--record", type=float, default=0.0, metavar="SEC",
+                   help="record raw IQ from the selected device for SEC seconds")
+    p.add_argument("--quit-after-record", action="store_true",
+                   help="quit when the IQ recording stops")
+    p.add_argument("--screenshot-after-record", type=str, default=None,
+                   metavar="PNG",
+                   help="save a screenshot after the recording stops and quit")
+    p.add_argument("--play", type=str, default=None, metavar="CF32",
+                   help="open a recorded .cf32 IQ file for playback")
     p.add_argument("--log-level", default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p
@@ -187,6 +196,33 @@ def main(argv: list[str] | None = None) -> int:
                 int(1200 + args.drone_seconds * 1000),
                 window.stop_drone,
             )
+
+    if args.play:
+        def start_playback() -> None:
+            if not window.play_recording_path(args.play):
+                window.status_label.setText(
+                    f"Запись не найдена: {args.play}"
+                )
+                window.status_label.setStyleSheet("color:#f87171;")
+
+        QTimer.singleShot(1200, start_playback)
+
+    if args.quit_after_record or args.screenshot_after_record:
+        def finish_record_and_quit(info) -> None:
+            screenshot = args.screenshot_after_record
+            if screenshot:
+                QTimer.singleShot(
+                    350, lambda: (window.capture_screenshot(screenshot),
+                                  window.close(), app.quit())
+                )
+            else:
+                window.close()
+                app.quit()
+
+        window.record_done.connect(finish_record_and_quit)
+
+    if args.record and args.record > 0:
+        QTimer.singleShot(1200, lambda: window.start_recording(args.record))
 
     screenshot = args.screenshot
     if args.smoke_test and not screenshot:

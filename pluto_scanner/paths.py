@@ -18,4 +18,5 @@ else:
     ASSETS_DIR = APP_ROOT / "assets"
 
 DATA_DIR = APP_ROOT / "user_data"
+RECORDINGS_DIR = APP_ROOT / "iq_recordings"
 ICON_PATH = ASSETS_DIR / "pluto_scanner.ico"

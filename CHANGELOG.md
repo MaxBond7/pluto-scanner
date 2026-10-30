@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.0] - 2026-10-31
+
+- Long IQ recording to `iq_recordings/*.cf32` with JSON sidecar metadata.
+- Background writer thread with a bounded queue, drop accounting and a free
+  space check before recording starts.
+- Recording tab: duration, estimated size, progress, file table, playback,
+  delete and folder buttons.
+- Playback of a recording as a normal device (`IqFileWorker`), so spectrum,
+  waterfall, contacts, VFO and demodulation all work without hardware.
+- Unfinished recordings are recovered by file size and can still be played.
+- CLI: `--record`, `--quit-after-record`, `--screenshot-after-record`,
+  `--play`.
+- New tests for cf32 writing, metadata, chunked reading and deletion.
+
 ## [0.3.0] - 2026-10-30
 
 - Portable Windows one-folder build: `build_windows.ps1` and a PyInstaller

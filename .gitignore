@@ -11,6 +11,7 @@ htmlcov/
 
 # Local application data / evidence
 user_data/
+iq_recordings/
 scan_logs/
 drone_logs/
 *.cf32
