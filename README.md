@@ -15,6 +15,7 @@
 - архитектура — `docs/ARCHITECTURE.md`;
 - библиотека сигнатур — `docs/SIGNATURES.md`;
 - план развития — `docs/ROADMAP.md`;
+- приватный GitHub и будущая публикация — `docs/GITHUB.md`;
 - история версий — `CHANGELOG.md`.
 
 Локальные данные (`user_data/`, логи, IQ-клипы) в Git не попадают.
