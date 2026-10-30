@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## [0.3.0] - 2026-10-30
+
+- Portable Windows one-folder build: `build_windows.ps1` and a PyInstaller
+  spec produce `dist/PlutoScanner/PlutoScanner.exe` without requiring Python
+  on the target machine.
+- Bundled libiio/libiio1 and their dependencies, so the frozen build works
+  with a real Pluto+ on a machine without a system-wide libiio install.
+- Frozen builds keep `user_data`, `scan_logs` and `drone_logs` next to the
+  executable and write `pluto_scanner_error.log` plus a message box if
+  startup fails.
+- Version and icon metadata embedded into the `.exe`.
+- Verified the frozen build with the simulator and a real Pluto+ over USB.
+
 ## [0.2.0] - 2026-10-30
 
 - Signal-signature library with SQLite storage, open-reference seed catalog,

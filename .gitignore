@@ -32,6 +32,10 @@ Thumbs.db
 # Presentation intermediates
 presentation/render_*.png
 
+# Build output
+build/
+dist/
+
 # OS / editor
 *.tmp
 *.bak

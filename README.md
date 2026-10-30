@@ -16,7 +16,7 @@
 - библиотека сигнатур — `docs/SIGNATURES.md`;
 - план развития — `docs/ROADMAP.md`;
 - приватный GitHub и будущая публикация — `docs/GITHUB.md`;
-- план сборки `.exe` — `docs/PACKAGING.md`;
+- сборка `.exe` — `docs/PACKAGING.md`;
 - история версий — `CHANGELOG.md`.
 
 Локальные данные (`user_data/`, логи, IQ-клипы) в Git не попадают.
@@ -39,6 +39,22 @@
 - **Белый список и фон**: известные сигналы не поднимают тревогу, а шумовые профили сохраняются по устройству, полосе, усилению и полосе захвата.
 
 ## Быстрый старт
+
+### Готовая сборка для Windows
+
+```powershell
+.\build_windows.ps1
+```
+
+Результат — `dist\PlutoScanner\PlutoScanner.exe`. Python на целевой машине не
+нужен: внутри уже есть PySide6, numpy, scipy, pyqtgraph, sounddevice,
+pyadi-iio и библиотеки libiio. Данные (`user_data`, `scan_logs`,
+`drone_logs`) создаются рядом с `.exe`.
+
+Сборка проверена с симулятором и реальным Pluto+ по USB. Подробности,
+ограничения и чеклист — в `docs/PACKAGING.md`.
+
+### Запуск из исходников
 
 Windows PowerShell, из папки `NEW`:
 
@@ -421,10 +437,13 @@ NEW/
     config.py      настройки, диапазоны, форматирование
     __main__.py    CLI и запуск Qt
   tests/
+  packaging/       launcher, PyInstaller spec, version info
+  dist/            готовая Windows-сборка (в Git не попадает)
   scan_logs/       результаты свипов (создаётся при первом скане)
   drone_logs/      события, спектры и IQ-фрагменты дрон-монитора
   user_data/       known_contacts · signatures.db · drone_whitelist · drone_background
   presentation/    PPTX/PDF/HTML-презентация проекта
+  build_windows.ps1
   launch_pluto_scanner.py
   launch_pluto_scanner.vbs
   Pluto Scanner.lnk

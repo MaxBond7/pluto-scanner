@@ -81,9 +81,9 @@ git push
 ```powershell
 git add .
 git commit -m "Describe the change"
-git tag -a v0.2.0 -m "Pluto Scanner 0.2.0"
+git tag -a v0.3.0 -m "Pluto Scanner 0.3.0"
 git push
-git push origin v0.2.0
+git push origin v0.3.0
 ```
 
 ## 6. Перед публикацией репозитория
