@@ -1,0 +1,9 @@
+numpy>=1.26
+scipy>=1.11
+PySide6>=6.6
+pyqtgraph>=0.13
+sounddevice>=0.4
+pytest>=8.0
+
+# Optional, only for a real ADALM-PLUTO:
+# pyadi-iio>=0.0.21

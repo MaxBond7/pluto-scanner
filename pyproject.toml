@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pluto-scanner"
+version = "0.1.0"
+description = "Desktop SDR scanner and passive drone-band monitor for ADALM-PLUTO / Pluto+"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Pluto Scanner contributors"}]
+requires-python = ">=3.10"
+keywords = ["SDR", "ADALM-PLUTO", "Pluto+", "spectrum", "drone", "RF"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "PySide6>=6.6",
+    "pyqtgraph>=0.13",
+    "sounddevice>=0.4",
+]
+
+[project.optional-dependencies]
+hardware = ["pyadi-iio>=0.0.21"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+pluto-scanner = "pluto_scanner.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["pluto_scanner*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
