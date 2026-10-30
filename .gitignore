@@ -1,0 +1,39 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local application data / evidence
+user_data/
+scan_logs/
+drone_logs/
+*.cf32
+*.npy
+*.wav
+*.iq
+*.log
+
+# Local screenshots and shortcuts
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.pdf
+*.lnk
+Thumbs.db
+.DS_Store
+
+# Presentation intermediates
+presentation/render_*.png
+
+# OS / editor
+*.tmp
+*.bak
+.vscode/
+.idea/
