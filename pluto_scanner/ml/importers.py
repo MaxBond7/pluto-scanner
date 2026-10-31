@@ -192,3 +192,102 @@ def import_raw_iq(
     info.notes = f"raw float32 I/Q: {path.name}"
     save_info(info)
     return ImportResult(info, str(path), "dat")
+
+def _pick_mat_iq(payload: dict, variable: str = "") -> tuple[str, np.ndarray]:
+    """Find the IQ array inside a MATLAB file.
+
+    CardRF and similar datasets store one long complex vector, but some
+    exports use two rows/columns for I and Q.  Both layouts are accepted.
+    """
+    candidates: list[tuple[str, np.ndarray]] = []
+    for key, value in payload.items():
+        if str(key).startswith("__"):
+            continue
+        if not isinstance(value, np.ndarray) or value.size < 256:
+            continue
+        candidates.append((str(key), value))
+    if variable:
+        candidates = [item for item in candidates if item[0] == variable]
+        if not candidates:
+            raise ValueError(f"в .mat нет переменной {variable!r}")
+    if not candidates:
+        raise ValueError("в .mat не найден массив с отсчётами")
+
+    complex_items = [item for item in candidates if np.iscomplexobj(item[1])]
+    if complex_items:
+        return max(complex_items, key=lambda item: item[1].size)
+    pair_items = [
+        item for item in candidates
+        if item[1].ndim == 2 and 2 in item[1].shape
+    ]
+    if pair_items:
+        return max(pair_items, key=lambda item: item[1].size)
+    return max(candidates, key=lambda item: item[1].size)
+
+
+def _mat_to_complex(array: np.ndarray) -> np.ndarray:
+    data = np.asarray(array)
+    if np.iscomplexobj(data):
+        return data.astype(np.complex64).ravel()
+    if data.ndim == 2 and 2 in data.shape:
+        if data.shape[0] == 2 and data.shape[1] != 2:
+            data = data.T
+        return (
+            data[:, 0].astype(np.float64)
+            + 1j * data[:, 1].astype(np.float64)
+        ).astype(np.complex64)
+    return data.astype(np.float64).ravel().astype(np.complex64)
+
+
+def import_mat(
+    src: str | Path,
+    out_dir: str | Path,
+    *,
+    sample_rate: float,
+    center_freq: float = 0.0,
+    label: str | None = None,
+    variable: str = "",
+    start_seconds: float = 0.0,
+    max_seconds: float = 10.0,
+    device_name: str = "MAT import",
+) -> ImportResult:
+    """Import a MATLAB ``.mat`` file with complex IQ (e.g. CardRF)."""
+    from scipy.io import loadmat
+
+    path = Path(src)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    sample_rate = float(sample_rate)
+    if sample_rate <= 0:
+        raise ValueError("нужна частота дискретизации")
+    payload = loadmat(path, squeeze_me=True, struct_as_record=False)
+    name, array = _pick_mat_iq(payload, variable)
+    iq = _mat_to_complex(array)
+
+    # Raw ADC counts would trip the dBFS overload rule; scale to a known peak.
+    peak = float(np.max(np.abs(iq))) if iq.size else 0.0
+    if peak > 1.5:
+        iq = (iq * (0.5 / peak)).astype(np.complex64)
+
+    start = max(0, int(float(start_seconds) * sample_rate))
+    count = max(1, int(float(max_seconds) * sample_rate))
+    iq = iq[start:start + count]
+    if iq.size == 0:
+        raise ValueError("в .mat нет отсчётов в выбранном интервале")
+
+    info = new_recording_info(
+        out_dir,
+        device_id="mat-import",
+        device_name=device_name,
+        device_kind="import",
+        sample_rate=sample_rate,
+        center_freq=float(center_freq),
+        bandwidth_hz=sample_rate,
+    )
+    iq.tofile(info.cf32_path)
+    info.samples = int(iq.size)
+    info.complete = True
+    info.label = _normalise_label(label)
+    info.notes = f"MAT: {path.name} [{name}]"
+    save_info(info)
+    return ImportResult(info, str(path), "mat")

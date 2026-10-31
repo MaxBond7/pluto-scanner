@@ -458,6 +458,10 @@ def analyze_iq(
             "envelope_low_db": float(time_features["envelope_low_db"]),
             "median_floor_db": float(median_floor),
             "overload": bool(overload),
+            # A signal that fills (almost) the whole captured band gives no
+            # shape information: a busy Wi-Fi channel and a wide video link
+            # look the same.  Marked, never hidden.
+            "wideband": bool(region is not None and busy_fraction >= 0.70),
         },
         iq_samples=iq,
     )

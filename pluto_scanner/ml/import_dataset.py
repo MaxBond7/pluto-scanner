@@ -14,7 +14,7 @@ import argparse
 import sys
 
 from ..paths import RECORDINGS_DIR
-from .importers import KNOWN_LABELS, import_raw_iq, import_sigmf
+from .importers import KNOWN_LABELS, import_mat, import_raw_iq, import_sigmf
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,13 +22,15 @@ def build_parser() -> argparse.ArgumentParser:
         prog="python -m pluto_scanner.ml.import_dataset",
         description="Import SigMF or raw float32 IQ into iq_recordings",
     )
-    p.add_argument("--format", choices=("sigmf", "dat"), required=True)
+    p.add_argument("--format", choices=("sigmf", "dat", "mat"), required=True)
     p.add_argument("--src", required=True, help="source file or SigMF folder")
     p.add_argument("--out", default=str(RECORDINGS_DIR))
     p.add_argument("--label", default="", choices=KNOWN_LABELS + ("",),
                    help="morphology label for training")
     p.add_argument("--sample-rate", type=float, default=0.0,
-                   help="required for --format dat")
+                   help="required for --format dat and mat")
+    p.add_argument("--variable", default="",
+                   help="MATLAB variable name inside a .mat file (optional)")
     p.add_argument("--center", type=float, default=0.0,
                    help="centre frequency in Hz (optional for SigMF)")
     p.add_argument("--start-seconds", type=float, default=0.0)
@@ -48,16 +50,28 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             if args.sample_rate <= 0:
-                print("Для --format dat нужен --sample-rate", file=sys.stderr)
+                print("Для --format dat/mat нужен --sample-rate",
+                      file=sys.stderr)
                 return 2
-            result = import_raw_iq(
-                args.src, args.out,
-                sample_rate=args.sample_rate,
-                center_freq=args.center,
-                label=args.label or None,
-                start_seconds=args.start_seconds,
-                max_seconds=args.max_seconds,
-            )
+            if args.format == "mat":
+                result = import_mat(
+                    args.src, args.out,
+                    sample_rate=args.sample_rate,
+                    center_freq=args.center,
+                    label=args.label or None,
+                    variable=args.variable,
+                    start_seconds=args.start_seconds,
+                    max_seconds=args.max_seconds,
+                )
+            else:
+                result = import_raw_iq(
+                    args.src, args.out,
+                    sample_rate=args.sample_rate,
+                    center_freq=args.center,
+                    label=args.label or None,
+                    start_seconds=args.start_seconds,
+                    max_seconds=args.max_seconds,
+                )
     except Exception as exc:
         print(f"Ошибка импорта: {exc}", file=sys.stderr)
         return 1

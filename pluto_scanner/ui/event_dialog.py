@@ -92,6 +92,17 @@ class DroneEventDialog(QDialog):
         )
         root.addWidget(self.binary_label)
 
+        if event.wideband:
+            wide_label = QLabel(
+                "Широкополосный сигнал: занимает почти всю полосу захвата. "
+                "Ровно так же выглядит занятый Wi-Fi-канал. Модель не может "
+                "отличить его от видеолинка дрона — проверьте вручную "
+                "(посмотрите, есть ли рядом точка доступа)."
+            )
+            wide_label.setWordWrap(True)
+            wide_label.setStyleSheet("color:#facc15; font-size:11px;")
+            root.addWidget(wide_label)
+
         grid = QGridLayout()
         grid.setHorizontalSpacing(18)
         grid.setVerticalSpacing(3)

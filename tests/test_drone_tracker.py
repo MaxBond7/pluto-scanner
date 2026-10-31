@@ -142,3 +142,13 @@ def test_recorder_saves_iq_clip_and_exports_bundle(tmp_path):
     data = json.loads((bundle / "event.json").read_text(encoding="utf-8"))
     assert data["clip_samples"] == 4096
     assert data["envelope_db"] == [-100.0, -85.0, -95.0]
+
+def test_wideband_flag_is_kept_on_the_event():
+    tracker = DroneTracker(timeout_s=5.0)
+    obs = _obs(2410e6, ts=100.0)
+    obs.extra["wideband"] = True
+    event, is_new = tracker.update(obs)
+    assert is_new
+    assert event.wideband is True
+    payload = event.to_dict(include_spectrum=False)
+    assert payload["wideband"] is True

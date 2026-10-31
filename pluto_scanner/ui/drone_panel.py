@@ -57,7 +57,8 @@ def _binary_short(event: DroneEvent) -> str:
         return "—"
     if str(data.get("verdict") or "") == "unknown":
         return "н/д"
-    return f"{float(data.get('score') or 0.0) * 100:.0f}%"
+    text = f"{float(data.get('score') or 0.0) * 100:.0f}%"
+    return f"{text} Wi-Fi?" if event.wideband else text
 
 
 class DronePanel(QWidget):
@@ -274,7 +275,7 @@ class DronePanel(QWidget):
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         for column, width in enumerate(
-            (50, 55, 0, 88, 52, 34, 38, 42, 36, 44, 58)
+            (50, 55, 0, 88, 52, 34, 38, 42, 36, 72, 58)
         ):
             if column != 2:
                 self.table.setColumnWidth(column, width)
@@ -465,6 +466,11 @@ class DronePanel(QWidget):
                     f"(порог тревоги "
                     f"{float(event.binary.get('threshold_alarm', 0.9)) * 100:.0f}%)"
                 )
+            if event.wideband:
+                tips.append(
+                    "Широкополосный сигнал: занимает почти всю полосу. "
+                    "Так же выглядит занятый Wi-Fi — проверьте вручную."
+                )
             if tips:
                 item.setToolTip("\n".join(tips))
             if column in (5, 6, 7, 8, 9):
@@ -484,6 +490,7 @@ class DronePanel(QWidget):
             f"{format_freq(event.freq_hz)} · SNR {event.max_snr_db:.1f} дБ · "
             f"подтверждено {event.count}× · увер. {event.confidence * 100:.0f}%"
             + (f" · дрон {binary}" if binary not in ("—", "н/д") else "")
+            + (" · широкополосный, возможно Wi-Fi" if event.wideband else "")
         )
         self.alarm.setVisible(True)
         self._alarm_timer.start(10000)

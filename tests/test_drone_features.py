@@ -136,3 +136,31 @@ def test_near_field_overload_is_not_a_drone_alarm():
     assert obs.class_key == OVERLOAD
     assert obs.extra.get("overload") is True
     assert obs.drone_like is False
+
+def test_wideband_flag_marks_signals_that_fill_the_band():
+    rng = np.random.default_rng(0)
+    fs = 1.024e6
+    band = DroneBand("2.4", "2.4 ГГц", -0.45 * fs, 0.45 * fs)
+    n = int(fs * 0.02)
+    # Flat signal: every bin is above the quiet floor, no shape to classify.
+    flat = (0.1 * (
+        rng.normal(size=n) + 1j * rng.normal(size=n)
+    )).astype(np.complex64)
+    first = analyze_iq(flat, fs, 0.0, band, threshold_db=6.0, nfft=4096,
+                       notch_hz=0.0)
+    floor = first.extra["median_floor_db"] - 20.0
+    wide = analyze_iq(flat, fs, 0.0, band, threshold_db=6.0, nfft=4096,
+                      notch_hz=0.0, noise_floor_db=floor)
+    assert wide.extra["wideband"] is True
+
+    # A narrow carrier on the same baseline keeps its shape.
+    t = np.arange(n, dtype=np.float64) / fs
+    tone = (0.5 * np.exp(2j * np.pi * 100e3 * t) + 0.002 * (
+        rng.normal(size=n) + 1j * rng.normal(size=n)
+    )).astype(np.complex64)
+    first = analyze_iq(tone, fs, 0.0, band, threshold_db=6.0, nfft=4096,
+                       notch_hz=0.0)
+    narrow = analyze_iq(tone, fs, 0.0, band, threshold_db=6.0, nfft=4096,
+                        notch_hz=0.0,
+                        noise_floor_db=first.extra["median_floor_db"])
+    assert narrow.extra["wideband"] is False

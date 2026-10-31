@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-01
+
+- Wideband guard: a signal that fills almost the whole captured band
+  (`busy_fraction >= 0.70`) is flagged as `wideband`. The event keeps its
+  alarm but is marked `Wi-Fi?` in the table and in the event card, because a
+  busy Wi-Fi channel and a wide drone video link are indistinguishable without
+  decoding.
+- Measured on a real phone hotspot (2412 MHz): 45–63% of blocks score above
+  the alarm threshold, and 90–91% of those alarms carry the new marker, so
+  nothing is suppressed.
+- Documented why retraining on the Wi-Fi recordings was rejected: false
+  alarms drop to 0–4%, but Phantom recall drops from 0.57 to 0.19–0.36.
+- Documented the split variance of the binary model (ROC-AUC 0.962 ± 0.054
+  over five splits instead of one lucky 0.978).
+- `.mat` IQ import (`--format mat`), so CardRF and similar datasets can be
+  loaded without manual conversion; the importer finds complex vectors and
+  I/Q pairs, normalises ADC counts and writes a normal `.cf32` recording.
+- Documented that two different datasets are called "CardRF" and how to get
+  each one (Louisville/OneDrive vs Tampere/Zenodo).
+
 ## [0.14.0] - 2026-11-01
 
 - New binary `drone / background` model, trained on real DroneRF recordings

@@ -209,3 +209,32 @@ def test_import_raw_float32_iq(tmp_path):
     assert result.info.label == "NARROW"
     assert result.info.samples == iq.size
     assert result.info.center_freq == 2437.5e6
+
+def test_import_mat_complex_vector_and_iq_pairs(tmp_path):
+    from scipy.io import savemat
+
+    from pluto_scanner.ml.importers import import_mat
+
+    fs = 1.024e6
+    t = np.arange(4096) / fs
+    iq = (0.3 * np.exp(2j * np.pi * 100e3 * t)).astype(np.complex64)
+
+    single = tmp_path / "one.mat"
+    savemat(single, {"Y": iq.reshape(1, -1)})
+    result = import_mat(
+        single, tmp_path / "out1", sample_rate=fs, center_freq=2412e6,
+        label="WIFI", max_seconds=1.0,
+    )
+    assert result.info.samples == iq.size
+    assert result.info.label == "WIFI"
+    assert result.info.center_freq == 2412e6
+    assert result.info.path.exists()
+
+    pairs = tmp_path / "two.mat"
+    savemat(pairs, {"Z": np.vstack([iq.real, iq.imag])})
+    result2 = import_mat(
+        pairs, tmp_path / "out2", sample_rate=fs, max_seconds=1.0,
+    )
+    data = np.fromfile(result2.info.cf32_path, dtype=np.complex64)
+    assert data.size == iq.size
+    assert np.allclose(np.abs(data), np.abs(iq), atol=0.01)
