@@ -18,6 +18,7 @@
 - приватный GitHub и будущая публикация — `docs/GITHUB.md`;
 - сборка `.exe` — `docs/PACKAGING.md`;
 - второй RX и 2R2T — `docs/PLUTO_2R2T.md`;
+- аппаратура и ограничения — `docs/HARDWARE.md`;
 - история версий — `CHANGELOG.md`.
 
 Локальные данные (`user_data/`, логи, IQ-клипы) в Git не попадают.
