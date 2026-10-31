@@ -18,6 +18,10 @@
 </p>
 
 <p align="center">
+  <img src="https://github.com/MaxBond7/pluto-scanner/actions/workflows/tests.yml/badge.svg?branch=main" alt="CI">
+</p>
+
+<p align="center">
   <a href="#возможности">Возможности</a> ·
   <a href="#скриншоты">Скриншоты</a> ·
   <a href="#быстрый-старт">Быстрый старт</a> ·
@@ -163,9 +167,19 @@ IQ (Pluto / симулятор / запись)
 
 - Версия: **0.5.0**
 - Тесты: **84 passed** (`pytest`), симулятор и реальные Pluto+
-- Лицензия: **MIT**
+- Лицензия: **MIT** — см. [LICENSE](LICENSE); сторонние компоненты —
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Репозиторий пока **приватный**; структура и документы готовы к публикации
 - Локальные данные (`user_data/`, `iq_recordings/`, логи, клипы) в Git не попадают
+
+## Участие
+
+Проект пока развивается как частный, но структура готова к open source:
+
+- перед изменениями — [CONTRIBUTING.md](CONTRIBUTING.md);
+- об уязвимостях — [SECURITY.md](SECURITY.md), не в публичных issue;
+- идеи и баги — через GitHub Issues;
+- новые сигнатуры — с открытым источником, лицензией и примером измерения.
 
 <p align="center">
   <sub>Сделано для пассивного наблюдения за эфиром. Без обещаний того,
