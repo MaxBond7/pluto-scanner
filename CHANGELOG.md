@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [0.4.1] - 2026-10-31
+
+- Read-only `--rx-info` probe: reports firmware model, IIO RX channels,
+  `1r1t`/`2r2t` mode and writes `rx_info.json`.
+- Documented the second RX limitation, the 2R2T firmware options, a
+  reversible U-Boot environment check and DFU recovery risks.
+- Added tests for complex RX channel counting.
+
 ## [0.4.0] - 2026-10-31
 
 - Long IQ recording to `iq_recordings/*.cf32` with JSON sidecar metadata.

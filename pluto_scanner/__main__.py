@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -89,6 +90,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="save a screenshot after the recording stops and quit")
     p.add_argument("--play", type=str, default=None, metavar="CF32",
                    help="open a recorded .cf32 IQ file for playback")
+    p.add_argument("--rx-info", action="store_true",
+                   help="print Pluto RX channel capability (1R1T/2R2T) and exit")
     p.add_argument("--log-level", default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p
@@ -105,6 +108,32 @@ def main(argv: list[str] | None = None) -> int:
         level=getattr(logging, args.log_level),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+
+    if args.rx_info:
+        from .devices.pluto import probe_pluto_rx
+
+        uri = args.device[0] if args.device else ""
+        try:
+            info = probe_pluto_rx(uri)
+        except Exception as exc:
+            print(f"RX probe failed: {exc}", flush=True)
+            return 1
+        print(json.dumps(info, ensure_ascii=False, indent=2), flush=True)
+        try:
+            out = Path("rx_info.json")
+            out.write_text(
+                json.dumps(info, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(f"JSON: {out.resolve()}", flush=True)
+        except Exception:
+            pass
+        print(
+            "2R2T доступен" if info["dual_rx"]
+            else "2R2T недоступен: прошивка отдаёт только один RX",
+            flush=True,
+        )
+        return 0
 
     app = QApplication([sys.argv[0]])
     app.setApplicationName(APP_NAME)

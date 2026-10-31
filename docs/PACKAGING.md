@@ -31,7 +31,7 @@ dist/PlutoScanner/
 Особенности:
 
 - `--onedir` (one-folder): быстрый старт, предсказуемая работа Qt и libiio;
-- иконка и версия `0.4.0` в свойствах `.exe`;
+- иконка и версия `0.4.1` в свойствах `.exe`;
 - `libiio.dll`, `libiio1.dll` и их зависимости (`libusb-1.0.dll`,
   `libserialport.dll`, `libxml2.dll`, `libzstd.dll`) кладутся внутрь
   `_internal`, чтобы сборка работала на машине без установленного libiio;
@@ -60,7 +60,7 @@ dist/PlutoScanner/
 
 ```text
 dist/PlutoScanner/                     распакованная сборка
-dist/PlutoScanner-0.4.0-portable.zip   архив для передачи
+dist/PlutoScanner-0.4.1-portable.zip   архив для передачи
 dist/SHA256SUMS.txt                    контрольная сумма
 ```
 

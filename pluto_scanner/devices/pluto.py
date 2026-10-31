@@ -50,6 +50,56 @@ def _ensure_pylibiio_windows() -> None:
     ctypes.util.find_library = patched
 
 
+def count_rx_channels(channel_ids: list[str]) -> int:
+    """Complex RX channels = input ``voltageN`` pairs divided by two."""
+    inputs = [
+        str(name) for name in channel_ids
+        if str(name).startswith("voltage")
+    ]
+    return len(inputs) // 2
+
+
+def probe_pluto_rx(uri: str = "") -> dict:
+    """Read-only capability probe for RX1/RX2 on a Pluto/Pluto+.
+
+    This does not enable a second channel and does not stream IQ.  It reports
+    what the current firmware actually exposes, which is the only reliable
+    answer: the AD936x chip name alone does not tell whether the FPGA image
+    was built for 1R1T or 2R2T.
+    """
+    _ensure_pylibiio_windows()
+    import adi  # type: ignore
+
+    if not uri:
+        found = scan_pluto_uris()
+        uri = next(
+            (u for u in found if u.startswith("usb:")),
+            found[0] if found else "",
+        )
+    sdr = adi.Pluto(uri=uri) if uri else adi.Pluto()
+    try:
+        ctx = sdr.ctx
+        attrs = {str(k): str(v) for k, v in dict(ctx.attrs).items()}
+        rx_dev = ctx.find_device("cf-ad9361-lpc")
+        channels = [str(ch.id) for ch in rx_dev.channels] if rx_dev else []
+        rx_channels = count_rx_channels(channels)
+        return {
+            "uri": str(getattr(sdr, "uri", uri)),
+            "hw_model": attrs.get("hw_model", ""),
+            "firmware": attrs.get("fw_version", ""),
+            "chip_model": attrs.get("ad9361-phy,model", ""),
+            "iio_rx_channels": channels,
+            "rx_channels": rx_channels,
+            "dual_rx": rx_channels >= 2,
+            "mode": "2r2t" if rx_channels >= 2 else "1r1t",
+        }
+    finally:
+        try:
+            sdr.rx_destroy_buffer()
+        except Exception:
+            pass
+
+
 def scan_pluto_uris() -> list[str]:
     """Best-effort libiio context scan.
 

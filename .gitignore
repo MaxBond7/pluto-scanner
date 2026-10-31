@@ -26,6 +26,7 @@ drone_logs/
 /*.jpeg
 /*.webp
 /*.pdf
+/*.json
 *.lnk
 Thumbs.db
 .DS_Store
