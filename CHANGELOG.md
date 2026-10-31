@@ -8,6 +8,16 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.9.0] - 2026-10-31
+
+- Bundled synthetic ML model (`assets/ml_model_default.json`) so the ML tab
+  and event-card hypothesis work out of the box before any local training.
+- ML results now carry their source (`synthetic`, `real`, `mixed`) and the
+  event card shows it instead of always claiming synthetic training.
+- Fallback order: user model in `user_data/ml_model.json`, then bundled
+  default model.
+- Test for the bundled default model.
+
 ## [0.8.0] - 2026-10-31
 
 - Import external IQ datasets into the local recording format:

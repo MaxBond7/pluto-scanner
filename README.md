@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.8.0-22d3ee?style=for-the-badge" alt="version">
+  <img src="https://img.shields.io/badge/version-0.9.0-22d3ee?style=for-the-badge" alt="version">
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="python">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="windows">
-  <img src="https://img.shields.io/badge/tests-93%20passed-4ade80?style=for-the-badge" alt="tests">
+  <img src="https://img.shields.io/badge/tests-94%20passed-4ade80?style=for-the-badge" alt="tests">
   <img src="https://img.shields.io/badge/license-MIT-3da639?style=for-the-badge" alt="license">
 </p>
 
@@ -54,7 +54,7 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
 | 🧠 | **Библиотека сигнатур** | SQLite, seed-каталог, top-3, импорт/экспорт, открытые ссылки |
 | 🎯 | **Белый список и фон** | подавление известных сигналов, профили шума по устройству/полосе/усилению |
 | 💾 | **Длинная запись IQ** | cf32 + JSON, оценка размера, воспроизведение через DSP без платы |
-| 🤖 | **ML-гипотеза** | офлайн softmax, обучение на синтетике и размеченных записях, top-3 |
+| 🤖 | **ML-гипотеза** | встроенная синтетическая модель из коробки, обучение на своих записях, top-3 |
 | 📥 | **Импорт данных** | SigMF и raw float32 IQ из открытых датасетов |
 | 🪟 | **Windows-сборка** | portable ZIP, установщик Inno Setup, SHA256, версия и логи |
 
@@ -92,7 +92,7 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
 
 ### 1. Готовая Windows-сборка
 
-Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/pluto-scanner/releases/tag/v0.8.0) — portable ZIP, установщик и `SHA256SUMS.txt`.
+Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/pluto-scanner/releases/tag/v0.9.0) — portable ZIP, установщик и `SHA256SUMS.txt`.
 
 Собрать самому:
 
@@ -110,8 +110,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.8.0-portable.zip        архив
-dist\PlutoScanner-Setup-0.8.0.exe           установщик
+dist\PlutoScanner-0.9.0-portable.zip        архив
+dist\PlutoScanner-Setup-0.9.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -158,8 +158,8 @@ IQ (Pluto / симулятор / запись)
 - **Второй RX / 2R2T** зависит от прошивки; текущая плата отдаёт 1R1T.
   U-Boot-трюк проверен и опасен — см. [PLUTO_2R2T](docs/PLUTO_2R2T.md).
 - **KerberosSDR / пеленг** требует 4 антенны, кабели и калибровку.
-- **ML-классификатор** — офлайн-baseline; можно обучать на синтетике или
-  размеченных записях. Без веба и телефона.
+- **ML-классификатор** — из коробки идёт синтетическая модель; для реальной
+  точности обучите на размеченных записях. Без веба и телефона.
 
 ## Документация
 
@@ -178,8 +178,8 @@ IQ (Pluto / симулятор / запись)
 
 ## Статус и лицензия
 
-- Версия: **0.8.0**
-- Тесты: **93 passed** (`pytest`), симулятор и реальные Pluto+
+- Версия: **0.9.0**
+- Тесты: **94 passed** (`pytest`), симулятор и реальные Pluto+
 - Лицензия: **MIT** — см. [LICENSE](LICENSE); сторонние компоненты —
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Репозиторий открыт: <https://github.com/MaxBond7/pluto-scanner>

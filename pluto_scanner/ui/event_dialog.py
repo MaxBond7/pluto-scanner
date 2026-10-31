@@ -218,9 +218,14 @@ class DroneEventDialog(QDialog):
                 f"{float(prob) * 100:.0f}%"
             )
         suffix = f" · ещё: {', '.join(extra)}" if extra else ""
+        source = {
+            "synthetic": "синтетика",
+            "real": "реальные записи",
+            "mixed": "реальные + синтетика",
+        }.get(str(data.get("source") or ""), "неизвестно")
         return (
             f"ML-гипотеза: {ru} {confidence * 100:.0f}%{suffix} "
-            "(обучение на синтетике; не заменяет эвристику)."
+            f"(источник: {source}; не заменяет эвристику)."
         )
 
     def _whitelist_text(self) -> str:

@@ -16,6 +16,7 @@ from pluto_scanner.ml.model import (
 )
 from pluto_scanner.ml.synthetic import CLASSES, generate_dataset, make_iq
 from pluto_scanner.drone.features import NARROW, TELEMETRY
+from pluto_scanner.paths import DEFAULT_ML_MODEL
 from pluto_scanner.recordings import (
     list_recordings,
     load_info,
@@ -105,6 +106,13 @@ def test_missing_or_bad_model_returns_none(tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text("{not json", encoding="utf-8")
     assert SoftmaxModel.load(bad) is None
+
+
+def test_bundled_default_model_loads():
+    model = SoftmaxModel.load(DEFAULT_ML_MODEL)
+    assert model is not None
+    assert set(model.classes) == set(CLASSES)
+    assert model.source == "synthetic"
 
 
 def test_recording_label_roundtrip(tmp_path):

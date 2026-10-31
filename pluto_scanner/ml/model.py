@@ -18,6 +18,7 @@ class MLResult:
     label: str
     confidence: float
     alternatives: list[tuple[str, float]]
+    source: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -27,6 +28,7 @@ class MLResult:
                 [label, round(float(prob), 3)]
                 for label, prob in self.alternatives
             ],
+            "source": self.source,
         }
 
 
@@ -78,7 +80,7 @@ class SoftmaxModel:
             (self.classes[int(i)], float(probs[int(i)]))
             for i in order[:3]
         ]
-        return MLResult(ranked[0][0], ranked[0][1], ranked)
+        return MLResult(ranked[0][0], ranked[0][1], ranked, self.source)
 
     def to_dict(self) -> dict[str, Any]:
         return {

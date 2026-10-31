@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from ..drone.features import CLASS_RU
 from ..ml.dataset import dataset_summary, train_from_recordings
 from ..ml.model import SoftmaxModel, train_and_save
-from ..paths import RECORDINGS_DIR
+from ..paths import DEFAULT_ML_MODEL, RECORDINGS_DIR
 
 
 class _TrainWorker(QThread):
@@ -212,7 +212,9 @@ class MLPanel(QWidget):
             summary["labeled"] > 0
             and (self._worker is None or not self._worker.isRunning())
         )
-        self._model = SoftmaxModel.load(self.model_path)
+        user_model = SoftmaxModel.load(self.model_path)
+        self._using_default = user_model is None
+        self._model = user_model or SoftmaxModel.load(DEFAULT_ML_MODEL)
         if self._model is None:
             self.model_label.setText(
                 "Модель не обучена. Обучите на синтетике или на размеченных записях."
@@ -227,8 +229,9 @@ class MLPanel(QWidget):
             if trained else "—"
         )
         self.model_label.setText(
-            f"Файл: {self.model_path}\n"
-            f"Источник: {self._model.source} · обучена: {when} · "
+            ("Встроенная синтетическая модель (можно заменить своей)\n"
+             if self._using_default else f"Файл: {self.model_path}\n")
+            + f"Источник: {self._model.source} · обучена: {when} · "
             f"примеров: {int(meta.get('total_blocks', meta.get('n', 0)))}"
         )
         real_blocks = meta.get("real_blocks")

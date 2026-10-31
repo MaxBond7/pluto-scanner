@@ -9,7 +9,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..ml.model import SoftmaxModel
-from ..paths import DATA_DIR
+from ..paths import DATA_DIR, DEFAULT_ML_MODEL
 from ..scanner.recorder import ranges_overlap
 from .background import DroneBackgroundStore
 from .bands import DroneBand, MonitorChunk, chunks_for_bands
@@ -55,8 +55,9 @@ class DroneMonitorManager(QObject):
         self._clip_count = 0
         self._whitelist: DroneWhitelist | None = None
         self._background_store: DroneBackgroundStore | None = None
-        self._ml_model: SoftmaxModel | None = SoftmaxModel.load(
-            DATA_DIR / "ml_model.json"
+        self._ml_model: SoftmaxModel | None = (
+            SoftmaxModel.load(DATA_DIR / "ml_model.json")
+            or SoftmaxModel.load(DEFAULT_ML_MODEL)
         )
         self._expire = QTimer(self)
         self._expire.setInterval(2000)
@@ -80,7 +81,10 @@ class DroneMonitorManager(QObject):
         self._ml_model = model
 
     def reload_ml_model(self) -> SoftmaxModel | None:
-        self._ml_model = SoftmaxModel.load(DATA_DIR / "ml_model.json")
+        self._ml_model = (
+            SoftmaxModel.load(DATA_DIR / "ml_model.json")
+            or SoftmaxModel.load(DEFAULT_ML_MODEL)
+        )
         return self._ml_model
 
     @property
