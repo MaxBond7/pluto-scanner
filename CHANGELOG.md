@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-01
+
+- New binary `drone / background` model, trained on real DroneRF recordings
+  (Bebop, AR, Phantom) plus local 433 MHz voice recordings and synthetic
+  blocks. See `docs/BINARY.md` and `docs/BINARY_REPORT.md`.
+- 18 binary features with a robust baseline fit, so a shaped receiver floor
+  no longer turns a 9 MHz video link into "narrow 15 kHz activity".
+- Drone monitor shows the binary score in a new `Дрон` column and in the
+  event card; the model can veto an alarm but never creates one.
+- CLI: `--train-binary`, `--binary-dronerf`, `--binary-out`.
+- DroneRF adapter: real 40 MS/s CSV windows are converted to 20 MS/s complex
+  baseband blocks, with noise augmentation down to 7 dB SNR.
 - Documented the failed U-Boot 2R2T experiment on the current Pluto: the
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.

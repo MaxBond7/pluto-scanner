@@ -50,6 +50,16 @@ _CLASS_SHORT = {
 }
 
 
+def _binary_short(event: DroneEvent) -> str:
+    """Short text for the binary model column."""
+    data = event.binary or {}
+    if not data:
+        return "—"
+    if str(data.get("verdict") or "") == "unknown":
+        return "н/д"
+    return f"{float(data.get('score') or 0.0) * 100:.0f}%"
+
+
 class DronePanel(QWidget):
     start_requested = Signal()
     stop_requested = Signal()
@@ -58,7 +68,7 @@ class DronePanel(QWidget):
 
     HEADERS = [
         "Время", "Полоса", "Класс", "Частота", "Ширина",
-        "SNR", "Хиты", "Скваж.", "Увер.", "Устр.",
+        "SNR", "Хиты", "Скваж.", "Увер.", "Дрон", "Устр.",
     ]
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -263,7 +273,9 @@ class DronePanel(QWidget):
         header.setMinimumSectionSize(40)
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        for column, width in enumerate((50, 55, 0, 88, 52, 34, 38, 42, 36, 58)):
+        for column, width in enumerate(
+            (50, 55, 0, 88, 52, 34, 38, 42, 36, 44, 58)
+        ):
             if column != 2:
                 self.table.setColumnWidth(column, width)
         root.addWidget(self.table, 3)
@@ -420,6 +432,7 @@ class DronePanel(QWidget):
             str(event.count),
             f"{event.max_duty * 100:.0f}%",
             f"{event.confidence * 100:.0f}%",
+            _binary_short(event),
             ", ".join(
                 self._device_names.get(device_id, device_id)
                 .replace("Симулятор", "SIM")
@@ -445,9 +458,16 @@ class DronePanel(QWidget):
                     f"{event.ml.get('label', '?')} "
                     f"{float(event.ml.get('confidence', 0.0)) * 100:.0f}%"
                 )
+            if event.binary:
+                tips.append(
+                    "Бинарная модель: "
+                    f"{_binary_short(event)} "
+                    f"(порог тревоги "
+                    f"{float(event.binary.get('threshold_alarm', 0.9)) * 100:.0f}%)"
+                )
             if tips:
                 item.setToolTip("\n".join(tips))
-            if column in (5, 6, 7, 8):
+            if column in (5, 6, 7, 8, 9):
                 item.setTextAlignment(
                     Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
                 )
@@ -457,11 +477,13 @@ class DronePanel(QWidget):
             self.show_alarm(event)
 
     def show_alarm(self, event: DroneEvent) -> None:
+        binary = _binary_short(event)
         self.alarm.setText(
             "⚠ ВОЗМОЖНЫЙ ДРОНОВЫЙ ЛИНК: "
             f"{event.band_name} · {event.class_ru} · "
             f"{format_freq(event.freq_hz)} · SNR {event.max_snr_db:.1f} дБ · "
             f"подтверждено {event.count}× · увер. {event.confidence * 100:.0f}%"
+            + (f" · дрон {binary}" if binary not in ("—", "н/д") else "")
         )
         self.alarm.setVisible(True)
         self._alarm_timer.start(10000)

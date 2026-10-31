@@ -102,6 +102,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="ML training epochs (default 600)")
     p.add_argument("--domain-gap", action="store_true",
                    help="build a synthetic-vs-real domain-gap report and exit")
+    p.add_argument("--train-binary", action="store_true",
+                   help="train the binary drone/background model and exit")
+    p.add_argument("--binary-dronerf", default="", metavar="PATH",
+                   help="folder with extracted DroneRF CSV files (optional)")
+    p.add_argument("--binary-out", default="", metavar="PATH",
+                   help="where to save the binary model")
     p.add_argument("--version", action="version",
                    version=f"%(prog)s {__version__}")
     p.add_argument("--log-level", default="INFO",
@@ -188,6 +194,16 @@ def main(argv: list[str] | None = None) -> int:
                 flush=True,
             )
         return 0
+
+    if args.train_binary:
+        from .ml.train_binary import main as binary_main
+
+        argv = ["--synthetic", str(max(8, args.ml_per_class // 3))]
+        if args.binary_dronerf:
+            argv += ["--dronerf-root", args.binary_dronerf]
+        if args.binary_out:
+            argv += ["--out", args.binary_out]
+        return binary_main(argv)
 
     app = QApplication([sys.argv[0]])
     app.setApplicationName(APP_NAME)

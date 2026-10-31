@@ -8,8 +8,9 @@ from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from ..ml.binary import BinaryModel
 from ..ml.model import SoftmaxModel
-from ..paths import DATA_DIR, DEFAULT_ML_MODEL
+from ..paths import DATA_DIR, DEFAULT_BINARY_MODEL, DEFAULT_ML_MODEL
 from ..scanner.recorder import ranges_overlap
 from .background import DroneBackgroundStore
 from .bands import DroneBand, MonitorChunk, chunks_for_bands
@@ -50,6 +51,7 @@ class DroneMonitorManager(QObject):
         self._min_alarm_hits = 3
         self._min_alarm_conf = 0.70
         self._alarm_count = 0
+        self._alarm_suppressed = 0
         self._record_iq = True
         self._max_clips = 100
         self._clip_count = 0
@@ -58,6 +60,10 @@ class DroneMonitorManager(QObject):
         self._ml_model: SoftmaxModel | None = (
             SoftmaxModel.load(DATA_DIR / "ml_model.json")
             or SoftmaxModel.load(DEFAULT_ML_MODEL)
+        )
+        self._binary_model: BinaryModel | None = (
+            BinaryModel.load(DATA_DIR / "ml_drone_binary.json")
+            or BinaryModel.load(DEFAULT_BINARY_MODEL)
         )
         self._expire = QTimer(self)
         self._expire.setInterval(2000)
@@ -85,11 +91,23 @@ class DroneMonitorManager(QObject):
             SoftmaxModel.load(DATA_DIR / "ml_model.json")
             or SoftmaxModel.load(DEFAULT_ML_MODEL)
         )
+        self.reload_binary_model()
         return self._ml_model
 
     @property
     def has_ml_model(self) -> bool:
         return self._ml_model is not None
+
+    @property
+    def binary_model(self) -> BinaryModel | None:
+        return self._binary_model
+
+    def reload_binary_model(self) -> BinaryModel | None:
+        self._binary_model = (
+            BinaryModel.load(DATA_DIR / "ml_drone_binary.json")
+            or BinaryModel.load(DEFAULT_BINARY_MODEL)
+        )
+        return self._binary_model
 
     # ------------------------------------------------------------------ start
     def start(
@@ -159,6 +177,7 @@ class DroneMonitorManager(QObject):
         self._min_alarm_hits = max(1, int(min_alarm_hits))
         self._min_alarm_conf = max(0.0, min(1.0, float(min_alarm_conf)))
         self._alarm_count = 0
+        self._alarm_suppressed = 0
         self._record_iq = bool(record_iq)
         self._max_clips = max(0, int(max_clips))
         self._clip_count = 0
@@ -220,6 +239,15 @@ class DroneMonitorManager(QObject):
                 obs.extra["ml"] = self._ml_model.predict_observation(obs).to_dict()
             except Exception as exc:
                 log.debug("ML prediction failed: %s", exc)
+        if self._binary_model is not None and obs.class_key not in (
+            "QUIET", "OVERLOAD"
+        ):
+            try:
+                obs.extra["binary"] = self._binary_model.predict_observation(
+                    obs
+                ).to_dict()
+            except Exception as exc:
+                log.debug("binary prediction failed: %s", exc)
         self.observation.emit(obs)
         event, is_new = self._tracker.update(obs)
         if event is None:
@@ -285,6 +313,12 @@ class DroneMonitorManager(QObject):
         if now - self._last_alarm.get(event.event_id, 0.0) < 12.0:
             return
         if now - self._last_alarm_any < 6.0:
+            return
+        # The binary model can veto an alarm, never create one.  A signal the
+        # model confidently calls "background" is exactly the Wi-Fi/voice case
+        # this feature exists for.
+        if (event.binary or {}).get("verdict") == "background":
+            self._alarm_suppressed += 1
             return
         self._last_alarm[event.event_id] = now
         self._last_alarm_any = now
@@ -366,6 +400,7 @@ class DroneMonitorManager(QObject):
         summary = self._tracker.summary()
         summary["duration_s"] = round(time.monotonic() - self._started, 2)
         summary["alarms"] = int(self._alarm_count)
+        summary["alarms_suppressed"] = int(self._alarm_suppressed)
         summary["alarm_hits"] = int(self._min_alarm_hits)
         summary["alarm_confidence"] = round(float(self._min_alarm_conf), 3)
         summary["iq_clips"] = int(self._clip_count)

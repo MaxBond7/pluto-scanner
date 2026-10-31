@@ -61,6 +61,7 @@ DATA_DIR = DATA_HOME / "user_data"
 RECORDINGS_DIR = DATA_HOME / "iq_recordings"
 ICON_PATH = ASSETS_DIR / "pluto_scanner.ico"
 DEFAULT_ML_MODEL = ASSETS_DIR / "ml_model_default.json"
+DEFAULT_BINARY_MODEL = ASSETS_DIR / "ml_drone_binary.json"
 
 
 def ensure_data_home() -> Path:

@@ -40,6 +40,7 @@ class DroneEvent:
     whitelisted: bool = False
     whitelist_name: str = ""
     ml: dict[str, Any] = field(default_factory=dict)
+    binary: dict[str, Any] = field(default_factory=dict)
 
     @property
     def duration_s(self) -> float:
@@ -80,6 +81,7 @@ class DroneEvent:
             "whitelisted": bool(self.whitelisted),
             "whitelist_name": self.whitelist_name,
             "ml": dict(self.ml),
+            "binary": dict(self.binary),
         }
         if include_spectrum:
             payload["spectrum_freqs_hz"] = list(self.spectrum_freqs_hz)
@@ -148,6 +150,14 @@ class DroneTracker:
         match.drone_like = match.drone_like or obs.drone_like
         if obs.extra.get("ml"):
             match.ml = dict(obs.extra["ml"])
+        binary = obs.extra.get("binary")
+        if binary:
+            # Keep the most drone-like score seen for this event: a link that
+            # fades in and out is still the same link.
+            if float(binary.get("score", 0.0)) >= float(
+                match.binary.get("score", -1.0)
+            ):
+                match.binary = dict(binary)
         match.active = True
         if obs.device_id not in match.device_ids:
             match.device_ids.append(obs.device_id)

@@ -60,6 +60,38 @@
 
 ## Импорт
 
+### DroneRF: скачать и распаковать
+
+DroneRF не импортируется через UI: у него свой формат (одна строка из
+10 000 000 отсчётов на файл). Его читает отдельный адаптер.
+
+```powershell
+# 1. Скачать все 23 архива (4.03 ГБ) из открытого API Mendeley
+.\.venv\Scripts\python.exe -m tools.download_dronerf --out "Z:\datasets\DroneRF"
+
+# 2. Распаковать (нужен 7-Zip) в отдельную папку
+& "C:\Program Files\7-Zip\7z.exe" x "Z:\datasets\DroneRF\*.rar" `
+    -o"Z:\datasets\DroneRF_extracted" -y
+```
+
+После распаковки — 454 CSV, около 40 ГБ. Обучение:
+
+```powershell
+.\.venv\Scripts\python.exe -m pluto_scanner.ml.train_binary `
+    --dronerf-root "Z:\datasets\DroneRF_extracted" `
+    --cache user_data\binary_dronerf.npz --cross-check `
+    --out assets\ml_drone_binary.json --report docs\BINARY_REPORT.md
+```
+
+Что важно знать про формат:
+
+- один файл = одна запись, 10 000 000 вещественных отсчётов при 40 МГц
+  (250 мс), одна строка без переводов строк;
+- файлы идут парами `L`/`H` — два соседних куска по 20 МГц; сигнал дрона
+  может быть в любом из них, поэтому берутся оба;
+- метка — префикс имени (`00000` фон, `10000–10011` Bebop,
+  `10100–10111` AR, `11000` Phantom), а не наш класс морфологии.
+
 ### SigMF
 
 ```powershell

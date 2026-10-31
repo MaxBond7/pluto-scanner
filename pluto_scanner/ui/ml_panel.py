@@ -22,9 +22,10 @@ from PySide6.QtWidgets import (
 )
 
 from ..drone.features import CLASS_RU
+from ..ml.binary import BinaryModel
 from ..ml.dataset import dataset_summary, train_from_recordings
 from ..ml.model import SoftmaxModel, train_and_save
-from ..paths import DEFAULT_ML_MODEL, RECORDINGS_DIR
+from ..paths import DATA_DIR, DEFAULT_BINARY_MODEL, DEFAULT_ML_MODEL, RECORDINGS_DIR
 
 
 class _TrainWorker(QThread):
@@ -127,6 +128,13 @@ class MLPanel(QWidget):
         )
         bl.addWidget(self.accuracy_label)
 
+        self.binary_label = QLabel("")
+        self.binary_label.setWordWrap(True)
+        self.binary_label.setStyleSheet(
+            "color:#fda4af; font-size:11px;"
+        )
+        bl.addWidget(self.binary_label)
+
         row = QHBoxLayout()
         row.setSpacing(6)
         self.train_btn = QPushButton("Обучить на синтетике")
@@ -196,6 +204,28 @@ class MLPanel(QWidget):
         self.refresh()
 
     # ------------------------------------------------------------------ model
+    def _binary_text(self) -> str:
+        model = (
+            BinaryModel.load(DATA_DIR / "ml_drone_binary.json")
+            or BinaryModel.load(DEFAULT_BINARY_MODEL)
+        )
+        if model is None:
+            return "Дрон / не дрон: модель не установлена."
+        metrics = model.metadata.get("metrics") or {}
+        auc = metrics.get("roc_auc")
+        source = {
+            "dronerf+recordings+synthetic": "DroneRF + записи + синтетика",
+            "dronerf": "DroneRF",
+        }.get(model.source, model.source)
+        head = "Дрон / не дрон"
+        parts = [f"порог тревоги {model.threshold_alarm * 100:.0f}%"]
+        if auc is not None:
+            parts.append(f"ROC-AUC {float(auc):.3f}")
+        blocks = model.metadata.get("total_blocks")
+        if blocks:
+            parts.append(f"{int(blocks)} блоков")
+        return f"{head}: {source} · " + " · ".join(parts)
+
     def refresh(self) -> None:
         summary = dataset_summary(self.recordings_dir)
         counts = summary.get("counts") or {}
@@ -215,6 +245,7 @@ class MLPanel(QWidget):
         user_model = SoftmaxModel.load(self.model_path)
         self._using_default = user_model is None
         self._model = user_model or SoftmaxModel.load(DEFAULT_ML_MODEL)
+        self.binary_label.setText(self._binary_text())
         if self._model is None:
             self.model_label.setText(
                 "Модель не обучена. Обучите на синтетике или на размеченных записях."

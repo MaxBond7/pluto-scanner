@@ -1497,6 +1497,8 @@ class MainWindow(QMainWindow):
         ]
         self._drone_manager = manager
         self._drone_active = True
+        # Pick up a binary model the user may have trained since launch.
+        manager.reload_binary_model()
         self._pre_drone_frame = self._last_frame
         self._drone_audio_was_enabled = self.audio_enabled
         self.right_tabs.setCurrentWidget(self.drone_panel)

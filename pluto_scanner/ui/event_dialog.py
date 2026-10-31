@@ -84,6 +84,14 @@ class DroneEventDialog(QDialog):
         )
         root.addWidget(self.ml_label)
 
+        self.binary_label = QLabel(self._binary_text())
+        self.binary_label.setWordWrap(True)
+        self.binary_label.setStyleSheet(
+            "color:#fda4af; font-size:12px; font-weight:600;"
+            if event.binary else "color:#64748b; font-size:11px;"
+        )
+        root.addWidget(self.binary_label)
+
         grid = QGridLayout()
         grid.setHorizontalSpacing(18)
         grid.setVerticalSpacing(3)
@@ -211,6 +219,35 @@ class DroneEventDialog(QDialog):
         root.addLayout(buttons)
 
     # ------------------------------------------------------------------ helpers
+    def _binary_text(self) -> str:
+        data = self.drone_event.binary or {}
+        if not data:
+            return (
+                "Дрон / не дрон: модель не установлена — только эвристика."
+            )
+        if self.drone_event.class_key == "OVERLOAD":
+            return (
+                "Дрон / не дрон: не определено из-за перегрузки входа."
+            )
+        verdict = str(data.get("verdict") or "")
+        if verdict == "unknown":
+            return (
+                "Дрон / не дрон: сигнала слишком мало для оценки."
+            )
+        score = float(data.get("score") or 0.0)
+        alarm = float(data.get("threshold_alarm") or 0.9) * 100.0
+        candidate = float(data.get("threshold_candidate") or 0.6) * 100.0
+        ru = {
+            "drone": "похоже на дрон",
+            "candidate": "кандидат, нужно подтверждение",
+            "background": "не похоже на дрон",
+        }.get(verdict, verdict)
+        return (
+            f"Дрон / не дрон: {score * 100:.0f}% — {ru}. "
+            f"Тревога с {alarm:.0f}%, кандидат с {candidate:.0f}%. "
+            "Это вероятность по обученной модели, а не гарантия."
+        )
+
     def _ml_text(self) -> str:
         if self.drone_event.class_key == "OVERLOAD":
             return (

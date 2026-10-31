@@ -1,0 +1,242 @@
+{
+  "version": 1,
+  "kind": "drone-binary",
+  "features": [
+    "peak_db",
+    "p90_db",
+    "p50_db",
+    "occ_6db",
+    "occ_12db",
+    "occ_20db",
+    "span_6db",
+    "flatness",
+    "entropy",
+    "log_regions",
+    "largest_share",
+    "edge_rise_db",
+    "duty",
+    "envelope_cv",
+    "envelope_span_db",
+    "log_burst_rate",
+    "log_median_burst_ms",
+    "envelope_autocorr"
+  ],
+  "mean": [
+    19.67664818216925,
+    11.785433803230282,
+    2.2488738793901035,
+    0.24434091582691167,
+    0.14366988366923533,
+    0.05193668494368702,
+    0.36610153008298757,
+    0.5127312785558593,
+    0.8253916580756893,
+    0.45087752108218093,
+    0.528082107710998,
+    -4.449172522643971,
+    0.5653304682868999,
+    3.3982949748522167,
+    12.331486883020865,
+    1.9095463878321535,
+    0.7777312386786467,
+    0.33568846169461336
+  ],
+  "std": [
+    16.106711508885002,
+    9.037895774795883,
+    3.3131350452810393,
+    0.21499526325840226,
+    0.17034177185138882,
+    0.09764756185967777,
+    0.33544887839792836,
+    0.3679036628759284,
+    0.21789883200323634,
+    0.2681193676100365,
+    0.4118678709238825,
+    9.802758780041785,
+    0.4264638721052313,
+    2.7563145100639974,
+    16.406480997335677,
+    0.315590644533238,
+    0.5284891939045986,
+    0.2907904165532595
+  ],
+  "coef": [
+    -0.4864435492419953,
+    0.010326692873600546,
+    1.1008334620454605,
+    0.2786300483498183,
+    -0.4485215626587194,
+    0.19835048908401806,
+    0.5790847071644828,
+    0.47916422548304904,
+    0.3745808998107418,
+    0.2855944965633013,
+    -0.7065965053067012,
+    -0.6292782529598219,
+    0.24014070242077873,
+    2.906835494512337,
+    2.0223217807673888,
+    0.4385722143104788,
+    0.2889077164527328,
+    -0.3285115587065001
+  ],
+  "intercept": 1.1302961909887934,
+  "threshold_alarm": 0.9523175527013747,
+  "threshold_candidate": 0.6,
+  "metadata": {
+    "source": "dronerf+recordings+synthetic",
+    "trained_at": 1793481712.1295664,
+    "seed": 1,
+    "total_blocks": 1687,
+    "positives": 1094,
+    "negatives": 593,
+    "composition": {
+      "dronerf-ar": 242,
+      "dronerf-ar-noisy": 176,
+      "dronerf-background": 54,
+      "dronerf-bebop": 276,
+      "dronerf-bebop-noisy": 162,
+      "dronerf-phantom": 130,
+      "dronerf-phantom-noisy": 108,
+      "recording-NARROW": 320,
+      "synthetic-NARROW": 112,
+      "synthetic-WIFI": 107
+    },
+    "metrics": {
+      "n": 516,
+      "positives": 350,
+      "negatives": 166,
+      "roc_auc": 0.9777,
+      "tpr_at_1pct_fpr": 0.7514,
+      "threshold": 0.952,
+      "precision": 0.9926,
+      "recall": 0.7657,
+      "false_alarm_rate": 0.012,
+      "tp": 268,
+      "fp": 2,
+      "tn": 164,
+      "fn": 82,
+      "calibration": [
+        {
+          "bin": 0.1,
+          "count": 136,
+          "mean_score": 0.026,
+          "observed": 0.015
+        },
+        {
+          "bin": 0.3,
+          "count": 5,
+          "mean_score": 0.295,
+          "observed": 1.0
+        },
+        {
+          "bin": 0.5,
+          "count": 7,
+          "mean_score": 0.527,
+          "observed": 1.0
+        },
+        {
+          "bin": 0.7,
+          "count": 25,
+          "mean_score": 0.726,
+          "observed": 0.6
+        },
+        {
+          "bin": 0.9,
+          "count": 343,
+          "mean_score": 0.97,
+          "observed": 0.936
+        }
+      ],
+      "by_source": {
+        "dronerf-ar": {
+          "n": 145,
+          "mean_score": 0.9871,
+          "median_score": 0.9978,
+          "share_above_threshold": 0.931
+        },
+        "dronerf-ar-noisy": {
+          "n": 88,
+          "mean_score": 0.8927,
+          "median_score": 0.9847,
+          "share_above_threshold": 0.6364
+        },
+        "dronerf-background": {
+          "n": 32,
+          "mean_score": 0.8328,
+          "median_score": 0.8565,
+          "share_above_threshold": 0.0625
+        },
+        "dronerf-phantom": {
+          "n": 69,
+          "mean_score": 0.9808,
+          "median_score": 0.9868,
+          "share_above_threshold": 0.942
+        },
+        "dronerf-phantom-noisy": {
+          "n": 48,
+          "mean_score": 0.8429,
+          "median_score": 0.8893,
+          "share_above_threshold": 0.25
+        },
+        "recording-NARROW": {
+          "n": 80,
+          "mean_score": 0.0142,
+          "median_score": 0.0069,
+          "share_above_threshold": 0.0
+        },
+        "synthetic-NARROW": {
+          "n": 28,
+          "mean_score": 0.0138,
+          "median_score": 0.0114,
+          "share_above_threshold": 0.0
+        },
+        "synthetic-WIFI": {
+          "n": 26,
+          "mean_score": 0.0657,
+          "median_score": 0.0478,
+          "share_above_threshold": 0.0
+        }
+      },
+      "holdout": true
+    },
+    "thresholds": {
+      "alarm": 0.952,
+      "candidate": 0.6,
+      "target_fpr": 0.01
+    },
+    "features": "12 features from pluto_scanner.ml.features",
+    "datasets": [
+      "DroneRF, Al-Sa'd et al. 2019, CC BY 4.0, doi:10.17632/f4c2b4n755.1",
+      "own IQ recordings (iq_recordings)",
+      "project synthetic generator"
+    ],
+    "limitations": [
+      "не определяет модель дрона",
+      "не заменяет Remote ID",
+      "Wi-Fi-дрон физически похож на обычный Wi-Fi",
+      "калибровка проверена на ограниченном наборе записей"
+    ],
+    "cross_family": {
+      "ar": {
+        "n": 418,
+        "recall_at_0.9": 0.7344,
+        "mean_score": 0.918,
+        "median_score": 0.9805
+      },
+      "bebop": {
+        "n": 438,
+        "recall_at_0.9": 0.7374,
+        "mean_score": 0.908,
+        "median_score": 0.9785
+      },
+      "phantom": {
+        "n": 238,
+        "recall_at_0.9": 0.4706,
+        "mean_score": 0.8367,
+        "median_score": 0.8858
+      }
+    }
+  }
+}
