@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+- Documented the failed U-Boot 2R2T experiment on the current Pluto: the
+  device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
+  environment was restored and verified. See `docs/PLUTO_2R2T.md`.
+
 ## [0.4.1] - 2026-10-31
 
 - Read-only `--rx-info` probe: reports firmware model, IIO RX channels,
