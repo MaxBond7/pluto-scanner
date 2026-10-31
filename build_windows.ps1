@@ -1,4 +1,4 @@
-# Build a portable one-folder Windows distribution.
+﻿# Build a portable one-folder Windows distribution.
 #
 #   .\build_windows.ps1
 #   .\build_windows.ps1 -Clean
@@ -9,6 +9,12 @@ param(
     [switch]$Clean,
     [switch]$SkipTests
 )
+
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+} catch {
+}
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path

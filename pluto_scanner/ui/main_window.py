@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -396,7 +397,9 @@ class MainWindow(QMainWindow):
                 return True
         config = DeviceConfig(
             device_id=self._next_id("iq"),
-            name=f"Запись {info.recording_id}",
+            name="Запись " + time.strftime(
+                "%H:%M:%S", time.localtime(info.created or time.time())
+            ),
             kind="iqfile",
             uri=str(info.path),
             center_freq=float(info.center_freq),
@@ -550,11 +553,23 @@ class MainWindow(QMainWindow):
     def _update_controls(self) -> None:
         has = self.selected_id is not None
         active = has and not self._drone_active
+        current = self.sessions.get(self.selected_id) if has else None
+        is_playback = bool(
+            current is not None and current.config.kind == "iqfile"
+        )
+        rx_ok = active and not self._recording and not is_playback
         self.rx_group.setEnabled(active and not self._recording)
-        self.band_group.setEnabled(active and not self._recording)
+        self.band_group.setEnabled(rx_ok)
         self.vfo_panel.setEnabled(active)
         self.audio_btn.setEnabled(active and not self._recording)
-        self.scan_panel.set_device_enabled(active and not self._recording)
+        self.scan_panel.set_device_enabled(
+            active and not self._recording and not is_playback
+        )
+        for widget in (
+            self.center_spin, self.fs_combo, self.gain_slider,
+            self.threshold_spin, self.reset_btn,
+        ):
+            widget.setEnabled(rx_ok)
         if not has:
             self.sim_group.setEnabled(False)
             self.recording_panel.set_device("", "", DEFAULT_SAMPLE_RATE)
@@ -1102,6 +1117,12 @@ class MainWindow(QMainWindow):
         if session is None:
             self.status_label.setText("Устройство не найдено")
             return
+        if session.config.kind == "iqfile":
+            self.status_label.setText(
+                "Запись имеет фиксированную полосу — сканировать её нельзя."
+            )
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
         start, end, step = self.scan_panel.values()
         if end <= start:
             self.scan_panel.fail(
@@ -1311,10 +1332,13 @@ class MainWindow(QMainWindow):
             sessions = [session]
         sessions = [
             session for session in sessions
-            if session.worker.isRunning()
+            if session.config.kind != "iqfile" and session.worker.isRunning()
         ]
         if not sessions:
-            self._fail_drone("Нет запущенных устройств для мониторинга.")
+            self._fail_drone(
+                "Для дрон-монитора нужен Pluto или симулятор; "
+                "запись IQ не подходит."
+            )
             return
         bands = selected_bands(self.drone_panel.selected_band_keys())
         if not bands:

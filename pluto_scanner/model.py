@@ -39,7 +39,7 @@ class SignalType(str, Enum):
 class DeviceConfig:
     device_id: str
     name: str
-    kind: str                       # "sim" | "pluto"
+    kind: str                       # "sim" | "pluto" | "iqfile"
     uri: str = ""
     center_freq: float = 433.92e6
     sample_rate: float = 1.024e6

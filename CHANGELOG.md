@@ -8,6 +8,16 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.4.2] - 2026-10-31
+
+- Playback devices are rejected by the band scanner and drone monitor instead
+  of producing meaningless sweeps.
+- Center frequency, bandwidth, gain, threshold and band preset are disabled
+  for a recording, while VFO and audio remain available.
+- Playback device names use a short time stamp instead of the full file id.
+- Windows build script forces UTF-8 console output.
+- Documented the `iqfile` device kind.
+
 ## [0.4.1] - 2026-10-31
 
 - Read-only `--rx-info` probe: reports firmware model, IIO RX channels,
