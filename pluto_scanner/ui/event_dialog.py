@@ -212,6 +212,11 @@ class DroneEventDialog(QDialog):
 
     # ------------------------------------------------------------------ helpers
     def _ml_text(self) -> str:
+        if self.drone_event.class_key == "OVERLOAD":
+            return (
+                "ML отключён: перегрузка входа. Уменьшите усиление "
+                "или отодвиньте антенну."
+            )
         data = self.drone_event.ml or {}
         if not data:
             return "ML: модель не обучена — доступна только эвристика."

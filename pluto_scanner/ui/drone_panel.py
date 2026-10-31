@@ -404,6 +404,8 @@ class DronePanel(QWidget):
         color = QColor(_CLASS_COLORS.get(event.class_key, "#d7e2f0"))
         if event.whitelisted:
             color = QColor("#64748b")
+        elif event.class_key == "OVERLOAD":
+            color = QColor("#facc15")
         elif self.is_confirmed(event):
             color = QColor("#f87171")
         elif event.drone_like:

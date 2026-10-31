@@ -213,7 +213,9 @@ class DroneMonitorManager(QObject):
     def _on_observation(self, obs: DroneObservation) -> None:
         if not self._running:
             return
-        if self._ml_model is not None and obs.class_key != "QUIET":
+        if self._ml_model is not None and obs.class_key not in (
+            "QUIET", "OVERLOAD"
+        ):
             try:
                 obs.extra["ml"] = self._ml_model.predict_observation(obs).to_dict()
             except Exception as exc:

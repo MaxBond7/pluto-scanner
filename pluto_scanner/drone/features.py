@@ -31,6 +31,7 @@ WIFI = "WIFI"
 NARROW = "NARROW"
 UNKNOWN = "UNKNOWN"
 QUIET = "QUIET"
+OVERLOAD = "OVERLOAD"
 
 CLASS_RU = {
     FHSS: "скачкообразное управление",
@@ -41,6 +42,7 @@ CLASS_RU = {
     NARROW: "узкополосная активность",
     UNKNOWN: "неизвестная активность",
     QUIET: "тихо",
+    OVERLOAD: "перегрузка входа",
 }
 
 DRONE_CLASSES = {FHSS, TELEMETRY, VIDEO_ANALOG, VIDEO_DIGITAL}
@@ -391,6 +393,7 @@ def analyze_iq(
         busy_fraction = float(np.mean(work >= floor + threshold_db))
 
     snr_db = float(peak_db - floor)
+    overload = False
     if region is None:
         class_key, confidence, drone_like = QUIET, 0.0, False
         bw = 0.0
@@ -403,6 +406,13 @@ def analyze_iq(
             flatness=flatness,
             snr_db=snr_db,
         )
+        if peak_db > -6.0 and snr_db > 30.0:
+            # A handheld held against the antenna saturates the ADC/FIR:
+            # the broad clipped spectrum must not become an FHSS alarm.
+            overload = True
+            class_key = OVERLOAD
+            confidence = 0.0
+            drone_like = False
         if class_key == QUIET:
             bw = 0.0
 
@@ -447,6 +457,7 @@ def analyze_iq(
             "duration_s": float(time_features["duration_s"]),
             "envelope_low_db": float(time_features["envelope_low_db"]),
             "median_floor_db": float(median_floor),
+            "overload": bool(overload),
         },
         iq_samples=iq,
     )

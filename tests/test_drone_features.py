@@ -7,6 +7,7 @@ from pluto_scanner.dsp.spectrum import SpectrumAnalyzer
 from pluto_scanner.drone.bands import DroneBand
 from pluto_scanner.drone.features import (
     FHSS,
+    OVERLOAD,
     QUIET,
     VIDEO_ANALOG,
     VIDEO_DIGITAL,
@@ -120,3 +121,18 @@ def test_wideband_video_is_detected():
     assert obs.active_fraction > 0.8
     assert obs.class_key in (VIDEO_ANALOG, VIDEO_DIGITAL)
     assert obs.drone_like is True
+
+
+def test_near_field_overload_is_not_a_drone_alarm():
+    fs = 2.048e6
+    n = int(fs * 0.02)
+    t = np.arange(n) / fs
+    iq = np.exp(2j * np.pi * 120e3 * t).astype(np.complex64)
+    obs = analyze_iq(
+        iq, fs, CENTER, BAND,
+        threshold_db=6.0, nfft=4096, notch_hz=0.0,
+    )
+    assert obs is not None
+    assert obs.class_key == OVERLOAD
+    assert obs.extra.get("overload") is True
+    assert obs.drone_like is False

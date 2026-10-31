@@ -8,6 +8,15 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.12.0] - 2026-10-31
+
+- Front-end overload guard: near-field signals with peak above -6 dBFS and
+  SNR over 30 dB are marked `OVERLOAD`, do not alarm and skip ML.
+- Event card explains overload and asks to reduce gain or move the antenna.
+- Real 433 MHz field test with Baofeng: 4 labeled recordings, overload at
+  0 m, correct `NARROW` at 1/3/5 m; report in `docs/FIELD_TEST_2026-10-31.md`.
+- Dataset builder ignores overloaded blocks.
+
 ## [0.11.0] - 2026-10-31
 
 - Band scanner pause/resume: the current step is re-armed on resume, and

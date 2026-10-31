@@ -92,7 +92,9 @@ def build_real_dataset(
                 device_id=info.recording_id,
                 threshold_db=6.0, nfft=4096, notch_hz=0.0,
             )
-            if obs is None or obs.snr_db < 4.0 or obs.class_key == "QUIET":
+            if obs is None or obs.snr_db < 4.0 or obs.class_key in (
+                "QUIET", "OVERLOAD"
+            ):
                 skipped += 1
                 continue
             rows.append(feature_vector(obs))
