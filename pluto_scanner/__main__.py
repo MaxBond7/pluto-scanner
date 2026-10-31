@@ -14,7 +14,7 @@ from PySide6.QtWidgets import QApplication
 
 from . import __version__
 from .config import APP_NAME, DEFAULT_CENTER_FREQ, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE
-from .paths import DATA_HOME, ICON_PATH, ensure_data_home
+from .paths import DATA_DIR, DATA_HOME, ICON_PATH, ensure_data_home
 from .ui.main_window import MainWindow
 from .ui.theme import apply_theme
 
@@ -100,6 +100,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="synthetic training blocks per class (default 60)")
     p.add_argument("--ml-epochs", type=int, default=600,
                    help="ML training epochs (default 600)")
+    p.add_argument("--domain-gap", action="store_true",
+                   help="build a synthetic-vs-real domain-gap report and exit")
     p.add_argument("--version", action="version",
                    version=f"%(prog)s {__version__}")
     p.add_argument("--log-level", default="INFO",
@@ -166,6 +168,26 @@ def main(argv: list[str] | None = None) -> int:
             "--per-class", str(args.ml_per_class),
             "--epochs", str(args.ml_epochs),
         ])
+
+    if args.domain_gap:
+        from .ml.domain import build_report
+
+        try:
+            report, path = build_report(
+                per_class=max(2, args.ml_per_class),
+                out_dir=DATA_DIR / "domain_gap",
+            )
+        except Exception as exc:
+            print(f"Domain-gap report failed: {exc}", flush=True)
+            return 1
+        print(f"Domain-gap report: {path}", flush=True)
+        for name, item in report["domains"].items():
+            print(
+                f"{name}: n={item['n']} "
+                f"accuracy={item['accuracy']}",
+                flush=True,
+            )
+        return 0
 
     app = QApplication([sys.argv[0]])
     app.setApplicationName(APP_NAME)

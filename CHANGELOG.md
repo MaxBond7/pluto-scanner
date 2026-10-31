@@ -8,6 +8,15 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.13.0] - 2026-10-31
+
+- Domain-gap report comparing fresh synthetic, augmented synthetic and real
+  recordings, with accuracy, coverage, confidence, per-class results and
+  feature drift.
+- CLI `python -m pluto_scanner.ml.domain_gap` and `--domain-gap` flag.
+- Current real 433 MHz result: 72.7% on 11 NARROW blocks vs 98.9% on
+  synthetic; report in `docs/DOMAIN_GAP.md`.
+
 ## [0.12.0] - 2026-10-31
 
 - Front-end overload guard: near-field signals with peak above -6 dBFS and

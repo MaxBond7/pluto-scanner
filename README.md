@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.12.0-22d3ee?style=for-the-badge" alt="version">
+  <img src="https://img.shields.io/badge/version-0.13.0-22d3ee?style=for-the-badge" alt="version">
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="python">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="windows">
   <img src="https://img.shields.io/badge/tests-95%20passed-4ade80?style=for-the-badge" alt="tests">
@@ -92,7 +92,7 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
 
 ### 1. Готовая Windows-сборка
 
-Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/pluto-scanner/releases/tag/v0.12.0) — portable ZIP, установщик и `SHA256SUMS.txt`.
+Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/pluto-scanner/releases/tag/v0.13.0) — portable ZIP, установщик и `SHA256SUMS.txt`.
 
 Собрать самому:
 
@@ -110,8 +110,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.12.0-portable.zip        архив
-dist\PlutoScanner-Setup-0.12.0.exe           установщик
+dist\PlutoScanner-0.13.0-portable.zip        архив
+dist\PlutoScanner-Setup-0.13.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -169,6 +169,7 @@ IQ (Pluto / симулятор / запись)
 | [PACKAGING](docs/PACKAGING.md) | сборка, ZIP, установщик, чистая Windows |
 | [SIGNATURES](docs/SIGNATURES.md) | библиотека сигнатур и источники |
 | [ML](docs/ML.md) | модель, признаки, синтетика, разметка записей |
+| [DOMAIN_GAP](docs/DOMAIN_GAP.md) | синтетика vs реальные записи |
 | [ML за 5 шагов](docs/ML_SIMPLE.md) | простая инструкция без терминала |
 | [DATASETS](docs/DATASETS.md) | внешние IQ-датасеты, лицензии и импорт |
 | [FIELD_TEST](docs/FIELD_TEST.md) | полевой тест: что взять и как записать |
@@ -180,7 +181,7 @@ IQ (Pluto / симулятор / запись)
 
 ## Статус и лицензия
 
-- Версия: **0.12.0**
+- Версия: **0.13.0**
 - Тесты: **95 passed** (`pytest`), симулятор и реальные Pluto+
 - Лицензия: **MIT** — см. [LICENSE](LICENSE); сторонние компоненты —
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
@@ -303,6 +304,7 @@ python -m pluto_scanner --device usb:1.6.5
 --train-ml                    обучить ML-модель на синтетике и выйти
 --ml-per-class N              синтетических блоков на класс (по умолчанию 60)
 --ml-epochs N                 эпох обучения (по умолчанию 600)
+--domain-gap                  построить отчёт синтетика vs реальные записи
 --version                     показать версию
 ```
 
