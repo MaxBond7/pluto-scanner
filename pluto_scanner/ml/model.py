@@ -11,7 +11,6 @@ import numpy as np
 
 from ..drone.features import DroneObservation
 from .features import FEATURE_NAMES, feature_vector
-from .synthetic import CLASSES, generate_dataset
 
 
 @dataclass
@@ -254,6 +253,8 @@ def train_synthetic(
     seed: int = 1,
     progress=None,
 ) -> tuple[SoftmaxModel, dict[str, Any]]:
+    from .synthetic import CLASSES, generate_dataset
+
     X, y, heuristics = generate_dataset(
         per_class=per_class, seed=seed, progress=progress
     )
@@ -269,6 +270,7 @@ def train_synthetic(
     )
     metrics["source"] = "synthetic"
     metrics["per_class_requested"] = per_class
+    metrics["total_blocks"] = len(y)
     metrics["heuristic_agreement"] = (
         sum(1 for a, b in zip(y, heuristics) if a == b) / max(1, len(y))
     )

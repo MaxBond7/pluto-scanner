@@ -54,6 +54,7 @@ from ..recordings import (
     list_recordings,
     load_info,
     new_recording_info,
+    set_label,
 )
 from ..scanner.compare import compare_background_files
 from ..scanner.controller import ScanController
@@ -276,7 +277,9 @@ class MainWindow(QMainWindow):
         self.signature_panel.setMinimumWidth(520)
         self.recording_panel = RecordingPanel(RECORDINGS_DIR)
         self.recording_panel.setMinimumWidth(520)
-        self.ml_panel = MLPanel(DATA_DIR / "ml_model.json")
+        self.ml_panel = MLPanel(
+            DATA_DIR / "ml_model.json", RECORDINGS_DIR
+        )
         self.ml_panel.setMinimumWidth(520)
         self.right_tabs = QTabWidget()
         self.right_tabs.addTab(self.contact_table, "Контакты")
@@ -330,6 +333,7 @@ class MainWindow(QMainWindow):
         )
         self.recording_panel.delete_requested.connect(self._delete_recording)
         self.recording_panel.refresh_requested.connect(self._refresh_recordings)
+        self.recording_panel.label_changed.connect(self._set_recording_label)
         self.ml_panel.model_changed.connect(self._on_ml_model_changed)
 
     def _initial_devices(self) -> None:
@@ -701,6 +705,27 @@ class MainWindow(QMainWindow):
     def _refresh_recordings(self) -> None:
         infos = list_recordings(RECORDINGS_DIR)
         self.recording_panel.set_recordings(infos)
+
+    def _set_recording_label(self, recording_id: str, label: str) -> None:
+        info = next(
+            (item for item in list_recordings(RECORDINGS_DIR)
+             if item.recording_id == recording_id),
+            None,
+        )
+        if info is None:
+            self._refresh_recordings()
+            return
+        try:
+            set_label(info, label)
+        except Exception as exc:
+            self.status_label.setText(f"Не удалось сохранить метку: {exc}")
+            self.status_label.setStyleSheet("color:#f87171;")
+            return
+        self._refresh_recordings()
+        self.ml_panel.refresh()
+        text = "без метки" if not label else label
+        self.status_label.setText(f"Метка записи: {text}")
+        self.status_label.setStyleSheet("color:#c4b5fd;")
 
     def _play_recording(self, recording_id: str) -> None:
         if self._recording:

@@ -8,6 +8,18 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.7.0] - 2026-10-31
+
+- Label IQ recordings with a drone class (`FHSS`, `TELEMETRY`,
+  `VIDEO_ANALOG`, `VIDEO_DIGITAL`, `WIFI`, `NARROW`) from the recording tab.
+- Train on labeled recordings with `--real-dir`, optional synthetic mixing,
+  block extraction and recording-level train/test split.
+- ML tab: "Обучить на записях", real/synthetic block counts and honest
+  no-holdout warning when there are too few recordings.
+- New tests for label persistence, real dataset building and training.
+- Recording analysis can disable the DC notch so a signal at the recording
+  centre is not erased.
+
 ## [0.6.0] - 2026-10-31
 
 - Offline ML baseline for the drone monitor: 12 IQ features, six classes,

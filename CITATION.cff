@@ -10,7 +10,7 @@ authors:
   - name: "Pluto Scanner contributors"
 type: software
 license: MIT
-version: 0.6.0
+version: 0.7.0
 date-released: "2026-10-31"
 keywords:
   - SDR

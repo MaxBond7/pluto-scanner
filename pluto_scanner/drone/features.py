@@ -337,6 +337,7 @@ def analyze_iq(
     analyzer: SpectrumAnalyzer | None = None,
     noise_floor_db: float | None = None,
     nfft: int = 4096,
+    notch_hz: float = 300e3,
 ) -> DroneObservation | None:
     """Measure one IQ block and classify what it contains.
 
@@ -362,7 +363,7 @@ def analyze_iq(
     # At 20 MS/s the LO/DC spur is much wider than in the 1 MS/s scanner.
     # Chunks overlap, so a real carrier sitting exactly on one LO is still
     # visible in the neighbouring chunk.
-    work = _notch_center(freqs, psd, center_hz, notch_hz=300e3)
+    work = _notch_center(freqs, psd, center_hz, notch_hz=notch_hz)
     # The 10th percentile stays on the noise side even when a broad signal
     # occupies most of a narrow chunk.  The controller supplies a long-term
     # baseline when even that is not enough (e.g. a full-band video link).

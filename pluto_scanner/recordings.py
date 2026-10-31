@@ -64,6 +64,7 @@ class RecordingInfo:
     complete: bool = False
     error: str = ""
     notes: str = ""
+    label: str = ""
     format: str = CF32
 
     @property
@@ -109,6 +110,7 @@ class RecordingInfo:
             "complete": bool(self.complete),
             "error": self.error,
             "notes": self.notes,
+            "label": self.label,
             "format": self.format,
         }
 
@@ -137,6 +139,7 @@ class RecordingInfo:
             complete=bool(data.get("complete")),
             error=str(data.get("error") or ""),
             notes=str(data.get("notes") or ""),
+            label=str(data.get("label") or ""),
             format=str(data.get("format") or CF32),
         )
 
@@ -211,6 +214,22 @@ def load_info(path: str | Path) -> RecordingInfo | None:
         return info
     except Exception:
         return None
+
+
+def save_info(info: RecordingInfo) -> None:
+    """Persist metadata without touching the IQ file."""
+    meta = Path(info.meta_path)
+    meta.parent.mkdir(parents=True, exist_ok=True)
+    meta.write_text(
+        json.dumps(info.to_dict(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def set_label(info: RecordingInfo, label: str) -> RecordingInfo:
+    info.label = str(label or "")
+    save_info(info)
+    return info
 
 
 def list_recordings(out_dir: str | Path = RECORDINGS_DIR) -> list[RecordingInfo]:

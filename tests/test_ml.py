@@ -6,13 +6,22 @@ from types import SimpleNamespace
 import numpy as np
 
 from pluto_scanner.ml.features import FEATURE_NAMES, feature_vector
+from pluto_scanner.ml.dataset import build_real_dataset, train_from_recordings
 from pluto_scanner.ml.model import (
     SoftmaxModel,
     evaluate,
     train_synthetic,
     train_softmax,
 )
-from pluto_scanner.ml.synthetic import CLASSES, generate_dataset
+from pluto_scanner.ml.synthetic import CLASSES, generate_dataset, make_iq
+from pluto_scanner.drone.features import NARROW, TELEMETRY
+from pluto_scanner.recordings import (
+    list_recordings,
+    load_info,
+    new_recording_info,
+    save_info,
+    set_label,
+)
 
 
 def _obs(**overrides):
@@ -95,3 +104,55 @@ def test_missing_or_bad_model_returns_none(tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text("{not json", encoding="utf-8")
     assert SoftmaxModel.load(bad) is None
+
+
+def test_recording_label_roundtrip(tmp_path):
+    info = new_recording_info(
+        tmp_path, device_id="test", device_name="test", device_kind="sim",
+        sample_rate=2.048e6, center_freq=2450e6,
+    )
+    info.path.write_bytes(b"\x00" * 8)
+    save_info(info)
+    loaded = load_info(info.meta_path)
+    assert loaded is not None
+    set_label(loaded, NARROW)
+    loaded_again = load_info(info.meta_path)
+    assert loaded_again is not None
+    assert loaded_again.label == NARROW
+
+
+def test_real_dataset_and_training(tmp_path):
+    rng = np.random.default_rng(7)
+    for label in (NARROW, TELEMETRY):
+        for index in range(2):
+            iq = make_iq(
+                label, fs=2.048e6, duration=0.45, rng=rng
+            )
+            info = new_recording_info(
+                tmp_path,
+                device_id=f"test-{label}-{index}",
+                device_name=f"test-{label}-{index}",
+                device_kind="sim",
+                sample_rate=2.048e6,
+                center_freq=2450e6,
+            )
+            iq.tofile(info.cf32_path)
+            info.samples = int(iq.size)
+            info.complete = True
+            info.label = label
+            save_info(info)
+
+    assert len(list_recordings(tmp_path)) == 4
+    data = build_real_dataset(tmp_path, block_s=0.2, max_blocks=2)
+    assert data.blocks > 0
+    assert set(data.y) == {NARROW, TELEMETRY}
+
+    model, metrics = train_from_recordings(
+        tmp_path / "model.json", tmp_path,
+        include_synthetic=False, epochs=120, block_s=0.2, max_blocks=2,
+    )
+    assert set(model.classes) == {NARROW, TELEMETRY}
+    assert 0.0 <= metrics["accuracy"] <= 1.0
+    assert metrics["real_recordings"] == 4
+    assert metrics["source"] == "real"
+    assert (tmp_path / "model.json").exists()

@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QComboBox,
     QDoubleSpinBox,
     QGroupBox,
     QHBoxLayout,
@@ -21,7 +22,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..config import format_freq
+from ..drone.features import CLASS_RU
 from ..recordings import RecordingInfo, estimated_bytes, format_size
+
+ML_LABEL_CLASSES = [
+    "FHSS", "TELEMETRY", "VIDEO_ANALOG", "VIDEO_DIGITAL", "WIFI", "NARROW",
+]
 
 
 class RecordingPanel(QWidget):
@@ -31,6 +38,7 @@ class RecordingPanel(QWidget):
     stop_playback_requested = Signal()
     delete_requested = Signal(str)
     refresh_requested = Signal()
+    label_changed = Signal(str, str)
 
     def __init__(self, recordings_dir: str | Path,
                  parent: QWidget | None = None) -> None:
@@ -137,6 +145,20 @@ class RecordingPanel(QWidget):
         self.summary.setStyleSheet("color:#8fa6c0; font-size:10px;")
         box_layout.addWidget(self.summary)
 
+        label_row = QHBoxLayout()
+        label_row.setSpacing(5)
+        self.label_combo = QComboBox()
+        self.label_combo.addItem("без метки", "")
+        for key in ML_LABEL_CLASSES:
+            self.label_combo.addItem(CLASS_RU.get(key, key), key)
+        self.label_btn = QPushButton("Сохранить метку")
+        self.label_btn.clicked.connect(self._apply_label)
+        label_row.addWidget(QLabel("Метка"))
+        label_row.addWidget(self.label_combo, 1)
+        label_row.addWidget(self.label_btn)
+        box_layout.addLayout(label_row)
+        self.table.itemSelectionChanged.connect(self._sync_label)
+
         actions = QHBoxLayout()
         actions.setSpacing(5)
         self.play_btn = QPushButton("Воспроизвести")
@@ -214,7 +236,10 @@ class RecordingPanel(QWidget):
                 item = QTableWidgetItem(value)
                 item.setData(Qt.ItemDataRole.UserRole, info.recording_id)
                 if column == 0:
-                    item.setToolTip(str(info.path))
+                    tip = str(info.path)
+                    if info.label:
+                        tip += f"\nМетка: {CLASS_RU.get(info.label, info.label)}"
+                    item.setToolTip(tip)
                 if column == 5:
                     if info.complete:
                         item.setForeground(QColor("#4ade80"))
@@ -229,6 +254,7 @@ class RecordingPanel(QWidget):
             f"Записей: {len(infos)} · всего {format_size(total_size)}"
         )
         self._update_buttons()
+        self._sync_label()
 
     def selected_id(self) -> str | None:
         rows = self.table.selectionModel().selectedRows()
@@ -258,6 +284,25 @@ class RecordingPanel(QWidget):
         can_play = info is not None and info.size_bytes > 0
         self.play_btn.setEnabled(can_play and not self._busy)
         self.delete_btn.setEnabled(info is not None and not self._busy)
+        self.label_btn.setEnabled(info is not None and not self._busy)
+        self.label_combo.setEnabled(info is not None and not self._busy)
+
+    # ------------------------------------------------------------------- label
+    def _sync_label(self) -> None:
+        info = self.selected_info()
+        value = info.label if info is not None else ""
+        index = self.label_combo.findData(value)
+        self.label_combo.blockSignals(True)
+        self.label_combo.setCurrentIndex(max(0, index))
+        self.label_combo.blockSignals(False)
+
+    def _apply_label(self) -> None:
+        info = self.selected_info()
+        if info is None:
+            return
+        self.label_changed.emit(
+            info.recording_id, str(self.label_combo.currentData() or "")
+        )
 
     # ------------------------------------------------------------------ record
     def _toggle_record(self) -> None:
