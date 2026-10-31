@@ -8,6 +8,18 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.8.0] - 2026-10-31
+
+- Import external IQ datasets into the local recording format:
+  SigMF (`.sigmf-meta` + `.sigmf-data`) and raw interleaved float32 `.dat`.
+- `python -m pluto_scanner.ml.import_dataset` with start/max seconds, centre
+  frequency, sample rate and optional morphology label.
+- Dataset catalogue with verified sizes, licences and fit for our six classes:
+  DroneDetect, DroneRFa, RadioML, WiSig, SigMF, SigIDWiki, RadioScanner.
+- No third-party dataset is bundled; licensing and huge sizes stay with the
+  original source.
+- Tests for SigMF and raw-IQ import.
+
 ## [0.7.0] - 2026-10-31
 
 - Label IQ recordings with a drone class (`FHSS`, `TELEMETRY`,

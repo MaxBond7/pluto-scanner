@@ -7,6 +7,7 @@ import numpy as np
 
 from pluto_scanner.ml.features import FEATURE_NAMES, feature_vector
 from pluto_scanner.ml.dataset import build_real_dataset, train_from_recordings
+from pluto_scanner.ml.importers import import_raw_iq, import_sigmf
 from pluto_scanner.ml.model import (
     SoftmaxModel,
     evaluate,
@@ -156,3 +157,47 @@ def test_real_dataset_and_training(tmp_path):
     assert metrics["real_recordings"] == 4
     assert metrics["source"] == "real"
     assert (tmp_path / "model.json").exists()
+
+
+def test_import_sigmf(tmp_path):
+    fs = 1.024e6
+    iq = (np.ones(4096, dtype=np.complex64)
+          * (0.1 + 0.05j)).astype(np.complex64)
+    stem = tmp_path / "sample"
+    stem.with_suffix(".sigmf-data").write_bytes(iq.tobytes())
+    meta = {
+        "global": {
+            "core:datatype": "cf32_le",
+            "core:sample_rate": fs,
+            "core:version": "1.0.0",
+        },
+        "captures": [{"core:sample_start": 0,
+                      "core:frequency": 2450e6}],
+        "annotations": [{"core:sample_start": 0,
+                         "core:sample_count": iq.size,
+                         "core:label": "WIFI"}],
+    }
+    stem.with_suffix(".sigmf-meta").write_text(
+        __import__("json").dumps(meta), encoding="utf-8"
+    )
+    out = tmp_path / "out"
+    result = import_sigmf(stem.with_suffix(".sigmf-meta"), out)
+    assert result.info.label == "WIFI"
+    assert result.info.sample_rate == fs
+    assert result.info.samples == iq.size
+    assert result.info.path.exists()
+
+
+def test_import_raw_float32_iq(tmp_path):
+    iq = (np.ones(2048, dtype=np.complex64)
+          * (0.2 - 0.1j)).astype(np.complex64)
+    src = tmp_path / "sample.dat"
+    src.write_bytes(iq.view(np.float32).tobytes())
+    out = tmp_path / "out"
+    result = import_raw_iq(
+        src, out, sample_rate=2.048e6, center_freq=2437.5e6,
+        label="NARROW", max_seconds=1.0,
+    )
+    assert result.info.label == "NARROW"
+    assert result.info.samples == iq.size
+    assert result.info.center_freq == 2437.5e6
