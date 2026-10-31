@@ -8,6 +8,14 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.11.0] - 2026-10-31
+
+- Band scanner pause/resume: the current step is re-armed on resume, and
+  timeouts do not fire while paused.
+- Scanner CSV export from the live results table.
+- Pause button state and status text in the scanner panel.
+- Verified pause, resume and CSV export on the simulator.
+
 ## [0.10.0] - 2026-10-31
 
 - Active learning: event card action "ML ошибся? Указать класс" saves the

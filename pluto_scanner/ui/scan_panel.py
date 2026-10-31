@@ -6,6 +6,7 @@ That separation keeps the UI responsive and makes the panel usable in tests.
 """
 from __future__ import annotations
 
+import csv
 import math
 import time
 from pathlib import Path
@@ -38,11 +39,15 @@ class ScanPanel(QWidget):
 
     start_requested = Signal()
     stop_requested = Signal()
+    pause_requested = Signal()
+    resume_requested = Signal()
+    export_requested = Signal()
     compare_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._scanning = False
+        self._paused = False
         self._sample_rate = 1.024e6
         self._scan_started = 0.0
         self._last_bundle: str | None = None
@@ -111,10 +116,18 @@ class ScanPanel(QWidget):
         self.compare_btn = QPushButton("Сравнить с фоном…")
         self.compare_btn.clicked.connect(self.compare_requested)
         self.compare_btn.setEnabled(False)
+        self.pause_btn = QPushButton("Пауза")
+        self.pause_btn.setEnabled(False)
+        self.pause_btn.clicked.connect(self._toggle_pause)
+        self.export_btn = QPushButton("Экспорт CSV…")
+        self.export_btn.setEnabled(False)
+        self.export_btn.clicked.connect(self.export_requested)
         self.folder_btn = QPushButton("Папка сканов")
         self.folder_btn.clicked.connect(self._open_folder)
         actions.addWidget(self.start_btn, 1)
+        actions.addWidget(self.pause_btn)
         actions.addWidget(self.compare_btn)
+        actions.addWidget(self.export_btn)
         actions.addWidget(self.folder_btn)
         root.addLayout(actions)
 
@@ -197,11 +210,15 @@ class ScanPanel(QWidget):
 
     def begin_scan(self, total: int, start_hz: float, end_hz: float) -> None:
         self._scanning = True
+        self._paused = False
         self._scan_started = time.monotonic()
         self._rows = 0
         self.table.setRowCount(0)
         self.start_btn.setText("Остановить")
         self.start_btn.setEnabled(True)
+        self.pause_btn.setText("Пауза")
+        self.pause_btn.setEnabled(True)
+        self.export_btn.setEnabled(False)
         for widget in (
             self.start_spin, self.end_spin, self.step_spin,
             self.preset_btn, self.compare_btn,
@@ -246,11 +263,13 @@ class ScanPanel(QWidget):
         center = float(record.get("center_hz", 0.0))
         for peak in peaks:
             self._append_peak(peak, center)
+        self.export_btn.setEnabled(self.table.rowCount() > 0)
         if peaks and self.status.styleSheet().find("#22d3ee") < 0:
             self.status.setStyleSheet("color:#22d3ee; font-size:11px;")
 
     def finish_scan(self, result: dict, *, stopped: bool = False) -> None:
         self._scanning = False
+        self._paused = False
         path = str(result.get("path", ""))
         self._last_bundle = path or None
         planned = int(result.get("planned_total", 0))
@@ -260,6 +279,9 @@ class ScanPanel(QWidget):
         self.progress.setValue(completed)
         self.start_btn.setText("Старт сканирования")
         self.start_btn.setEnabled(True)
+        self.pause_btn.setText("Пауза")
+        self.pause_btn.setEnabled(False)
+        self.export_btn.setEnabled(self.table.rowCount() > 0)
         for widget in (
             self.start_spin, self.end_spin, self.step_spin,
             self.preset_btn,
@@ -310,8 +332,12 @@ class ScanPanel(QWidget):
 
     def fail(self, message: str) -> None:
         self._scanning = False
+        self._paused = False
         self.start_btn.setText("Старт сканирования")
         self.start_btn.setEnabled(True)
+        self.pause_btn.setText("Пауза")
+        self.pause_btn.setEnabled(False)
+        self.export_btn.setEnabled(self.table.rowCount() > 0)
         for widget in (
             self.start_spin, self.end_spin, self.step_spin,
             self.preset_btn,
@@ -322,7 +348,41 @@ class ScanPanel(QWidget):
         self.status.setText(message)
         self.graph.mark_finished(None)
 
+    def set_paused(self, paused: bool) -> None:
+        self._paused = bool(paused)
+        self.pause_btn.setText("Продолжить" if paused else "Пауза")
+        if paused:
+            self.status.setStyleSheet("color:#facc15; font-size:11px;")
+            self.status.setText("Пауза. Нажмите «Продолжить».")
+        elif self._scanning:
+            self.status.setStyleSheet("color:#22d3ee; font-size:11px;")
+            self.status.setText("Сканирование продолжается…")
+
+    def export_csv(self, path: str | Path) -> int:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8-sig", newline="") as fh:
+            writer = csv.writer(fh, delimiter=";")
+            writer.writerow([
+                "freq_hz", "level_db", "snr_db", "type", "bw_hz", "step"
+            ])
+            for row in range(self.table.rowCount()):
+                values = []
+                for column in range(6):
+                    item = self.table.item(row, column)
+                    values.append(item.text() if item else "")
+                writer.writerow(values)
+        return self.table.rowCount()
+
     # ----------------------------------------------------------------- private
+    def _toggle_pause(self) -> None:
+        if not self._scanning:
+            return
+        if self._paused:
+            self.resume_requested.emit()
+        else:
+            self.pause_requested.emit()
+
     def _toggle(self) -> None:
         if self._scanning:
             self.stop_requested.emit()

@@ -324,6 +324,9 @@ class MainWindow(QMainWindow):
         self.waterfall.frequency_clicked.connect(self._on_frequency_clicked)
         self.scan_panel.start_requested.connect(self._start_scan)
         self.scan_panel.stop_requested.connect(self._stop_scan)
+        self.scan_panel.pause_requested.connect(self._pause_scan)
+        self.scan_panel.resume_requested.connect(self._resume_scan)
+        self.scan_panel.export_requested.connect(self._export_scan)
         self.scan_panel.compare_requested.connect(self._compare_scan)
         self.drone_panel.start_requested.connect(self._start_drone)
         self.drone_panel.stop_requested.connect(self._stop_drone)
@@ -1240,6 +1243,7 @@ class MainWindow(QMainWindow):
         controller.stopped.connect(self._on_scan_stopped)
         controller.failed.connect(self._on_scan_failed)
         controller.compare_ready.connect(self._on_scan_compare)
+        controller.pause_changed.connect(self.scan_panel.set_paused)
 
         self._scan_controller = controller
         self._scanning = True
@@ -1263,6 +1267,42 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Останавливаю сканирование…")
         self.scan_panel.status.setText("Останавливаю сканирование…")
         self._scan_controller.stop()
+
+    def _pause_scan(self) -> None:
+        if self._scan_controller is None:
+            return
+        self._scan_controller.pause()
+        self.status_label.setText("Сканирование приостановлено.")
+        self.status_label.setStyleSheet("color:#facc15;")
+
+    def _resume_scan(self) -> None:
+        if self._scan_controller is None:
+            return
+        self._scan_controller.resume()
+        self.status_label.setText("Сканирование продолжается.")
+        self.status_label.setStyleSheet("color:#22d3ee;")
+
+    def _export_scan(self) -> None:
+        if self.scan_panel.table.rowCount() == 0:
+            self.status_label.setText("Нет строк для экспорта.")
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Экспорт результатов скана",
+            str(Path("scan_logs") / "scan_export.csv"),
+            "CSV (*.csv)",
+        )
+        if not path:
+            return
+        try:
+            rows = self.scan_panel.export_csv(path)
+        except Exception as exc:
+            self.status_label.setText(f"Экспорт не удался: {exc}")
+            self.status_label.setStyleSheet("color:#f87171;")
+            return
+        self.status_label.setText(f"Экспортировано строк: {rows}")
+        self.status_label.setStyleSheet("color:#4ade80;")
 
     def _on_scan_started(self, total: int, start: float, end: float) -> None:
         self.scan_panel.begin_scan(total, start, end)

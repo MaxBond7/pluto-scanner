@@ -42,6 +42,7 @@ class ScanController(QObject):
     stopped = Signal(object, str)              # result dict, bundle path
     failed = Signal(str)
     compare_ready = Signal(object, str)        # report dict, report path
+    pause_changed = Signal(bool)
 
     def __init__(
         self,
@@ -71,6 +72,7 @@ class ScanController(QObject):
         self.auto_compare = bool(auto_compare)
 
         self._running = False
+        self._paused = False
         self._centers = np.empty(0, dtype=np.float64)
         self._index = 0
         self._current_center = 0.0
@@ -91,6 +93,10 @@ class ScanController(QObject):
     @property
     def running(self) -> bool:
         return self._running
+
+    @property
+    def paused(self) -> bool:
+        return self._paused
 
     @property
     def total(self) -> int:
@@ -159,6 +165,7 @@ class ScanController(QObject):
             return False
 
         self._running = True
+        self._paused = False
         self._index = 0
         self._consecutive_missed = 0
         self._started_at = time.monotonic()
@@ -194,7 +201,7 @@ class ScanController(QObject):
         self._timer.start()
 
     def _on_frame(self, device_id: str, frame) -> None:
-        if not self._running or self._recorder is None:
+        if not self._running or self._paused or self._recorder is None:
             return
         if device_id != self.session.config.device_id:
             return
@@ -257,7 +264,7 @@ class ScanController(QObject):
             self._begin_step()
 
     def _check_timeout(self) -> None:
-        if not self._running or self._recorder is None:
+        if not self._running or self._paused or self._recorder is None:
             return
         elapsed = time.monotonic() - self._step_started
         if elapsed < self.step_timeout_s:
@@ -286,6 +293,26 @@ class ScanController(QObject):
             self._begin_step()
 
     # ------------------------------------------------------------------ stop
+    def pause(self) -> None:
+        if not self._running or self._paused:
+            return
+        self._paused = True
+        self._timer.stop()
+        self.pause_changed.emit(True)
+
+    def resume(self) -> None:
+        if not self._running or not self._paused:
+            return
+        self._paused = False
+        self._frames = []
+        self._step_started = time.monotonic()
+        try:
+            self.session.set_center_freq(self._current_center)
+        except Exception:
+            pass
+        self._timer.start()
+        self.pause_changed.emit(False)
+
     def stop(self) -> None:
         if not self._running:
             return
@@ -295,6 +322,7 @@ class ScanController(QObject):
         if not self._running:
             return
         self._running = False
+        self._paused = False
         self._timer.stop()
         try:
             self.session.spectrum_updated.disconnect(self._on_frame)
@@ -358,6 +386,7 @@ class ScanController(QObject):
 
         self._restore_device()
         result["restore_center_hz"] = self._original_center
+        self.pause_changed.emit(False)
 
         if failure:
             self.failed.emit(f"{failure} Результат: {path}")
