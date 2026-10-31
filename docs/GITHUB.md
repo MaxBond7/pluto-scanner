@@ -72,8 +72,8 @@ git push origin v0.5.0
 - [x] Лицензия MIT, CONTRIBUTING, SECURITY, CITATION.
 - [x] GitHub Actions для тестов.
 - [x] Topics и описание репозитория.
+- [x] GitHub Release `v0.5.0` с ZIP, Setup и `SHA256SUMS.txt`.
 - [ ] Social preview 1280×640 в Settings → General.
-- [ ] GitHub Release с ZIP, Setup и `SHA256SUMS.txt`.
 - [ ] Включить private vulnerability reporting.
 - [ ] Dependabot alerts.
 
@@ -84,7 +84,8 @@ git push origin v0.5.0
 - [x] в истории нет токенов, паролей и приватных ключей;
 - [x] `user_data/`, логи и IQ-клипы не попали в Git;
 - [x] личные пути и серийники не добавлены в документацию;
-- [x] лицензии сторонних компонентов описаны в `THIRD_PARTY_NOTICES.md`.
+- [x] лицензии сторонних компонентов описаны в `THIRD_PARTY_NOTICES.md`;
+- [x] публичный релиз `v0.5.0` с проверенными артефактами.
 
 Если секрет всё же попал в историю, удалить файл новым коммитом
 недостаточно: нужен `git filter-repo` или новый чистый репозиторий.

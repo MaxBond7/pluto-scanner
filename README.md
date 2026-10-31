@@ -85,6 +85,10 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
 
 ### 1. Готовая Windows-сборка
 
+Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/pluto-scanner/releases/tag/v0.5.0) — portable ZIP, установщик и `SHA256SUMS.txt`.
+
+Собрать самому:
+
 ```powershell
 git clone https://github.com/MaxBond7/pluto-scanner.git
 cd pluto-scanner
