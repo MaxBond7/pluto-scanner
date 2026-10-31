@@ -169,6 +169,7 @@ IQ (Pluto / симулятор / запись)
 | [PACKAGING](docs/PACKAGING.md) | сборка, ZIP, установщик, чистая Windows |
 | [SIGNATURES](docs/SIGNATURES.md) | библиотека сигнатур и источники |
 | [ML](docs/ML.md) | модель, признаки, синтетика, разметка записей |
+| [MODEL_CARD](docs/MODEL_CARD.md) | происхождение, метрики и ограничения модели |
 | [DOMAIN_GAP](docs/DOMAIN_GAP.md) | синтетика vs реальные записи |
 | [ML за 5 шагов](docs/ML_SIMPLE.md) | простая инструкция без терминала |
 | [DATASETS](docs/DATASETS.md) | внешние IQ-датасеты, лицензии и импорт |
