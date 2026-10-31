@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.5.0-22d3ee?style=for-the-badge" alt="version">
+  <img src="https://img.shields.io/badge/version-0.6.0-22d3ee?style=for-the-badge" alt="version">
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="python">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="windows">
-  <img src="https://img.shields.io/badge/tests-84%20passed-4ade80?style=for-the-badge" alt="tests">
+  <img src="https://img.shields.io/badge/tests-89%20passed-4ade80?style=for-the-badge" alt="tests">
   <img src="https://img.shields.io/badge/license-MIT-3da639?style=for-the-badge" alt="license">
 </p>
 
@@ -54,6 +54,7 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
 | 🧠 | **Библиотека сигнатур** | SQLite, seed-каталог, top-3, импорт/экспорт, открытые ссылки |
 | 🎯 | **Белый список и фон** | подавление известных сигналов, профили шума по устройству/полосе/усилению |
 | 💾 | **Длинная запись IQ** | cf32 + JSON, оценка размера, воспроизведение через DSP без платы |
+| 🤖 | **ML-гипотеза** | офлайн softmax на признаках IQ, top-3, вторая гипотеза к эвристике |
 | 🪟 | **Windows-сборка** | portable ZIP, установщик Inno Setup, SHA256, версия и логи |
 
 ## Скриншоты
@@ -81,11 +82,16 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
   </tr>
 </table>
 
+<p align="center">
+  <img src="presentation/ui_ml.png" alt="ML-классификатор и метрики" width="78%"><br>
+  <sub>ML-классификатор: офлайн-обучение и вторая гипотеза</sub>
+</p>
+
 ## Быстрый старт
 
 ### 1. Готовая Windows-сборка
 
-Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/pluto-scanner/releases/tag/v0.5.0) — portable ZIP, установщик и `SHA256SUMS.txt`.
+Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/pluto-scanner/releases/tag/v0.6.0) — portable ZIP, установщик и `SHA256SUMS.txt`.
 
 Собрать самому:
 
@@ -103,8 +109,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.5.0-portable.zip        архив
-dist\PlutoScanner-Setup-0.5.0.exe           установщик
+dist\PlutoScanner-0.6.0-portable.zip        архив
+dist\PlutoScanner-Setup-0.6.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -151,8 +157,8 @@ IQ (Pluto / симулятор / запись)
 - **Второй RX / 2R2T** зависит от прошивки; текущая плата отдаёт 1R1T.
   U-Boot-трюк проверен и опасен — см. [PLUTO_2R2T](docs/PLUTO_2R2T.md).
 - **KerberosSDR / пеленг** требует 4 антенны, кабели и калибровку.
-- **ML-классификатор** — следующая тема; обучение будет офлайн, на синтетике
-  и размеченных записях, без веба и телефона.
+- **ML-классификатор** — офлайн-baseline на синтетике; реальные размеченные
+  записи — следующий этап. Без веба и телефона.
 
 ## Документация
 
@@ -161,6 +167,7 @@ IQ (Pluto / симулятор / запись)
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | слои, потоки, данные, режимы |
 | [PACKAGING](docs/PACKAGING.md) | сборка, ZIP, установщик, чистая Windows |
 | [SIGNATURES](docs/SIGNATURES.md) | библиотека сигнатур и источники |
+| [ML](docs/ML.md) | модель, признаки, синтетика и ограничения |
 | [PLUTO_2R2T](docs/PLUTO_2R2T.md) | второй RX, 2R2T, риски и восстановление |
 | [HARDWARE](docs/HARDWARE.md) | что есть, чего не хватает, ограничения |
 | [ROADMAP](docs/ROADMAP.md) | что сделано и что дальше |
@@ -169,8 +176,8 @@ IQ (Pluto / симулятор / запись)
 
 ## Статус и лицензия
 
-- Версия: **0.5.0**
-- Тесты: **84 passed** (`pytest`), симулятор и реальные Pluto+
+- Версия: **0.6.0**
+- Тесты: **89 passed** (`pytest`), симулятор и реальные Pluto+
 - Лицензия: **MIT** — см. [LICENSE](LICENSE); сторонние компоненты —
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Репозиторий открыт: <https://github.com/MaxBond7/pluto-scanner>
@@ -289,6 +296,9 @@ python -m pluto_scanner --device usb:1.6.5
 --screenshot-after-record PNG сохранить экран после записи
 --play FILE                   открыть .cf32-запись для воспроизведения
 --rx-info                     показать, сколько RX-каналов отдаёт прошивка
+--train-ml                    обучить ML-модель на синтетике и выйти
+--ml-per-class N              синтетических блоков на класс (по умолчанию 60)
+--ml-epochs N                 эпох обучения (по умолчанию 600)
 --version                     показать версию
 ```
 
@@ -623,7 +633,7 @@ IQ (Pluto / симулятор)
 .\.venv\Scripts\python -m pytest
 ```
 
-Покрыты: спектр и dBFS-нормировка, калибровка/детектор, трекер контактов, классификатор, демодуляция, хранилище известных частот, симулятор, конфигурация/диапазоны, а также сканер: детектор пиков шага, запись/чтение JSON-бандла, сравнение фонов и совместимость, дрон-монитор: нарезка полос, признаки IQ, классификация, трекер событий, IQ-клипы и JSON-журнал, библиотека сигнатур: seed, SQLite, импорт/экспорт и матчинг, а также белый список и профили фона, длинная запись IQ и воспроизведение. Сейчас это 84 теста.
+Покрыты: спектр и dBFS-нормировка, калибровка/детектор, трекер контактов, классификатор, демодуляция, хранилище известных частот, симулятор, конфигурация/диапазоны, а также сканер: детектор пиков шага, запись/чтение JSON-бандла, сравнение фонов и совместимость, дрон-монитор: нарезка полос, признаки IQ, классификация, трекер событий, IQ-клипы и JSON-журнал, библиотека сигнатур: seed, SQLite, импорт/экспорт и матчинг, а также белый список и профили фона, длинная запись IQ и воспроизведение, ML-признаки и softmax-модель. Сейчас это 89 тестов.
 
 Проверено на реальных Pluto+ (Rev.C): захват IQ, спектр и водопад на 433.92 МГц, 2.437 ГГц и 1.09 ГГц, реальный свип 433.0–434.2 МГц (2 шага, 0 пропусков, 3 пика), сохранение `background.json`, LO на 5.8 ГГц и приём на 20.48 MS/s, дрон-монитор 2.4 + 5.8 ГГц (10–32 события за 8–10 с; 20-МГц Wi-Fi в тесте ушёл в класс `WIFI`, но ложные срабатывания на Wi-Fi/Bluetooth возможны).
 
@@ -638,6 +648,7 @@ NEW/
     dsp/           spectrum, detector, tracker, classifier, demod, audio
     scanner/       peaks, recorder, compare, controller (свип диапазона)
     drone/         bands, features, tracker, recorder, report, controller, manager
+    ml/            features, synthetic IQ, softmax model, training CLI
     signatures/    models, seed, SQLite store, matcher
     ui/            главное окно, спектр, водопад, контакты, VFO, вкладки сканера, дронов и сигнатур
     engine.py      IQ -> DSP -> контакты -> аудио

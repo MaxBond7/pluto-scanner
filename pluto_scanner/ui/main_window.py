@@ -46,7 +46,7 @@ from ..drone.manager import DroneMonitorManager
 from ..drone.whitelist import DroneWhitelist
 from ..engine import DeviceSession
 from ..model import Contact, DeviceConfig, SpectrumFrame, VFOConfig
-from ..paths import ICON_PATH, RECORDINGS_DIR
+from ..paths import DATA_DIR, ICON_PATH, RECORDINGS_DIR
 from ..recordings import (
     IqRecorder,
     delete_recording,
@@ -64,6 +64,7 @@ from .contact_table import ContactTable
 from .device_panel import DevicePanel
 from .drone_panel import DronePanel
 from .event_dialog import DroneEventDialog
+from .ml_panel import MLPanel
 from .spectrum_view import SpectrumView
 from .vfo_panel import VFOPanel
 from .scan_panel import ScanPanel
@@ -275,11 +276,14 @@ class MainWindow(QMainWindow):
         self.signature_panel.setMinimumWidth(520)
         self.recording_panel = RecordingPanel(RECORDINGS_DIR)
         self.recording_panel.setMinimumWidth(520)
+        self.ml_panel = MLPanel(DATA_DIR / "ml_model.json")
+        self.ml_panel.setMinimumWidth(520)
         self.right_tabs = QTabWidget()
         self.right_tabs.addTab(self.contact_table, "Контакты")
-        self.right_tabs.addTab(self.scan_panel, "Сканер диапазона")
-        self.right_tabs.addTab(self.drone_panel, "Дрон-монитор")
+        self.right_tabs.addTab(self.scan_panel, "Сканер")
+        self.right_tabs.addTab(self.drone_panel, "Дроны")
         self.right_tabs.addTab(self.recording_panel, "Запись IQ")
+        self.right_tabs.addTab(self.ml_panel, "ML")
         self.right_tabs.addTab(self.signature_panel, "Сигнатуры")
         self.splitter.addWidget(self.right_tabs)
         self.splitter.setSizes([350, 860, 640])
@@ -326,6 +330,7 @@ class MainWindow(QMainWindow):
         )
         self.recording_panel.delete_requested.connect(self._delete_recording)
         self.recording_panel.refresh_requested.connect(self._refresh_recordings)
+        self.ml_panel.model_changed.connect(self._on_ml_model_changed)
 
     def _initial_devices(self) -> None:
         devices = list(getattr(self.args, "device", []) or [])
@@ -596,6 +601,14 @@ class MainWindow(QMainWindow):
         )
 
     # ------------------------------------------------------------------ recording
+    def _on_ml_model_changed(self, model) -> None:
+        if self._drone_manager is not None:
+            self._drone_manager.set_ml_model(model)
+        self.status_label.setText(
+            "ML-модель обновлена: новые события получат вторую гипотезу."
+        )
+        self.status_label.setStyleSheet("color:#c4b5fd;")
+
     def _on_iq_record(self, _device_id: str, block) -> None:
         if self._recording:
             self.recorder.write(block)

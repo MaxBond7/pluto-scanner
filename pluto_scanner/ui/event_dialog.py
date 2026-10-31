@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from ..config import format_bw, format_freq
 from ..drone.report import export_event_bundle
 from ..drone.tracker import DroneEvent
+from ..drone.features import CLASS_RU
 from ..signatures import SignatureStore, match_event
 from ..drone.whitelist import DroneWhitelist
 
@@ -71,6 +72,14 @@ class DroneEventDialog(QDialog):
             else "color:#64748b; font-size:11px;"
         )
         root.addWidget(self.whitelist_label)
+
+        self.ml_label = QLabel(self._ml_text())
+        self.ml_label.setWordWrap(True)
+        self.ml_label.setStyleSheet(
+            "color:#c4b5fd; font-size:11px;" if event.ml
+            else "color:#64748b; font-size:11px;"
+        )
+        root.addWidget(self.ml_label)
 
         grid = QGridLayout()
         grid.setHorizontalSpacing(18)
@@ -190,6 +199,30 @@ class DroneEventDialog(QDialog):
         root.addLayout(buttons)
 
     # ------------------------------------------------------------------ helpers
+    def _ml_text(self) -> str:
+        data = self.drone_event.ml or {}
+        if not data:
+            return "ML: модель не обучена — доступна только эвристика."
+        label = str(data.get("label") or "")
+        confidence = float(data.get("confidence") or 0.0)
+        ru = CLASS_RU.get(label, label or "неизвестно")
+        alternatives = data.get("alternatives") or []
+        extra = []
+        for item in alternatives[1:3]:
+            try:
+                key, prob = item
+            except Exception:
+                continue
+            extra.append(
+                f"{CLASS_RU.get(str(key), str(key))} "
+                f"{float(prob) * 100:.0f}%"
+            )
+        suffix = f" · ещё: {', '.join(extra)}" if extra else ""
+        return (
+            f"ML-гипотеза: {ru} {confidence * 100:.0f}%{suffix} "
+            "(обучение на синтетике; не заменяет эвристику)."
+        )
+
     def _whitelist_text(self) -> str:
         if self.drone_event.whitelisted:
             return (

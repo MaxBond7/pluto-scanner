@@ -39,6 +39,7 @@ class DroneEvent:
     clip_center_hz: float = 0.0
     whitelisted: bool = False
     whitelist_name: str = ""
+    ml: dict[str, Any] = field(default_factory=dict)
 
     @property
     def duration_s(self) -> float:
@@ -78,6 +79,7 @@ class DroneEvent:
             "clip_center_hz": round(float(self.clip_center_hz), 1),
             "whitelisted": bool(self.whitelisted),
             "whitelist_name": self.whitelist_name,
+            "ml": dict(self.ml),
         }
         if include_spectrum:
             payload["spectrum_freqs_hz"] = list(self.spectrum_freqs_hz)
@@ -144,6 +146,8 @@ class DroneTracker:
         match.bw_hz = max(match.bw_hz, obs.occupied_bw_hz)
         match.confidence = max(match.confidence, obs.confidence)
         match.drone_like = match.drone_like or obs.drone_like
+        if obs.extra.get("ml"):
+            match.ml = dict(obs.extra["ml"])
         match.active = True
         if obs.device_id not in match.device_ids:
             match.device_ids.append(obs.device_id)

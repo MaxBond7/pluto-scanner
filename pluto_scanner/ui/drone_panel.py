@@ -432,10 +432,19 @@ class DronePanel(QWidget):
             item.setText(text)
             item.setData(Qt.ItemDataRole.UserRole, event.event_id)
             item.setForeground(color)
+            tips = []
             if event.whitelisted:
-                item.setToolTip(
+                tips.append(
                     f"В белом списке: {event.whitelist_name or 'да'}"
                 )
+            if event.ml:
+                tips.append(
+                    "ML: "
+                    f"{event.ml.get('label', '?')} "
+                    f"{float(event.ml.get('confidence', 0.0)) * 100:.0f}%"
+                )
+            if tips:
+                item.setToolTip("\n".join(tips))
             if column in (5, 6, 7, 8):
                 item.setTextAlignment(
                     Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter

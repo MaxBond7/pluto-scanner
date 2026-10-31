@@ -8,6 +8,8 @@ from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from ..ml.model import SoftmaxModel
+from ..paths import DATA_DIR
 from ..scanner.recorder import ranges_overlap
 from .background import DroneBackgroundStore
 from .bands import DroneBand, MonitorChunk, chunks_for_bands
@@ -53,6 +55,9 @@ class DroneMonitorManager(QObject):
         self._clip_count = 0
         self._whitelist: DroneWhitelist | None = None
         self._background_store: DroneBackgroundStore | None = None
+        self._ml_model: SoftmaxModel | None = SoftmaxModel.load(
+            DATA_DIR / "ml_model.json"
+        )
         self._expire = QTimer(self)
         self._expire.setInterval(2000)
         self._expire.timeout.connect(self._expire_events)
@@ -69,6 +74,18 @@ class DroneMonitorManager(QObject):
 
     def summary(self) -> dict[str, Any]:
         return self._tracker.summary()
+
+    # --------------------------------------------------------------------- ML
+    def set_ml_model(self, model: SoftmaxModel | None) -> None:
+        self._ml_model = model
+
+    def reload_ml_model(self) -> SoftmaxModel | None:
+        self._ml_model = SoftmaxModel.load(DATA_DIR / "ml_model.json")
+        return self._ml_model
+
+    @property
+    def has_ml_model(self) -> bool:
+        return self._ml_model is not None
 
     # ------------------------------------------------------------------ start
     def start(
@@ -192,6 +209,11 @@ class DroneMonitorManager(QObject):
     def _on_observation(self, obs: DroneObservation) -> None:
         if not self._running:
             return
+        if self._ml_model is not None and obs.class_key != "QUIET":
+            try:
+                obs.extra["ml"] = self._ml_model.predict_observation(obs).to_dict()
+            except Exception as exc:
+                log.debug("ML prediction failed: %s", exc)
         self.observation.emit(obs)
         event, is_new = self._tracker.update(obs)
         if event is None:

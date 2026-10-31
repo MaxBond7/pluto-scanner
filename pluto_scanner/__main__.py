@@ -94,6 +94,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="open a recorded .cf32 IQ file for playback")
     p.add_argument("--rx-info", action="store_true",
                    help="print Pluto RX channel capability (1R1T/2R2T) and exit")
+    p.add_argument("--train-ml", action="store_true",
+                   help="train the offline ML model on synthetic IQ and exit")
+    p.add_argument("--ml-per-class", type=int, default=60,
+                   help="synthetic training blocks per class (default 60)")
+    p.add_argument("--ml-epochs", type=int, default=600,
+                   help="ML training epochs (default 600)")
     p.add_argument("--version", action="version",
                    version=f"%(prog)s {__version__}")
     p.add_argument("--log-level", default="INFO",
@@ -152,6 +158,14 @@ def main(argv: list[str] | None = None) -> int:
             flush=True,
         )
         return 0
+
+    if args.train_ml:
+        from .ml.train import main as train_main
+
+        return train_main([
+            "--per-class", str(args.ml_per_class),
+            "--epochs", str(args.ml_epochs),
+        ])
 
     app = QApplication([sys.argv[0]])
     app.setApplicationName(APP_NAME)

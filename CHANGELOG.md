@@ -8,6 +8,19 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.6.0] - 2026-10-31
+
+- Offline ML baseline for the drone monitor: 12 IQ features, six classes,
+  NumPy softmax regression, JSON persistence.
+- Synthetic IQ generator for FHSS, telemetry, analog/digital video, Wi-Fi and
+  narrowband activity.
+- `python -m pluto_scanner.ml.train` CLI and an in-app ML tab with training
+  progress, holdout accuracy and per-class precision/recall.
+- ML top-3 hypothesis in the event card and `ml` block in event JSON; the
+  heuristic classifier remains the primary label.
+- Tests for features, synthetic data, softmax training, persistence and
+  missing/broken models.
+
 ## [0.5.0] - 2026-10-31
 
 - One-command release build: tests, PyInstaller, portable ZIP, SHA256 and an
