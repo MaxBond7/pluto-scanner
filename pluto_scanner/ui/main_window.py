@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .. import __version__
 from ..config import (
     APP_NAME,
     BANDS,
@@ -133,7 +134,7 @@ class MainWindow(QMainWindow):
         self._pre_drone_frame: SpectrumFrame | None = None
         self._await_center: float | None = None
 
-        self.setWindowTitle(f"{APP_NAME} — software VFO / new contacts")
+        self.setWindowTitle(f"{APP_NAME} {__version__} — software VFO / new contacts")
         self.resize(1500, 950)
         self.setMinimumSize(1120, 720)
 
@@ -590,7 +591,7 @@ class MainWindow(QMainWindow):
             session.config.sample_rate,
         )
         self.setWindowTitle(
-            f"{APP_NAME} — {session.config.name} — "
+            f"{APP_NAME} {__version__} — {session.config.name} — "
             f"{format_freq(session.config.center_freq)}"
         )
 

@@ -5,14 +5,16 @@ import argparse
 import json
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from . import __version__
 from .config import APP_NAME, DEFAULT_CENTER_FREQ, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE
-from .paths import ICON_PATH
+from .paths import DATA_HOME, ICON_PATH, ensure_data_home
 from .ui.main_window import MainWindow
 from .ui.theme import apply_theme
 
@@ -92,6 +94,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="open a recorded .cf32 IQ file for playback")
     p.add_argument("--rx-info", action="store_true",
                    help="print Pluto RX channel capability (1R1T/2R2T) and exit")
+    p.add_argument("--version", action="version",
+                   version=f"%(prog)s {__version__}")
     p.add_argument("--log-level", default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p
@@ -108,6 +112,20 @@ def main(argv: list[str] | None = None) -> int:
         level=getattr(logging, args.log_level),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    try:
+        ensure_data_home()
+        handler = RotatingFileHandler(
+            DATA_HOME / "pluto_scanner.log",
+            maxBytes=1_000_000,
+            backupCount=3,
+            encoding="utf-8",
+        )
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s %(levelname)s %(name)s: %(message)s"
+        ))
+        logging.getLogger().addHandler(handler)
+    except Exception:
+        pass
 
     if args.rx_info:
         from .devices.pluto import probe_pluto_rx

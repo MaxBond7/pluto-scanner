@@ -45,13 +45,23 @@
 ### Готовая сборка для Windows
 
 ```powershell
-.\build_windows.ps1
+.\build_windows.ps1 -Clean -Installer
 ```
 
-Результат — `dist\PlutoScanner\PlutoScanner.exe`. Python на целевой машине не
-нужен: внутри уже есть PySide6, numpy, scipy, pyqtgraph, sounddevice,
-pyadi-iio и библиотеки libiio. Данные (`user_data`, `scan_logs`,
-`drone_logs`) создаются рядом с `.exe`.
+Результат:
+- `dist\PlutoScanner\PlutoScanner.exe` — portable one-folder;
+- `dist\PlutoScanner-<версия>-portable.zip`;
+- `dist\PlutoScanner-Setup-<версия>.exe` — установщик Inno Setup;
+- `dist\SHA256SUMS.txt`.
+
+Python на целевой машине не нужен: внутри уже есть PySide6, numpy, scipy,
+pyqtgraph, sounddevice, pyadi-iio и библиотеки libiio.
+
+Где лежат данные:
+- portable-сборка — рядом с `.exe`, маркер `portable.flag`;
+- установленная версия — `%LOCALAPPDATA%\PlutoScanner`, чтобы Program Files
+  оставался только для чтения;
+- логи — `pluto_scanner.log` в той же папке данных.
 
 Сборка проверена с симулятором и реальным Pluto+ по USB. Подробности,
 ограничения и чеклист — в `docs/PACKAGING.md`.
@@ -127,6 +137,7 @@ python -m pluto_scanner --device usb:1.6.5
 --screenshot-after-record PNG сохранить экран после записи
 --play FILE                   открыть .cf32-запись для воспроизведения
 --rx-info                     показать, сколько RX-каналов отдаёт прошивка
+--version                     показать версию
 ```
 
 Примеры:
@@ -489,7 +500,9 @@ NEW/
   drone_logs/      события, спектры и IQ-фрагменты дрон-монитора
   iq_recordings/   длинные записи IQ: .cf32 + .json (создаётся при записи)
   user_data/       known_contacts · signatures.db · drone_whitelist · drone_background
+  iq_recordings/   длинные записи IQ: .cf32 + .json (создаётся при записи)
   presentation/    PPTX/PDF/HTML-презентация проекта
+  installer/       шаблон Inno Setup
   build_windows.ps1
   launch_pluto_scanner.py
   launch_pluto_scanner.vbs

@@ -9,9 +9,12 @@ import traceback
 def _report_startup_error(exc: BaseException) -> None:
     text = traceback.format_exc()
     try:
-        from pluto_scanner.paths import APP_ROOT
+        from pluto_scanner.paths import DATA_HOME, ensure_data_home
 
-        (APP_ROOT / "pluto_scanner_error.log").write_text(text, encoding="utf-8")
+        ensure_data_home()
+        (DATA_HOME / "pluto_scanner_error.log").write_text(
+            text, encoding="utf-8"
+        )
     except Exception:
         pass
     if any(arg in ("--smoke-test", "--screenshot", "--log-level") for arg in sys.argv):
@@ -36,7 +39,8 @@ def main() -> int:
     from pluto_scanner.__main__ import main as app_main
 
     if getattr(sys, "frozen", False):
-        os.chdir(paths.APP_ROOT)
+        paths.ensure_data_home()
+        os.chdir(paths.DATA_HOME)
     return app_main()
 
 

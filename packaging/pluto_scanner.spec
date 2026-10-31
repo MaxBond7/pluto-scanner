@@ -39,7 +39,13 @@ hiddenimports = [
     "sounddevice",
     "_sounddevice_data",
 ]
-extra_datas = collect_data_files("_sounddevice_data")
+extra_datas = collect_data_files(
+    "_sounddevice_data",
+    includes=[
+        "**/libportaudio64bit.dll",
+        "**/libportaudio64bit-asio.dll",
+    ],
+)
 
 a = Analysis(  # noqa: F821 - provided by PyInstaller
     [str(ROOT / "packaging" / "launcher.py")],

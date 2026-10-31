@@ -8,6 +8,20 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.5.0] - 2026-10-31
+
+- One-command release build: tests, PyInstaller, portable ZIP, SHA256 and an
+  optional Inno Setup installer (`-Installer`).
+- Portable builds keep data next to the executable via `portable.flag`;
+  installed builds use `%LOCALAPPDATA%\PlutoScanner` so Program Files stays
+  read-only.
+- `--version` and the version in the window title.
+- Rotating application log `pluto_scanner.log` in the active data directory.
+- Build script validates that `pyproject.toml`, `__init__.py` and the release
+  version agree.
+- Inno Setup template with per-user install, shortcuts and uninstall entry.
+- Tests for portable/installed data-directory selection.
+
 ## [0.4.2] - 2026-10-31
 
 - Playback devices are rejected by the band scanner and drone monitor instead
