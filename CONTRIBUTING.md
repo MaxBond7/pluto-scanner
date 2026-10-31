@@ -1,8 +1,8 @@
 # Contributing
 
-Thanks for considering a contribution. The project is currently maintained as
-a private repository, but the codebase and data model are designed to be
-published as open source later.
+Thanks for considering a contribution. The project is open source under the
+MIT license, and the codebase and data model are designed to stay
+reproducible and community-friendly.
 
 ## Development setup
 

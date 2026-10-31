@@ -1,62 +1,38 @@
-# GitHub: приватный репозиторий и будущий open source
+# GitHub: публикация и версии
 
-## 1. Создать приватный репозиторий
+Репозиторий: <https://github.com/MaxBond7/pluto-scanner>
 
-На GitHub: **New repository**
+## 1. Текущий статус
 
-- name: `pluto-scanner`
-- visibility: **Private**
-- не добавлять README, .gitignore и license — они уже есть в проекте.
-
-Скопировать HTTPS-URL, например:
-
-```text
-https://github.com/<USER>/pluto-scanner.git
-```
-
-## 2. Привязать и отправить
-
-Из папки `NEW`:
-
-```powershell
-git remote add origin https://github.com/<USER>/pluto-scanner.git
-git push -u origin main
-git push origin v0.1.0
-```
-
-Git for Windows при первом push откроет вход через браузер (Git Credential
-Manager). Токен в файлы проекта не записывать.
-
-## 3. Проверить
-
-```powershell
-git remote -v
-git log --oneline --decorate -5
-git status
-```
+- visibility: **Public**;
+- лицензия: **MIT**;
+- основная ветка: `main`;
+- версии: теги `v0.1.0` … `v0.5.0`;
+- GitHub Actions: тесты на Windows;
+- приватные отчёты об уязвимостях: включить в Settings → Security.
 
 В репозитории должны быть только исходники, тесты, документация и
-презентация. `.venv/`, `user_data/`, `scan_logs/`, `drone_logs/`, IQ-клипы и
-ярлыки должны отсутствовать.
+презентация. `.venv/`, `user_data/`, `scan_logs/`, `drone_logs/`,
+`iq_recordings/`, логи, IQ-клипы и ярлыки отсутствуют.
 
-## 4. Откат на версию
+## 2. Клонирование и отправка
 
-Посмотреть историю:
+```powershell
+git clone https://github.com/MaxBond7/pluto-scanner.git
+cd pluto-scanner
+git remote -v
+git log --oneline --decorate -5
+```
+
+Первый push откроет вход через браузер (Git Credential Manager). Токен в
+файлы проекта не записывать.
+
+## 3. Откат на версию
 
 ```powershell
 git log --oneline --decorate --all
-```
-
-Посмотреть состояние тега без изменения рабочей папки:
-
-```powershell
-git show v0.1.0
-```
-
-Создать ветку из старой версии:
-
-```powershell
-git switch -c restore-v0.1.0 v0.1.0
+git show v0.5.0
+git switch -c restore-v0.5.0 v0.5.0
 ```
 
 Вернуть рабочую папку к тегу (осторожно: незакоммиченные изменения нужно
@@ -64,19 +40,17 @@ git switch -c restore-v0.1.0 v0.1.0
 
 ```powershell
 git switch main
-git reset --hard v0.1.0
+git reset --hard v0.5.0
 ```
 
-Если нужен именно откат уже отправленной ветки:
+Если ветка уже отправлена, безопаснее откат коммитом:
 
 ```powershell
 git revert <commit>
 git push
 ```
 
-`git revert` безопаснее для общей истории, чем `reset --hard` + force push.
-
-## 5. Новая версия
+## 4. Новая версия
 
 ```powershell
 git add .
@@ -86,15 +60,31 @@ git push
 git push origin v0.5.0
 ```
 
-## 6. Перед публикацией репозитория
+Для сборки релиза:
 
-- [ ] Проверить, что в истории нет токенов, паролей, серийников и личных путей.
-- [ ] Проверить, что `user_data/`, логи и IQ-клипы не попали в Git.
-- [ ] Выбрать лицензию (сейчас MIT) и подтвердить права на код.
-- [ ] Проверить источники и лицензии библиотеки сигнатур.
-- [ ] Включить GitHub Actions и private vulnerability reporting.
-- [ ] Добавить описание, topics и скриншоты в настройках репозитория.
-- [ ] Помнить: после смены private → public **вся история** становится публичной.
+```powershell
+.\build_windows.ps1 -Clean -Installer
+```
 
-Если в историю случайно попали секреты, недостаточно удалить файл новым
-коммитом: нужен `git filter-repo` или новый чистый репозиторий.
+## 5. Оформление страницы
+
+- [x] README с баннером, скриншотами, возможностями и быстрым стартом.
+- [x] Лицензия MIT, CONTRIBUTING, SECURITY, CITATION.
+- [x] GitHub Actions для тестов.
+- [x] Topics и описание репозитория.
+- [ ] Social preview 1280×640 в Settings → General.
+- [ ] GitHub Release с ZIP, Setup и `SHA256SUMS.txt`.
+- [ ] Включить private vulnerability reporting.
+- [ ] Dependabot alerts.
+
+## 6. Безопасность истории
+
+Перед публикацией проверено:
+
+- [x] в истории нет токенов, паролей и приватных ключей;
+- [x] `user_data/`, логи и IQ-клипы не попали в Git;
+- [x] личные пути и серийники не добавлены в документацию;
+- [x] лицензии сторонних компонентов описаны в `THIRD_PARTY_NOTICES.md`.
+
+Если секрет всё же попал в историю, удалить файл новым коммитом
+недостаточно: нужен `git filter-repo` или новый чистый репозиторий.

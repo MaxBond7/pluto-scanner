@@ -8,9 +8,8 @@ transmission.
 
 ## Reporting a vulnerability
 
-Please do not open a public issue for a security-sensitive report while the
-repository is private. Contact the maintainer privately or use GitHub's
-private vulnerability reporting once it is enabled.
+Please do not open a public issue for a security-sensitive report. Use
+GitHub's private vulnerability reporting or contact the maintainer privately.
 
 Include:
 
