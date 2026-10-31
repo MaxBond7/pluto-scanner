@@ -171,6 +171,7 @@ IQ (Pluto / симулятор / запись)
 | [ML](docs/ML.md) | модель, признаки, синтетика, разметка записей |
 | [ML за 5 шагов](docs/ML_SIMPLE.md) | простая инструкция без терминала |
 | [DATASETS](docs/DATASETS.md) | внешние IQ-датасеты, лицензии и импорт |
+| [FIELD_TEST](docs/FIELD_TEST.md) | полевой тест: что взять и как записать |
 | [PLUTO_2R2T](docs/PLUTO_2R2T.md) | второй RX, 2R2T, риски и восстановление |
 | [HARDWARE](docs/HARDWARE.md) | что есть, чего не хватает, ограничения |
 | [ROADMAP](docs/ROADMAP.md) | что сделано и что дальше |
