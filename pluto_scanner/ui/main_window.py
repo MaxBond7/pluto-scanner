@@ -1,7 +1,9 @@
 """Main window: devices, spectrum, waterfall, contacts, software VFO."""
 from __future__ import annotations
 
+import json
 import logging
+import shutil
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -54,6 +56,7 @@ from ..recordings import (
     list_recordings,
     load_info,
     new_recording_info,
+    save_info,
     set_label,
 )
 from ..scanner.compare import compare_background_files
@@ -65,6 +68,7 @@ from .contact_table import ContactTable
 from .device_panel import DevicePanel
 from .drone_panel import DronePanel
 from .event_dialog import DroneEventDialog
+from .import_dialog import DatasetImportDialog
 from .ml_panel import MLPanel
 from .spectrum_view import SpectrumView
 from .vfo_panel import VFOPanel
@@ -334,6 +338,7 @@ class MainWindow(QMainWindow):
         self.recording_panel.delete_requested.connect(self._delete_recording)
         self.recording_panel.refresh_requested.connect(self._refresh_recordings)
         self.recording_panel.label_changed.connect(self._set_recording_label)
+        self.recording_panel.import_requested.connect(self._import_dataset)
         self.ml_panel.model_changed.connect(self._on_ml_model_changed)
 
     def _initial_devices(self) -> None:
@@ -705,6 +710,21 @@ class MainWindow(QMainWindow):
     def _refresh_recordings(self) -> None:
         infos = list_recordings(RECORDINGS_DIR)
         self.recording_panel.set_recordings(infos)
+
+    def _import_dataset(self) -> None:
+        dialog = DatasetImportDialog(RECORDINGS_DIR, self)
+        if not dialog.exec():
+            return
+        self._refresh_recordings()
+        self.ml_panel.refresh()
+        if dialog.result_info is not None:
+            info = dialog.result_info
+            self.status_label.setText(
+                f"Импортировано: {info.recording_id} "
+                f"({info.label or 'без метки'})"
+            )
+            self.status_label.setStyleSheet("color:#4ade80;")
+            self.right_tabs.setCurrentWidget(self.recording_panel)
 
     def _set_recording_label(self, recording_id: str, label: str) -> None:
         info = next(
@@ -1504,12 +1524,76 @@ class MainWindow(QMainWindow):
             store=self.signature_store,
             whitelist=self.drone_whitelist,
         )
+        dialog.feedback_requested.connect(self._save_ml_feedback)
         dialog.exec()
 
     def _open_whitelist(self) -> None:
         dialog = WhitelistDialog(self.drone_whitelist, self)
         dialog.exec()
         self.drone_panel.refresh_events()
+
+    def _save_ml_feedback(self, event_id: str, label: str) -> None:
+        event = self.drone_panel.find_event(event_id)
+        if event is None or not event.clip_path:
+            self.status_label.setText(
+                "Нет IQ-фрагмента: включите запись IQ в дрон-мониторе."
+            )
+            self.status_label.setStyleSheet("color:#facc15;")
+            return
+        clip = Path(event.clip_path)
+        if not clip.exists():
+            self.status_label.setText("IQ-фрагмент не найден.")
+            self.status_label.setStyleSheet("color:#f87171;")
+            return
+        note = f"ML feedback: {event_id}"
+        for info in list_recordings(RECORDINGS_DIR):
+            if info.notes == note:
+                set_label(info, label)
+                self._refresh_recordings()
+                self.ml_panel.refresh()
+                self.status_label.setText(
+                    f"Метка исправления обновлена: {label}"
+                )
+                self.status_label.setStyleSheet("color:#c4b5fd;")
+                return
+        try:
+            meta = json.loads(
+                clip.with_suffix(".json").read_text(encoding="utf-8")
+            )
+        except Exception:
+            meta = {}
+        fs = float(meta.get("sample_rate") or event.clip_sample_rate or 0.0)
+        center = float(meta.get("center_hz") or event.clip_center_hz or 0.0)
+        if fs <= 0:
+            self.status_label.setText("Неизвестная частота дискретизации клипа.")
+            self.status_label.setStyleSheet("color:#f87171;")
+            return
+        info = new_recording_info(
+            RECORDINGS_DIR,
+            device_id="ml-feedback",
+            device_name=f"ML feedback {event_id}",
+            device_kind="feedback",
+            sample_rate=fs,
+            center_freq=center,
+            bandwidth_hz=fs,
+        )
+        try:
+            shutil.copyfile(clip, info.cf32_path)
+        except Exception as exc:
+            self.status_label.setText(f"Не удалось сохранить клип: {exc}")
+            self.status_label.setStyleSheet("color:#f87171;")
+            return
+        info.samples = info.path.stat().st_size // 8
+        info.complete = info.samples > 0
+        info.label = label
+        info.notes = note
+        save_info(info)
+        self._refresh_recordings()
+        self.ml_panel.refresh()
+        self.status_label.setText(
+            f"Пример сохранён: {label}. Теперь ML → «Обучить на записях»."
+        )
+        self.status_label.setStyleSheet("color:#4ade80;")
 
     def _on_drone_event(self, event, is_new: bool) -> None:
         self.drone_panel.add_event(event, is_new)

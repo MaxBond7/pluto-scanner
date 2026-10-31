@@ -39,6 +39,7 @@ class RecordingPanel(QWidget):
     delete_requested = Signal(str)
     refresh_requested = Signal()
     label_changed = Signal(str, str)
+    import_requested = Signal()
 
     def __init__(self, recordings_dir: str | Path,
                  parent: QWidget | None = None) -> None:
@@ -169,12 +170,18 @@ class RecordingPanel(QWidget):
         self.delete_btn.clicked.connect(self._delete)
         self.folder_btn = QPushButton("Папка")
         self.folder_btn.clicked.connect(self._open_folder)
+        self.import_btn = QPushButton("Импорт…")
+        self.import_btn.setToolTip(
+            "SigMF или raw float32 IQ из открытого датасета"
+        )
+        self.import_btn.clicked.connect(self.import_requested)
         self.refresh_btn = QPushButton("Обновить")
         self.refresh_btn.clicked.connect(self.refresh_requested)
         actions.addWidget(self.play_btn, 1)
         actions.addWidget(self.stop_play_btn)
         actions.addWidget(self.delete_btn)
         actions.addWidget(self.folder_btn)
+        actions.addWidget(self.import_btn)
         actions.addWidget(self.refresh_btn)
         box_layout.addLayout(actions)
         root.addWidget(box, 1)

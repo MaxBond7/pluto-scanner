@@ -8,6 +8,16 @@ All notable changes to this project are documented here.
   device lost USB/SSH shortly after the change; the original `ad9364`/`1r1t`
   environment was restored and verified. See `docs/PLUTO_2R2T.md`.
 
+## [0.10.0] - 2026-10-31
+
+- Active learning: event card action "ML ошибся? Указать класс" saves the
+  event IQ clip as a labeled training recording.
+- Import dialog in the recording tab for SigMF and raw float32 IQ, with
+  label, sample rate, centre and max seconds.
+- Simple five-step ML guide in Russian (`docs/ML_SIMPLE.md`), written for
+  users without a terminal.
+- ML panel shows labeled recording counts and source of the active model.
+
 ## [0.9.0] - 2026-10-31
 
 - Bundled synthetic ML model (`assets/ml_model_default.json`) so the ML tab

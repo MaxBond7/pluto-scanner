@@ -5,13 +5,14 @@ import time
 from pathlib import Path
 
 import pyqtgraph as pg
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QGridLayout,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QPushButton,
     QVBoxLayout,
@@ -27,6 +28,8 @@ from ..drone.whitelist import DroneWhitelist
 
 
 class DroneEventDialog(QDialog):
+    feedback_requested = Signal(str, str)
+
     def __init__(self, event: DroneEvent, parent: QWidget | None = None,
                  store: SignatureStore | None = None,
                  whitelist: DroneWhitelist | None = None) -> None:
@@ -189,11 +192,20 @@ class DroneEventDialog(QDialog):
         if event.whitelisted:
             self.white_btn.setText("Уже в белом списке")
         self.white_btn.clicked.connect(self._add_to_whitelist)
+        self.ml_btn = QPushButton("ML ошибся? Указать класс")
+        self.ml_btn.setEnabled(bool(event.clip_path))
+        self.ml_btn.setToolTip(
+            "Сохранит IQ-фрагмент с правильной меткой для дообучения."
+            if event.clip_path else
+            "Нужен IQ-фрагмент события: включите запись IQ в дрон-мониторе."
+        )
+        self.ml_btn.clicked.connect(self._ask_ml_feedback)
         close_btn = QPushButton("Закрыть")
         close_btn.clicked.connect(self.accept)
         buttons.addWidget(self.export_btn)
         buttons.addWidget(self.folder_btn)
         buttons.addWidget(self.white_btn)
+        buttons.addWidget(self.ml_btn)
         buttons.addStretch(1)
         buttons.addWidget(close_btn)
         root.addLayout(buttons)
@@ -226,6 +238,35 @@ class DroneEventDialog(QDialog):
         return (
             f"ML-гипотеза: {ru} {confidence * 100:.0f}%{suffix} "
             f"(источник: {source}; не заменяет эвристику)."
+        )
+
+    def _ask_ml_feedback(self) -> None:
+        keys = [
+            "FHSS", "TELEMETRY", "VIDEO_ANALOG", "VIDEO_DIGITAL",
+            "WIFI", "NARROW",
+        ]
+        labels = [CLASS_RU[key] for key in keys]
+        current = 0
+        predicted = str((self.drone_event.ml or {}).get("label") or "")
+        if predicted in keys:
+            current = keys.index(predicted)
+        text, ok = QInputDialog.getItem(
+            self,
+            "ML: правильный класс",
+            "Выберите класс сигнала:",
+            labels,
+            current,
+            False,
+        )
+        if not ok:
+            return
+        index = labels.index(text)
+        self.feedback_requested.emit(
+            self.drone_event.event_id, keys[index]
+        )
+        self.status.setStyleSheet("color:#4ade80; font-size:11px;")
+        self.status.setText(
+            "Пример сохранён. Во вкладке ML нажмите «Обучить на записях»."
         )
 
     def _whitelist_text(self) -> str:

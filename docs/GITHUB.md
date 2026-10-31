@@ -7,7 +7,7 @@
 - visibility: **Public**;
 - лицензия: **MIT**;
 - основная ветка: `main`;
-- версии: теги `v0.1.0` … `v0.9.0`;
+- версии: теги `v0.1.0` … `v0.10.0`;
 - GitHub Actions: тесты на Windows;
 - приватные отчёты об уязвимостях: включить в Settings → Security.
 
@@ -31,8 +31,8 @@ git log --oneline --decorate -5
 
 ```powershell
 git log --oneline --decorate --all
-git show v0.9.0
-git switch -c restore-v0.9.0 v0.9.0
+git show v0.10.0
+git switch -c restore-v0.10.0 v0.10.0
 ```
 
 Вернуть рабочую папку к тегу (осторожно: незакоммиченные изменения нужно
@@ -40,7 +40,7 @@ git switch -c restore-v0.9.0 v0.9.0
 
 ```powershell
 git switch main
-git reset --hard v0.9.0
+git reset --hard v0.10.0
 ```
 
 Если ветка уже отправлена, безопаснее откат коммитом:
@@ -55,9 +55,9 @@ git push
 ```powershell
 git add .
 git commit -m "Describe the change"
-git tag -a v0.9.0 -m "Pluto Scanner 0.9.0"
+git tag -a v0.10.0 -m "Pluto Scanner 0.10.0"
 git push
-git push origin v0.9.0
+git push origin v0.10.0
 ```
 
 Для сборки релиза:
@@ -72,7 +72,7 @@ git push origin v0.9.0
 - [x] Лицензия MIT, CONTRIBUTING, SECURITY, CITATION.
 - [x] GitHub Actions для тестов.
 - [x] Topics и описание репозитория.
-- [x] GitHub Release `v0.9.0` с ZIP, Setup и `SHA256SUMS.txt`.
+- [x] GitHub Release `v0.10.0` с ZIP, Setup и `SHA256SUMS.txt`.
 - [ ] Social preview 1280×640 в Settings → General.
 - [ ] Включить private vulnerability reporting.
 - [ ] Dependabot alerts.
@@ -85,7 +85,7 @@ git push origin v0.9.0
 - [x] `user_data/`, логи и IQ-клипы не попали в Git;
 - [x] личные пути и серийники не добавлены в документацию;
 - [x] лицензии сторонних компонентов описаны в `THIRD_PARTY_NOTICES.md`;
-- [x] публичный релиз `v0.9.0` с проверенными артефактами.
+- [x] публичный релиз `v0.10.0` с проверенными артефактами.
 
 Если секрет всё же попал в историю, удалить файл новым коммитом
 недостаточно: нужен `git filter-repo` или новый чистый репозиторий.
