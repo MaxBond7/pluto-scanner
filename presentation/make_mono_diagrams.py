@@ -230,11 +230,89 @@ def limits() -> None:
     print("written", OUT / "mono_limits.png")
 
 
+def _box(d: ImageDraw.ImageDraw, x: int, y: int, w: int, h: int,
+         title: str, lines: list[str], *, note: str = "") -> None:
+    d.rectangle([x, y, x + w, y + h], outline=bm.WHITE, width=1)
+    d.rectangle([x, y, x + w, y + 24], fill=bm.WHITE)
+    bm.label(d, (x + 10, y + 5), title, 12, color=bm.BLACK, bold=True)
+    for index, line in enumerate(lines):
+        bm.label(d, (x + 12, y + 40 + index * 22), line, 11, color=bm.DIM)
+    if note:
+        bm.label(d, (x + 12, y + h - 22), note, 10, color=bm.FAINT)
+
+
+def _arrow(d: ImageDraw.ImageDraw, x1: int, y1: int, x2: int, y2: int) -> None:
+    d.line([(x1, y1), (x2, y2)], fill=bm.WHITE, width=1)
+    if y1 == y2:
+        direction = 1 if x2 > x1 else -1
+        d.line([(x2 - 8 * direction, y1 - 4), (x2, y1),
+                (x2 - 8 * direction, y1 + 4)], fill=bm.WHITE, width=1)
+    else:
+        direction = 1 if y2 > y1 else -1
+        d.line([(x1 - 4, y2 - 8 * direction), (x1, y2),
+                (x1 + 4, y2 - 8 * direction)], fill=bm.WHITE, width=1)
+
+
+def architecture() -> None:
+    width, height = 1600, 860
+    image = bm.canvas(width, height)
+    d = ImageDraw.Draw(image)
+    bm.frame(d, width, height)
+
+    bm.label(d, (56, 50), "ARCHITECTURE", 15, color=bm.FAINT)
+    bm.label(d, (56, 78), "ОДИН ПОТОК НА УСТРОЙСТВО", 34,
+             color=bm.WHITE, bold=True)
+    bm.label(d, (58, 122), "ОБЩИЙ GUI · ПАССИВНЫЙ ПРИЁМ · БЕЗ ДЕКОДИРОВАНИЯ", 12)
+    bm.divider(d, 56, 150, width - 56)
+
+    # Row 1.
+    y1, h1 = 180, 120
+    _box(d, 56, y1, 210, h1, "IQ", ["Pluto / sim", "20.48 MS/s"])
+    _box(d, 330, y1, 280, h1, "DeviceSession",
+         ["спектр · детектор", "трекер · VFO · демод"])
+    _box(d, 676, y1, 280, h1, "DSP / UI",
+         ["SpectrumFrame", "contacts · audio"])
+    _box(d, 1022, y1, 300, h1, "GUI",
+         ["Контакты · Сканер", "Дрон-монитор"])
+
+    _arrow(d, 266, y1 + h1 // 2, 322, y1 + h1 // 2)
+    _arrow(d, 610, y1 + h1 // 2, 668, y1 + h1 // 2)
+    _arrow(d, 956, y1 + h1 // 2, 1014, y1 + h1 // 2)
+
+    # VFO under DeviceSession.
+    _box(d, 330, 360, 280, 96, "VFO / DEMOD",
+         ["цифровой перенос", "AM/FM/SSB/CW"])
+    _arrow(d, 470, y1 + h1, 470, 352)
+
+    # Row 2: scanner and drone monitor are separate consumers.
+    y2, h2 = 520, 150
+    _box(d, 56, y2, 400, h2, "СКАНЕР ДИАПАЗОНА",
+         ["ScanController → peaks", "recorder → compare", "325 МГц – 3.8 ГГц"])
+    _box(d, 540, y2, 420, h2, "ДРОН-МОНИТОР",
+         ["DroneWatchController", "features → tracker",
+          "recorder + manager"])
+    _box(d, 1046, y2, 340, h2, "ХРАНИЛИЩЕ",
+         ["scan_logs/ · drone_logs/", "background.json · summary.json",
+          "events.jsonl"])
+
+    _arrow(d, 456, y2 + h2 // 2, 532, y2 + h2 // 2)
+    _arrow(d, 960, y2 + h2 // 2, 1038, y2 + h2 // 2)
+
+    bm.label(d, (56, height - 44),
+             "ОДИН ПОТОК НА УСТРОЙСТВО · СОБЫТИЯ И IQ-КЛИПЫ ПИШУТСЯ ЛОКАЛЬНО",
+             11, color=bm.DIM)
+    bm.barcode(d, (width - 300, height - 52, width - 60, height - 28), seed=61)
+
+    image.convert("RGB").save(OUT / "mono_architecture.png", quality=95)
+    print("written", OUT / "mono_architecture.png")
+
+
 def main() -> int:
     band_map()
     pipeline()
     binary_model()
     limits()
+    architecture()
     return 0
 
 

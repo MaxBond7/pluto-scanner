@@ -143,7 +143,7 @@ python -m pluto_scanner --device usb:1.6.5
 ## АРХИТЕКТУРА
 
 <p align="center">
-  <img src="presentation/diagram_architecture.png" alt="Архитектура Pluto Scanner" width="90%">
+  <img src="presentation/mono_architecture.png" alt="Архитектура Pluto Scanner: один поток на устройство, общий GUI" width="100%">
 </p>
 
 ```text
