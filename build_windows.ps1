@@ -46,6 +46,49 @@ if ($version -ne $Matches[1]) {
 }
 Write-Host "== Pluto Scanner $version =="
 
+# The exe version resource is generated, not hand-maintained: a stale version
+# in the binary looks sloppy and helps nobody (and Windows shows it in the
+# file properties and in Defender's file details).
+$parts = $version.Split(".")
+while ($parts.Count -lt 4) { $parts += "0" }
+$quad = ($parts[0..3] -join ", ")
+$versionInfo = @"
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=($quad),
+    prodvers=($quad),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          u'040904B0',
+          [
+            StringStruct(u'CompanyName', u'Pluto Scanner contributors'),
+            StringStruct(u'FileDescription', u'Pluto Scanner - SDR spectrum and drone-band monitor'),
+            StringStruct(u'FileVersion', u'$version'),
+            StringStruct(u'InternalName', u'PlutoScanner'),
+            StringStruct(u'LegalCopyright', u'MIT License'),
+            StringStruct(u'OriginalFilename', u'PlutoScanner.exe'),
+            StringStruct(u'ProductName', u'Pluto Scanner'),
+            StringStruct(u'ProductVersion', u'$version')
+          ]
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+  ]
+)
+"@
+Set-Content -Path (Join-Path $root "packaging\version_info.txt") `
+    -Value $versionInfo -Encoding UTF8
+
 if (-not $SkipTests) {
     Write-Host "== Тесты =="
     & $python -m pytest -q

@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-11-03
+
+- The `.exe` version resource is now generated from `pyproject.toml` on every
+  build; it used to stay at 0.13.0, which looked like a stale binary in the
+  file properties.
+- Added `docs/ANTIVIRUS.md`: why Windows Defender can delete the unsigned
+  PyInstaller build, what has already been ruled out (no UPX, one-folder,
+  no admin, no autostart), and the three real options — local exclusion,
+  Microsoft false-positive submission, code signing.
+
 ## [0.14.1] - 2026-11-01
 
 - Wideband guard: a signal that fills almost the whole captured band

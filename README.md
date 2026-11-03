@@ -168,6 +168,7 @@ IQ (Pluto / симулятор / запись)
 |---|---|
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | слои, потоки, данные, режимы |
 | [PACKAGING](docs/PACKAGING.md) | сборка, ZIP, установщик, чистая Windows |
+| [ANTIVIRUS](docs/ANTIVIRUS.md) | ложные срабатывания Defender и что с ними делать |
 | [SIGNATURES](docs/SIGNATURES.md) | библиотека сигнатур и источники |
 | [ML](docs/ML.md) | модель, признаки, синтетика, разметка записей |
 | [BINARY](docs/BINARY.md) | бинарная модель «дрон / не дрон», обучение на DroneRF |
