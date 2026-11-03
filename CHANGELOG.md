@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-11-03
+
+- Fixed a crash when selecting a signature in the library: the panel used the
+  theme colour helper without importing it.
+- Scanner action buttons moved to a two-row grid, so "Сравнить с фоном" and
+  "Экспорт CSV" are no longer clipped in a narrow panel.
+- The GitHub page is now in the same monochrome style: new banner and social
+  preview (black, 1 px frames, ruler, barcode, spectrum trace), flat B/W
+  badges, a terminal-style feature block, uppercase section titles and
+  screenshots retaken in the `mono` theme.
+
 ## [0.15.0] - 2026-11-03
 
 - Theme engine: every colour now goes through a palette, so the whole UI can

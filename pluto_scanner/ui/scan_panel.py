@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 from ..config import PLUTO_MAX_FREQ, PLUTO_MIN_FREQ, format_bw, format_freq
 from ..scanner.recorder import load_bundle
 from .scan_graph import ScanGraph
-from .themes import set_style
+from .themes import set_style, tcol
 
 
 class ScanPanel(QWidget):
@@ -107,27 +107,28 @@ class ScanPanel(QWidget):
         set_style(self.estimate, "color:#8fa6c0; font-size:10px;")
         root.addWidget(self.estimate)
 
-        actions = QHBoxLayout()
+        actions = QGridLayout()
         actions.setSpacing(6)
         self.start_btn = QPushButton("Старт сканирования")
         self.start_btn.setMinimumHeight(30)
         self.start_btn.clicked.connect(self._toggle)
-        self.compare_btn = QPushButton("Сравнить с фоном…")
+        self.compare_btn = QPushButton("Сравнить с фоном")
         self.compare_btn.clicked.connect(self.compare_requested)
         self.compare_btn.setEnabled(False)
         self.pause_btn = QPushButton("Пауза")
         self.pause_btn.setEnabled(False)
         self.pause_btn.clicked.connect(self._toggle_pause)
-        self.export_btn = QPushButton("Экспорт CSV…")
+        self.export_btn = QPushButton("Экспорт CSV")
         self.export_btn.setEnabled(False)
         self.export_btn.clicked.connect(self.export_requested)
         self.folder_btn = QPushButton("Папка сканов")
         self.folder_btn.clicked.connect(self._open_folder)
-        actions.addWidget(self.start_btn, 1)
-        actions.addWidget(self.pause_btn)
-        actions.addWidget(self.compare_btn)
-        actions.addWidget(self.export_btn)
-        actions.addWidget(self.folder_btn)
+        actions.addWidget(self.start_btn, 0, 0)
+        actions.addWidget(self.pause_btn, 0, 1)
+        actions.addWidget(self.compare_btn, 1, 0)
+        actions.addWidget(self.export_btn, 1, 1)
+        actions.addWidget(self.folder_btn, 1, 2)
+        actions.setColumnStretch(0, 1)
         root.addLayout(actions)
 
         progress_row = QHBoxLayout()

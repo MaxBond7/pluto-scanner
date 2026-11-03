@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 
 from ..config import format_bw, format_freq
 from ..signatures import SignatureStore, SignalSignature
-from .themes import set_style
+from .themes import set_style, tcol
 
 
 class SignaturePanel(QWidget):
