@@ -13,6 +13,14 @@ OUT = ROOT / "assets" / "github_social_preview.png"
 W, H = 1280, 640
 
 
+def app_version() -> str:
+    import re
+
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
+    return match.group(1) if match else "0.0.0"
+
+
 def main() -> None:
     image = bm.canvas(W, H)
     d = bm.ImageDraw.Draw(image)
@@ -54,7 +62,7 @@ def main() -> None:
     bm.label(d, (440, 566), "MONO THEMES  ·  USER JSON", 14)
 
     bm.label(d, (W - 330, 558), "github.com/MaxBond7/pluto-scanner", 13)
-    bm.label(d, (W - 130, 580), "REV 0.15.0", 13)
+    bm.label(d, (W - 130, 580), f"REV {app_version()}", 13)
 
     bm.dots(d, (W - 360, 100, W - 70, 300), step=8, seed=5)
 

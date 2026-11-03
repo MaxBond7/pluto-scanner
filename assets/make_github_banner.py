@@ -15,6 +15,14 @@ OUT = ROOT / "assets" / "github_banner.png"
 W, H = 1600, 480
 
 
+def app_version() -> str:
+    import re
+
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', text)
+    return match.group(1) if match else "0.0.0"
+
+
 def main() -> None:
     image = bm.canvas(W, H)
     d = bm.ImageDraw.Draw(image)
@@ -47,7 +55,7 @@ def main() -> None:
         15,
     )
     bm.label(d, (left, 416), "github.com/MaxBond7/pluto-scanner", 15)
-    bm.label(d, (W - 190, 416), "REV 0.15.0", 15)
+    bm.label(d, (W - 190, 416), f"REV {app_version()}", 15)
 
     # Right block: spectrum trace in a technical box.
     box = (980, 96, W - 64, 250)

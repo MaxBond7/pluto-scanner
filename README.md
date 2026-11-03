@@ -3,27 +3,19 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.15.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.15.1-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-MIT-000000?style=flat-square&labelColor=ffffff" alt="license">
 </p>
+
+<p align="center">[ <a href="#возможности">ВОЗМОЖНОСТИ</a> ] &nbsp;·&nbsp; [ <a href="#скриншоты">СКРИНШОТЫ</a> ] &nbsp;·&nbsp; [ <a href="#как-это-работает">СХЕМА</a> ] &nbsp;·&nbsp; [ <a href="#быстрый-старт">БЫСТРЫЙ СТАРТ</a> ] &nbsp;·&nbsp; [ <a href="#архитектура">АРХИТЕКТУРА</a> ] &nbsp;·&nbsp; [ <a href="#документация">ДОКУМЕНТАЦИЯ</a> ] &nbsp;·&nbsp; [ <a href="#честные-ограничения">ОГРАНИЧЕНИЯ</a> ]</p>
 
 ```text
 // PLUTO SCANNER
 // пассивный приём: ADALM-PLUTO / Pluto+  ·  Windows 10/11  ·  только RX
 // спектр · водопад · VFO · демодуляция · свип · дрон-монитор · IQ-доказательства
 ```
-
-<p align="center"><code>
-[ <a href="#возможности">ВОЗМОЖНОСТИ</a> ] ·
-[ <a href="#скриншоты">СКРИНШОТЫ</a> ] ·
-[ <a href="#как-это-работает">СХЕМА</a> ] ·
-[ <a href="#быстрый-старт">БЫСТРЫЙ СТАРТ</a> ] ·
-[ <a href="#архитектура">АРХИТЕКТУРА</a> ] ·
-[ <a href="#документация">ДОКУМЕНТАЦИЯ</a> ] ·
-[ <a href="#честные-ограничения">ОГРАНИЧЕНИЯ</a> ]
-</code></p>
 
 ## ВОЗМОЖНОСТИ
 
