@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from ..config import format_freq
 from ..model import DeviceConfig
+from .themes import set_style, tcol
 
 _STATUS_RU = {
     "idle": "ожидание",
@@ -81,7 +82,7 @@ class DevicePanel(QGroupBox):
             "Плата по USB/сети. Для второго Pluto добавьте ещё один URI."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#64748b; font-size:10px;")
+        set_style(hint, "color:#64748b; font-size:10px;")
         layout.addWidget(hint)
 
     def add_device(self, config: DeviceConfig) -> None:
@@ -117,7 +118,7 @@ class DevicePanel(QGroupBox):
             f"{_STATUS_RU.get(status, status)}"
         )
         color = _STATUS_COLOR.get(status, "#d7e2f0")
-        item.setForeground(QColor(color))
+        item.setForeground(QColor(tcol(color)))
         item.setToolTip(
             f"ID: {config.device_id}\nТип: {config.kind}\nURI: {config.uri or '—'}"
         )

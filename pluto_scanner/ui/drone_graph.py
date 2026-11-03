@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from ..drone.features import DroneObservation
 from ..drone.bands import MonitorChunk
+from .themes import set_style, tcol, trgba
 
 
 class DroneGraph(QWidget):
@@ -17,7 +18,7 @@ class DroneGraph(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        self.plot = pg.PlotWidget(background="#0a0f1e")
+        self.plot = pg.PlotWidget(background=tcol("graph_bg"))
         self.plot.setMenuEnabled(False)
         self.plot.showGrid(x=True, y=True, alpha=0.12)
         self.plot.setLabel("bottom", "Частота", units="MHz")
@@ -27,27 +28,40 @@ class DroneGraph(QWidget):
         self.plot.getAxis("bottom").setHeight(26)
         layout.addWidget(self.plot, 1)
 
-        self.curve = self.plot.plot([], [], pen=pg.mkPen("#22d3ee", width=1.2))
+        self.curve = self.plot.plot([], [], pen=pg.mkPen(tcol("#22d3ee"), width=1.2))
         self.peak_scatter = pg.ScatterPlotItem(
             size=9, symbol="o",
-            brush=pg.mkBrush(248, 113, 113, 210),
-            pen=pg.mkPen("#fecaca"),
+            brush=pg.mkBrush(trgba(248, 113, 113, 210)),
+            pen=pg.mkPen(tcol("#fecaca")),
         )
         self.plot.addItem(self.peak_scatter)
         self.peak_line = pg.InfiniteLine(
             pos=0, angle=90, movable=False,
-            pen=pg.mkPen("#f87171", width=1, style=Qt.PenStyle.DotLine),
+            pen=pg.mkPen(tcol("#f87171"), width=1, style=Qt.PenStyle.DotLine),
         )
         self.plot.addItem(self.peak_line)
         self.peak_line.hide()
 
         self.hint = QLabel("Ожидание данных…")
         self.hint.setWordWrap(True)
-        self.hint.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.hint, "color:#8fa6c0; font-size:10px;")
         layout.addWidget(self.hint)
 
         self._chunk: MonitorChunk | None = None
         self._last_range: tuple[float, float] | None = None
+
+    def retheme(self) -> None:
+        self.plot.setBackground(tcol("graph_bg"))
+        for name in ("left", "bottom"):
+            axis = self.plot.getAxis(name)
+            axis.setPen(pg.mkPen(tcol("graph_fg")))
+            axis.setTextPen(pg.mkPen(tcol("graph_fg")))
+        self.curve.setPen(pg.mkPen(tcol("#22d3ee"), width=1.2))
+        self.peak_scatter.setBrush(pg.mkBrush(trgba(248, 113, 113, 210)))
+        self.peak_scatter.setPen(pg.mkPen(tcol("#fecaca")))
+        self.peak_line.setPen(
+            pg.mkPen(tcol("#f87171"), width=1, style=Qt.PenStyle.DotLine)
+        )
 
     def configure_chunk(self, chunk: MonitorChunk) -> None:
         self._chunk = chunk

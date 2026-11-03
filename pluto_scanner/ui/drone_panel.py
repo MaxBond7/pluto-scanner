@@ -28,6 +28,7 @@ from ..drone.bands import DRONE_BANDS, MonitorChunk, chunks_for_bands
 from ..drone.features import DroneObservation
 from ..drone.tracker import DroneEvent
 from .drone_graph import DroneGraph
+from .themes import set_style, tcol
 
 _CLASS_COLORS = {
     "FHSS": "#f87171",
@@ -85,9 +86,7 @@ class DronePanel(QWidget):
         root.setSpacing(6)
 
         title = QLabel("ДРОН-МОНИТОР")
-        title.setStyleSheet(
-            "color:#f472b6; font-size:15px; font-weight:600; padding:2px;"
-        )
+        set_style(title, "color:#f472b6; font-size:15px; font-weight:600; padding:2px;")
         root.addWidget(title)
         hint = QLabel(
             "Пассивный монитор эфира. Wi-Fi, Bluetooth и микроволновки "
@@ -95,7 +94,7 @@ class DronePanel(QWidget):
             "Двойной клик по событию открывает карточку и экспорт."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(hint, "color:#8fa6c0; font-size:10px;")
         root.addWidget(hint)
 
         bands_box = QGroupBox("Полосы")
@@ -213,7 +212,7 @@ class DronePanel(QWidget):
 
         self.estimate = QLabel("")
         self.estimate.setWordWrap(True)
-        self.estimate.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.estimate, "color:#8fa6c0; font-size:10px;")
         root.addWidget(self.estimate)
 
         actions = QHBoxLayout()
@@ -233,10 +232,8 @@ class DronePanel(QWidget):
         self.alarm = QLabel("")
         self.alarm.setWordWrap(True)
         self.alarm.setVisible(False)
-        self.alarm.setStyleSheet(
-            "background:#7f1d1d; color:#fecaca; border:1px solid #ef4444; "
-            "border-radius:5px; padding:7px; font-weight:600;"
-        )
+        set_style(self.alarm, "background:#7f1d1d; color:#fecaca; border:1px solid #ef4444; "
+            "border-radius:5px; padding:7px; font-weight:600;")
         root.addWidget(self.alarm)
         self._alarm_timer = QTimer(self)
         self._alarm_timer.setSingleShot(True)
@@ -246,7 +243,7 @@ class DronePanel(QWidget):
         self.device_layout = QVBoxLayout(self.device_box)
         self.device_layout.setSpacing(2)
         self.device_hint = QLabel("Устройства появятся после старта.")
-        self.device_hint.setStyleSheet("color:#64748b; font-size:10px;")
+        set_style(self.device_hint, "color:#64748b; font-size:10px;")
         self.device_layout.addWidget(self.device_hint)
         root.addWidget(self.device_box)
 
@@ -269,7 +266,7 @@ class DronePanel(QWidget):
         self.table.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
-        self.table.setStyleSheet("QTableWidget { font-size: 10px; }")
+        set_style(self.table, "QTableWidget { font-size: 10px; }")
         header = self.table.horizontalHeader()
         header.setMinimumSectionSize(40)
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
@@ -284,7 +281,7 @@ class DronePanel(QWidget):
 
         self.status = QLabel("Выберите полосы и нажмите «Старт мониторинга».")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet("color:#94a3b8; font-size:11px;")
+        set_style(self.status, "color:#94a3b8; font-size:11px;")
         root.addWidget(self.status)
 
         for check in self.band_checks.values():
@@ -351,12 +348,12 @@ class DronePanel(QWidget):
         self._device_names = dict(devices)
         if not devices:
             self.device_hint = QLabel("Нет устройств.")
-            self.device_hint.setStyleSheet("color:#f87171; font-size:10px;")
+            set_style(self.device_hint, "color:#f87171; font-size:10px;")
             self.device_layout.addWidget(self.device_hint)
             return
         for device_id, name in devices:
             label = QLabel(f"{name}: ожидание")
-            label.setStyleSheet("color:#8fa6c0; font-size:10px;")
+            set_style(label, "color:#8fa6c0; font-size:10px;")
             self.device_layout.addWidget(label)
             self._device_labels[device_id] = label
 
@@ -385,7 +382,7 @@ class DronePanel(QWidget):
             widget.setEnabled(False)
         for check in self.band_checks.values():
             check.setEnabled(False)
-        self.status.setStyleSheet("color:#22d3ee; font-size:11px;")
+        set_style(self.status, "color:#22d3ee; font-size:11px;")
         self.status.setText(
             f"Мониторинг {band_count} полос · {chunks} кусков · "
             f"{len(devices)} устр. · {self.sample_rate() / 1e6:.2f} MS/s. "
@@ -414,15 +411,15 @@ class DronePanel(QWidget):
             self._rows[event.event_id] = row
             for column in range(len(self.HEADERS)):
                 self.table.setItem(row, column, QTableWidgetItem(""))
-        color = QColor(_CLASS_COLORS.get(event.class_key, "#d7e2f0"))
+        color = QColor(tcol(_CLASS_COLORS.get(event.class_key, "#d7e2f0")))
         if event.whitelisted:
-            color = QColor("#64748b")
+            color = QColor(tcol("#64748b"))
         elif event.class_key == "OVERLOAD":
-            color = QColor("#facc15")
+            color = QColor(tcol("#facc15"))
         elif self.is_confirmed(event):
-            color = QColor("#f87171")
+            color = QColor(tcol("#f87171"))
         elif event.drone_like:
-            color = QColor("#fb923c")
+            color = QColor(tcol("#fb923c"))
         values = [
             time.strftime("%H:%M:%S", time.localtime(event.last_seen)),
             event.band_name,
@@ -496,7 +493,7 @@ class DronePanel(QWidget):
         self._alarm_timer.start(10000)
 
     def update_status(self, text: str) -> None:
-        self.status.setStyleSheet("color:#22d3ee; font-size:11px;")
+        set_style(self.status, "color:#22d3ee; font-size:11px;")
         self.status.setText(text)
 
     def finish_monitor(self, summary: dict, path: str) -> None:
@@ -510,10 +507,8 @@ class DronePanel(QWidget):
         ))
         clips = int(summary.get("iq_clips", 0))
         failure = summary.get("failure")
-        self.status.setStyleSheet(
-            "color:#f87171; font-size:11px;"
-            if failure else "color:#4ade80; font-size:11px;"
-        )
+        set_style(self.status, "color:#f87171; font-size:11px;"
+            if failure else "color:#4ade80; font-size:11px;")
         suffix = f" · журнал: {path}" if path else ""
         if failure:
             self.status.setText(f"Мониторинг остановлен: {failure}{suffix}")
@@ -529,7 +524,7 @@ class DronePanel(QWidget):
         self._monitoring = False
         self.alarm.setVisible(False)
         self._end_monitor_ui()
-        self.status.setStyleSheet("color:#f87171; font-size:11px;")
+        set_style(self.status, "color:#f87171; font-size:11px;")
         self.status.setText(message)
         self.graph.mark_finished(None)
 

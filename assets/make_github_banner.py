@@ -66,7 +66,6 @@ def main() -> None:
     chips = [
         ("325 MHz – 3.8 GHz", CYAN),
         ("IQ evidence", PINK),
-        ("84 tests", (74, 222, 128, 255)),
     ]
     x = 254
     for label, color in chips:

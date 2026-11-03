@@ -58,8 +58,7 @@ def main() -> None:
         fill=MUTED,
     )
 
-    chips = [("325 MHz – 3.8 GHz", CYAN), ("IQ evidence", PINK),
-             ("84 tests", (74, 222, 128, 255))]
+    chips = [("325 MHz – 3.8 GHz", CYAN), ("IQ evidence", PINK)]
     x = 304
     for label, color in chips:
         f = font("segoeuib.ttf", 18)

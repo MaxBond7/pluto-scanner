@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 from ..config import PLUTO_MAX_FREQ, PLUTO_MIN_FREQ, format_bw, format_freq
 from ..scanner.recorder import load_bundle
 from .scan_graph import ScanGraph
+from .themes import set_style
 
 
 class ScanPanel(QWidget):
@@ -58,9 +59,7 @@ class ScanPanel(QWidget):
         root.setSpacing(6)
 
         title = QLabel("СКАНИРОВАНИЕ ДИАПАЗОНА")
-        title.setStyleSheet(
-            "color:#67e8f9; font-size:15px; font-weight:600; padding:2px;"
-        )
+        set_style(title, "color:#67e8f9; font-size:15px; font-weight:600; padding:2px;")
         root.addWidget(title)
 
         params = QGroupBox("Параметры свипа")
@@ -105,7 +104,7 @@ class ScanPanel(QWidget):
 
         self.estimate = QLabel("")
         self.estimate.setWordWrap(True)
-        self.estimate.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.estimate, "color:#8fa6c0; font-size:10px;")
         root.addWidget(self.estimate)
 
         actions = QHBoxLayout()
@@ -140,7 +139,7 @@ class ScanPanel(QWidget):
         self.progress.setFixedHeight(14)
         self.step_label = QLabel("Готов")
         self.step_label.setMinimumWidth(190)
-        self.step_label.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.step_label, "color:#8fa6c0; font-size:10px;")
         progress_row.addWidget(self.progress, 1)
         progress_row.addWidget(self.step_label)
         root.addLayout(progress_row)
@@ -175,7 +174,7 @@ class ScanPanel(QWidget):
 
         self.status = QLabel("Выберите устройство и задайте диапазон.")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet("color:#94a3b8; font-size:11px;")
+        set_style(self.status, "color:#94a3b8; font-size:11px;")
         root.addWidget(self.status)
 
         for widget in (self.start_spin, self.end_spin, self.step_spin):
@@ -228,7 +227,7 @@ class ScanPanel(QWidget):
         self.progress.setValue(0)
         self.step_label.setText(f"0 / {total}")
         self.graph.configure(start_hz, end_hz)
-        self.status.setStyleSheet("color:#22d3ee; font-size:11px;")
+        set_style(self.status, "color:#22d3ee; font-size:11px;")
         self.status.setText(
             f"Сканирую {format_freq(start_hz)} – {format_freq(end_hz)}, "
             f"{total} шагов…"
@@ -264,8 +263,8 @@ class ScanPanel(QWidget):
         for peak in peaks:
             self._append_peak(peak, center)
         self.export_btn.setEnabled(self.table.rowCount() > 0)
-        if peaks and self.status.styleSheet().find("#22d3ee") < 0:
-            self.status.setStyleSheet("color:#22d3ee; font-size:11px;")
+        if peaks and self.status.styleSheet().find(tcol("#22d3ee")) < 0:
+            set_style(self.status, "color:#22d3ee; font-size:11px;")
 
     def finish_scan(self, result: dict, *, stopped: bool = False) -> None:
         self._scanning = False
@@ -298,7 +297,7 @@ class ScanPanel(QWidget):
             extra = " · сравнение пропущено (фон с другого устройства)"
         missed = int(result.get("steps_missed", 0))
         miss_text = f" · пропущено шагов: {missed}" if missed else ""
-        self.status.setStyleSheet("color:#4ade80; font-size:11px;")
+        set_style(self.status, "color:#4ade80; font-size:11px;")
         self.status.setText(
             f"{head}: шагов {completed}, "
             f"пиков {result.get('peak_count', 0)}, {duration}"
@@ -316,11 +315,9 @@ class ScanPanel(QWidget):
                 for item in new_contacts[:5]
             )
             summary += f" Новые: {examples}."
-        self.status.setStyleSheet(
-            "color:#f87171; font-size:11px;"
+        set_style(self.status, "color:#f87171; font-size:11px;"
             if counts.get("new")
-            else "color:#4ade80; font-size:11px;"
-        )
+            else "color:#4ade80; font-size:11px;")
         self.status.setText(f"{summary} Отчёт: {path}")
         background_path = (report.get("background") or {}).get("path")
         if background_path:
@@ -344,7 +341,7 @@ class ScanPanel(QWidget):
         ):
             widget.setEnabled(True)
         self.compare_btn.setEnabled(bool(self._last_bundle))
-        self.status.setStyleSheet("color:#f87171; font-size:11px;")
+        set_style(self.status, "color:#f87171; font-size:11px;")
         self.status.setText(message)
         self.graph.mark_finished(None)
 
@@ -352,10 +349,10 @@ class ScanPanel(QWidget):
         self._paused = bool(paused)
         self.pause_btn.setText("Продолжить" if paused else "Пауза")
         if paused:
-            self.status.setStyleSheet("color:#facc15; font-size:11px;")
+            set_style(self.status, "color:#facc15; font-size:11px;")
             self.status.setText("Пауза. Нажмите «Продолжить».")
         elif self._scanning:
-            self.status.setStyleSheet("color:#22d3ee; font-size:11px;")
+            set_style(self.status, "color:#22d3ee; font-size:11px;")
             self.status.setText("Сканирование продолжается…")
 
     def export_csv(self, path: str | Path) -> int:

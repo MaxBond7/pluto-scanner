@@ -16,7 +16,14 @@ from . import __version__
 from .config import APP_NAME, DEFAULT_CENTER_FREQ, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE
 from .paths import DATA_DIR, DATA_HOME, ICON_PATH, ensure_data_home
 from .ui.main_window import MainWindow
-from .ui.theme import apply_theme
+from .ui.themes import (
+    DEFAULT_THEME,
+    apply_theme,
+    ensure_theme_dir,
+    load_settings,
+    resolve_theme,
+    theme_dir,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -108,6 +115,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="folder with extracted DroneRF CSV files (optional)")
     p.add_argument("--binary-out", default="", metavar="PATH",
                    help="where to save the binary model")
+    p.add_argument("--theme", default="", metavar="NAME",
+                   help="start with a theme (classic, mono, mono-acid, "
+                        "mono-ember, mono-ice, or a file from user_data/themes)")
     p.add_argument("--version", action="version",
                    version=f"%(prog)s {__version__}")
     p.add_argument("--log-level", default="INFO",
@@ -210,7 +220,13 @@ def main(argv: list[str] | None = None) -> int:
     app.setOrganizationName("PlutoScanner")
     if ICON_PATH.exists():
         app.setWindowIcon(QIcon(str(ICON_PATH)))
-    apply_theme(app)
+
+    settings = load_settings(DATA_DIR / "settings.json")
+    requested = args.theme or str(settings.get("theme") or DEFAULT_THEME)
+    theme = resolve_theme(requested, theme_dir(DATA_DIR))
+    args.theme = theme.name
+    ensure_theme_dir(DATA_DIR)
+    apply_theme(app, theme)
 
     window = MainWindow(args)
     window.show()

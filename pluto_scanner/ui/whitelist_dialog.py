@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from ..config import format_freq
 from ..drone.whitelist import DroneWhitelist
+from .themes import set_style
 
 
 class WhitelistDialog(QDialog):
@@ -28,23 +29,21 @@ class WhitelistDialog(QDialog):
         self.setWindowTitle("Белый список дрон-монитора")
         self.resize(820, 520)
         self.setMinimumSize(680, 420)
-        self.setStyleSheet("QDialog { background:#0b1020; }")
+        set_style(self, "QDialog { background:#0b1020; }")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(12, 10, 12, 10)
         root.setSpacing(8)
 
         title = QLabel("БЕЛЫЙ СПИСОК")
-        title.setStyleSheet(
-            "color:#4ade80; font-size:17px; font-weight:700;"
-        )
+        set_style(title, "color:#4ade80; font-size:17px; font-weight:700;")
         root.addWidget(title)
         hint = QLabel(
             "Сигналы из этого списка не поднимают тревогу, но остаются "
             "в таблице для наблюдения."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(hint, "color:#8fa6c0; font-size:10px;")
         root.addWidget(hint)
 
         self.table = QTableWidget(0, 6)
@@ -63,7 +62,7 @@ class WhitelistDialog(QDialog):
         self.table.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
-        self.table.setStyleSheet("QTableWidget { font-size: 10px; }")
+        set_style(self.table, "QTableWidget { font-size: 10px; }")
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
@@ -73,7 +72,7 @@ class WhitelistDialog(QDialog):
         root.addWidget(self.table, 1)
 
         self.status = QLabel("")
-        self.status.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.status, "color:#8fa6c0; font-size:10px;")
         root.addWidget(self.status)
 
         row = QHBoxLayout()

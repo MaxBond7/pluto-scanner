@@ -8,8 +8,8 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QFont, QIcon
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QCloseEvent, QDesktopServices, QFont, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -77,6 +77,18 @@ from .signature_panel import SignaturePanel
 from .recording_panel import RecordingPanel
 from .waterfall_view import WaterfallView
 from .whitelist_dialog import WhitelistDialog
+from .themes import (
+    active_theme,
+    apply_theme,
+    available_themes,
+    load_settings,
+    resolve_theme,
+    retint,
+    save_settings,
+    ensure_theme_dir,
+    set_style,
+    theme_dir,
+)
 
 log = logging.getLogger(__name__)
 
@@ -174,7 +186,7 @@ class MainWindow(QMainWindow):
         ll.setSpacing(6)
         title = QLabel("PLUTO\nSCANNER")
         title.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
-        title.setStyleSheet("color:#22d3ee; letter-spacing:2px; line-height:0.9;")
+        set_style(title, "color:#22d3ee; letter-spacing:2px; line-height:0.9;")
         ll.addWidget(title)
         self.device_panel = DevicePanel()
         ll.addWidget(self.device_panel)
@@ -190,7 +202,7 @@ class MainWindow(QMainWindow):
         self.band_btn.clicked.connect(lambda: self._tune_band())
         bl.addWidget(self.band_btn)
         note = QLabel("Стоковый Pluto: 325 МГц – 3.8 ГГц")
-        note.setStyleSheet("color:#64748b; font-size:10px;")
+        set_style(note, "color:#64748b; font-size:10px;")
         bl.addWidget(note)
         ll.addWidget(self.band_group)
         self.sim_group = QGroupBox("Симулятор")
@@ -256,7 +268,7 @@ class MainWindow(QMainWindow):
         self.audio_btn.toggled.connect(self._toggle_audio)
         rl.addWidget(self.audio_btn, 1, 3)
         self.status_hint = QLabel("VFO — software, LO не трогаем")
-        self.status_hint.setStyleSheet("color:#94a3b8;")
+        set_style(self.status_hint, "color:#94a3b8;")
         rl.addWidget(self.status_hint, 1, 4, 1, 3)
         rl.setColumnStretch(6, 1)
         cl.addWidget(self.rx_group)
@@ -304,11 +316,60 @@ class MainWindow(QMainWindow):
         self.fps_label = QLabel("— FPS")
         self.audio_label = QLabel("Аудио выкл")
         for w in (self.cal_label, self.fps_label, self.audio_label):
-            w.setStyleSheet("color:#8fa6c0; padding:0 8px;")
+            set_style(w, "color:#8fa6c0; padding:0 8px;")
         self.statusBar().addWidget(self.status_label, 1)
+        self.theme_combo = QComboBox()
+        self.theme_combo.setMinimumWidth(150)
+        self.theme_combo.setToolTip(
+            "Тема интерфейса. Свои темы: user_data/themes/*.json"
+        )
+        self._theme_names: dict[int, str] = {}
+        current = active_theme()
+        for index, (name, theme) in enumerate(
+            available_themes(theme_dir(DATA_DIR)).items()
+        ):
+            self.theme_combo.addItem(theme.title, name)
+            self._theme_names[index] = name
+            if name == current.name:
+                self.theme_combo.setCurrentIndex(index)
+        self.theme_combo.currentIndexChanged.connect(self._on_theme_changed)
+        self.theme_btn = QPushButton("папка")
+        self.theme_btn.setFixedWidth(64)
+        self.theme_btn.setToolTip("Открыть папку пользовательских тем")
+        self.theme_btn.clicked.connect(self._open_theme_folder)
+        self.theme_label = QLabel("ТЕМА")
+        set_style(self.theme_label, "color:#64748b; padding:0 4px 0 10px;")
+        self.statusBar().addPermanentWidget(self.theme_label)
+        self.statusBar().addPermanentWidget(self.theme_combo)
+        self.statusBar().addPermanentWidget(self.theme_btn)
         self.statusBar().addPermanentWidget(self.cal_label)
         self.statusBar().addPermanentWidget(self.fps_label)
         self.statusBar().addPermanentWidget(self.audio_label)
+
+    def _on_theme_changed(self, index: int) -> None:
+        name = self._theme_names.get(int(index)) or self.theme_combo.currentData()
+        if not name:
+            return
+        theme = resolve_theme(str(name), theme_dir(DATA_DIR))
+        app = QApplication.instance()
+        if app is None:
+            return
+        apply_theme(app, theme)
+        retint(self)
+        for widget in (self.spectrum, self.waterfall,
+                       self.scan_panel.graph, self.drone_panel.graph):
+            retheme = getattr(widget, "retheme", None)
+            if callable(retheme):
+                retheme()
+        settings = load_settings(DATA_DIR / "settings.json")
+        settings["theme"] = theme.name
+        save_settings(DATA_DIR / "settings.json", settings)
+        self.status_label.setText(f"Тема: {theme.title}")
+        self.status_label.setStyleSheet("")
+
+    def _open_theme_folder(self) -> None:
+        folder = ensure_theme_dir(DATA_DIR)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
 
     def _connect(self) -> None:
         self.device_panel.add_simulator.connect(self._add_simulator)
@@ -406,7 +467,7 @@ class MainWindow(QMainWindow):
         info = load_info(path)
         if info is None or not info.path.exists():
             self.status_label.setText("Запись не найдена или повреждена.")
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             return False
         for session in self.sessions.values():
             if (session.config.kind == "iqfile"
@@ -469,12 +530,12 @@ class MainWindow(QMainWindow):
             self.status_label.setText(
                 "Найдено: " + ", ".join(uris[:3])
             )
-            self.status_label.setStyleSheet("color:#4ade80;")
+            set_style(self.status_label, "color:#4ade80;")
         else:
             self.status_label.setText(
                 "Pluto не найден. Проверьте USB/сеть и pyadi-iio."
             )
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
 
     def _remove_device(self, device_id: str) -> None:
         if self._recording and self.recorder.info is not None and (
@@ -619,7 +680,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText(
             "ML-модель обновлена: новые события получат вторую гипотезу."
         )
-        self.status_label.setStyleSheet("color:#c4b5fd;")
+        set_style(self.status_label, "color:#c4b5fd;")
 
     def _on_iq_record(self, _device_id: str, block) -> None:
         if self._recording:
@@ -635,16 +696,16 @@ class MainWindow(QMainWindow):
             self.status_label.setText(
                 "Сначала остановите сканер или дрон-монитор."
             )
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         if self.selected_id is None:
             self.status_label.setText("Нет устройства для записи.")
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         session = self.sessions[self.selected_id]
         if session.config.kind == "iqfile":
             self.status_label.setText("Нельзя записывать воспроизведение.")
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         info = new_recording_info(
             RECORDINGS_DIR,
@@ -662,7 +723,7 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             delete_recording(info)
             self.status_label.setText(f"Запись не началась: {exc}")
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             return
         self._recording = True
         self._record_expected_s = seconds
@@ -672,7 +733,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText(
             f"Запись IQ: {session.config.name}, {seconds:.1f} с"
         )
-        self.status_label.setStyleSheet("color:#a78bfa;")
+        set_style(self.status_label, "color:#a78bfa;")
 
     def _recording_tick(self) -> None:
         if not self._recording:
@@ -702,12 +763,12 @@ class MainWindow(QMainWindow):
                 f"Запись сохранена: {info.recording_id} "
                 f"({format_size(info.size_bytes)})"
             )
-            self.status_label.setStyleSheet("color:#4ade80;")
+            set_style(self.status_label, "color:#4ade80;")
         elif info is not None:
             self.status_label.setText(
                 f"Запись не завершена: {info.error or 'нет данных'}"
             )
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
         self.record_done.emit(info)
 
     def _refresh_recordings(self) -> None:
@@ -726,7 +787,7 @@ class MainWindow(QMainWindow):
                 f"Импортировано: {info.recording_id} "
                 f"({info.label or 'без метки'})"
             )
-            self.status_label.setStyleSheet("color:#4ade80;")
+            set_style(self.status_label, "color:#4ade80;")
             self.right_tabs.setCurrentWidget(self.recording_panel)
 
     def _set_recording_label(self, recording_id: str, label: str) -> None:
@@ -742,18 +803,18 @@ class MainWindow(QMainWindow):
             set_label(info, label)
         except Exception as exc:
             self.status_label.setText(f"Не удалось сохранить метку: {exc}")
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             return
         self._refresh_recordings()
         self.ml_panel.refresh()
         text = "без метки" if not label else label
         self.status_label.setText(f"Метка записи: {text}")
-        self.status_label.setStyleSheet("color:#c4b5fd;")
+        set_style(self.status_label, "color:#c4b5fd;")
 
     def _play_recording(self, recording_id: str) -> None:
         if self._recording:
             self.status_label.setText("Сначала остановите запись.")
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         info = next(
             (item for item in list_recordings(RECORDINGS_DIR)
@@ -769,7 +830,7 @@ class MainWindow(QMainWindow):
                 f"Воспроизведение: {info.recording_id} "
                 f"({info.duration_s:.1f} с)"
             )
-            self.status_label.setStyleSheet("color:#22d3ee;")
+            set_style(self.status_label, "color:#22d3ee;")
 
     def play_recording_path(self, path: str | Path) -> bool:
         if self._make_iqfile(path):
@@ -790,11 +851,11 @@ class MainWindow(QMainWindow):
                     break
         if target is None:
             self.status_label.setText("Воспроизведение не запущено.")
-            self.status_label.setStyleSheet("color:#94a3b8;")
+            set_style(self.status_label, "color:#94a3b8;")
             return
         self._remove_device(target)
         self.status_label.setText("Воспроизведение остановлено.")
-        self.status_label.setStyleSheet("color:#94a3b8;")
+        set_style(self.status_label, "color:#94a3b8;")
 
     def _delete_recording(self, recording_id: str) -> None:
         info = next(
@@ -809,7 +870,7 @@ class MainWindow(QMainWindow):
             self.recorder.info.recording_id == recording_id
         ):
             self.status_label.setText("Эта запись ещё пишется.")
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         answer = QMessageBox.question(
             self,
@@ -826,7 +887,7 @@ class MainWindow(QMainWindow):
         delete_recording(info)
         self._refresh_recordings()
         self.status_label.setText("Запись удалена.")
-        self.status_label.setStyleSheet("color:#94a3b8;")
+        set_style(self.status_label, "color:#94a3b8;")
 
     # ------------------------------------------------------------------- spectrum
     def _on_spectrum(self, device_id: str, frame: SpectrumFrame) -> None:
@@ -848,12 +909,12 @@ class MainWindow(QMainWindow):
         self.waterfall.update_frame(frame)
         if frame.calibrated:
             self.cal_label.setText("Фон: готов")
-            self.cal_label.setStyleSheet("color:#4ade80; padding:0 8px;")
+            set_style(self.cal_label, "color:#4ade80; padding:0 8px;")
         else:
             self.cal_label.setText(
                 f"Калибровка: {frame.calibration_progress * 100:.0f}%"
             )
-            self.cal_label.setStyleSheet("color:#facc15; padding:0 8px;")
+            set_style(self.cal_label, "color:#facc15; padding:0 8px;")
         self.fps_label.setText(
             f"{frame.fps:.1f} FPS · {frame.span_hz / 1e6:.3f} МГц"
         )
@@ -883,9 +944,7 @@ class MainWindow(QMainWindow):
             name = self.device_panel.device_name(device_id)
             label = _STATUS_RU.get(status, status)
             self.status_label.setText(f"{name}: {label}")
-            self.status_label.setStyleSheet(
-                f"color:{_STATUS_COLOR.get(status, '#d7e2f0')};"
-            )
+            set_style(self.status_label, f"color:{_STATUS_COLOR.get(status, '#d7e2f0')};")
         if status == "stopped":
             self.audio_sink.clear()
 
@@ -906,7 +965,7 @@ class MainWindow(QMainWindow):
             )
             return
         self.status_label.setText(message)
-        self.status_label.setStyleSheet("color:#f87171;")
+        set_style(self.status_label, "color:#f87171;")
         self.status_label.setToolTip(message)
 
     def _on_info(self, device_id: str, info: dict) -> None:
@@ -938,16 +997,16 @@ class MainWindow(QMainWindow):
                 self.audio_btn.setChecked(False)
                 self._audio_guard = False
                 self.audio_label.setText("Аудио: нет устройства")
-                self.audio_label.setStyleSheet("color:#f87171; padding:0 8px;")
+                set_style(self.audio_label, "color:#f87171; padding:0 8px;")
                 return
             self.audio_enabled = True
             self.audio_label.setText("Аудио вкл")
-            self.audio_label.setStyleSheet("color:#4ade80; padding:0 8px;")
+            set_style(self.audio_label, "color:#4ade80; padding:0 8px;")
         else:
             self.audio_enabled = False
             self.audio_sink.stop()
             self.audio_label.setText("Аудио выкл")
-            self.audio_label.setStyleSheet("color:#8fa6c0; padding:0 8px;")
+            set_style(self.audio_label, "color:#8fa6c0; padding:0 8px;")
         for did, session in self.sessions.items():
             session.set_audio_enabled(self.audio_enabled and did == self.selected_id)
         if not self.audio_enabled:
@@ -960,11 +1019,11 @@ class MainWindow(QMainWindow):
         if not self.audio_sink.running or self.audio_sink.rate != int(round(rate)):
             if not self.audio_sink.start(rate):
                 self.audio_label.setText(f"Аудио: {self.audio_sink.error}")
-                self.audio_label.setStyleSheet("color:#f87171; padding:0 8px;")
+                set_style(self.audio_label, "color:#f87171; padding:0 8px;")
                 return
         self.audio_sink.push(samples)
         self.audio_label.setText(f"Аудио {rate / 1000:.0f} kHz")
-        self.audio_label.setStyleSheet("color:#4ade80; padding:0 8px;")
+        set_style(self.audio_label, "color:#4ade80; padding:0 8px;")
 
     # ------------------------------------------------------------------------ VFO
     def _on_vfo_changed(self, vfo: VFOConfig) -> None:
@@ -1109,7 +1168,7 @@ class MainWindow(QMainWindow):
             self.status_label.setText(
                 f"{format_freq(center)} вне паспортного диапазона Pluto"
             )
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
         else:
             self.status_label.setText(f"LO: {format_freq(center)}")
 
@@ -1154,9 +1213,9 @@ class MainWindow(QMainWindow):
         self.spectrum.baseline_curve.setData([], [])
         self._refresh_contacts()
         self.cal_label.setText("Калибровка: 0%")
-        self.cal_label.setStyleSheet("color:#facc15; padding:0 8px;")
+        set_style(self.cal_label, "color:#facc15; padding:0 8px;")
         self.status_label.setText("Фон сброшен, идёт калибровка")
-        self.status_label.setStyleSheet("color:#d7e2f0;")
+        set_style(self.status_label, "color:#d7e2f0;")
 
     # ---------------------------------------------------------------------- scan
     def start_scan(self) -> None:
@@ -1166,7 +1225,7 @@ class MainWindow(QMainWindow):
     def _start_scan(self) -> None:
         if self._recording:
             self.status_label.setText("Сначала остановите запись IQ.")
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         if self._drone_active:
             self._stop_drone()
@@ -1183,7 +1242,7 @@ class MainWindow(QMainWindow):
             self.status_label.setText(
                 "Запись имеет фиксированную полосу — сканировать её нельзя."
             )
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         start, end, step = self.scan_panel.values()
         if end <= start:
@@ -1219,7 +1278,7 @@ class MainWindow(QMainWindow):
         self.audio_btn.setEnabled(False)
         if self._scan_audio_was_enabled:
             self.audio_label.setText("Аудио: пауза (скан)")
-            self.audio_label.setStyleSheet("color:#8fa6c0; padding:0 8px;")
+            set_style(self.audio_label, "color:#8fa6c0; padding:0 8px;")
         try:
             session.set_audio_enabled(False)
             self.audio_sink.clear()
@@ -1255,7 +1314,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText(
             f"Сканирование {format_freq(start)} – {format_freq(end)}…"
         )
-        self.status_label.setStyleSheet("color:#22d3ee;")
+        set_style(self.status_label, "color:#22d3ee;")
         if not controller.start():
             # ``failed`` is emitted synchronously and the slot already
             # restored the UI and showed the reason.
@@ -1273,19 +1332,19 @@ class MainWindow(QMainWindow):
             return
         self._scan_controller.pause()
         self.status_label.setText("Сканирование приостановлено.")
-        self.status_label.setStyleSheet("color:#facc15;")
+        set_style(self.status_label, "color:#facc15;")
 
     def _resume_scan(self) -> None:
         if self._scan_controller is None:
             return
         self._scan_controller.resume()
         self.status_label.setText("Сканирование продолжается.")
-        self.status_label.setStyleSheet("color:#22d3ee;")
+        set_style(self.status_label, "color:#22d3ee;")
 
     def _export_scan(self) -> None:
         if self.scan_panel.table.rowCount() == 0:
             self.status_label.setText("Нет строк для экспорта.")
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         path, _ = QFileDialog.getSaveFileName(
             self,
@@ -1299,10 +1358,10 @@ class MainWindow(QMainWindow):
             rows = self.scan_panel.export_csv(path)
         except Exception as exc:
             self.status_label.setText(f"Экспорт не удался: {exc}")
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             return
         self.status_label.setText(f"Экспортировано строк: {rows}")
-        self.status_label.setStyleSheet("color:#4ade80;")
+        set_style(self.status_label, "color:#4ade80;")
 
     def _on_scan_started(self, total: int, start: float, end: float) -> None:
         self.scan_panel.begin_scan(total, start, end)
@@ -1330,7 +1389,7 @@ class MainWindow(QMainWindow):
             suffix = " · сравнение с фоном пропущено"
         else:
             suffix = ""
-        self.status_label.setStyleSheet("color:#4ade80;")
+        set_style(self.status_label, "color:#4ade80;")
         self.status_label.setText(
             f"Скан завершён: шагов {result.get('steps_completed', 0)}, "
             f"пиков {result.get('peak_count', 0)}{suffix}"
@@ -1341,7 +1400,7 @@ class MainWindow(QMainWindow):
         self._last_scan_bundle = path
         self.scan_panel.finish_scan(result, stopped=True)
         self._end_scan_ui()
-        self.status_label.setStyleSheet("color:#facc15;")
+        set_style(self.status_label, "color:#facc15;")
         self.status_label.setText(
             f"Скан остановлен: сохранено "
             f"{result.get('steps_completed', 0)} шагов"
@@ -1351,7 +1410,7 @@ class MainWindow(QMainWindow):
     def _on_scan_failed(self, message: str) -> None:
         self.scan_panel.fail(message)
         self._end_scan_ui()
-        self.status_label.setStyleSheet("color:#f87171;")
+        set_style(self.status_label, "color:#f87171;")
         self.status_label.setText(message)
         self.status_label.setToolTip(message)
         self.scan_done.emit({"failure": message, "path": None})
@@ -1360,13 +1419,13 @@ class MainWindow(QMainWindow):
         self.scan_panel.show_compare(report, path)
         counts = report.get("counts", {})
         if counts.get("new"):
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             self.status_label.setText(
                 f"Новых контактов: {counts['new']} · "
                 f"отчёт {Path(path).name}"
             )
         else:
-            self.status_label.setStyleSheet("color:#4ade80;")
+            set_style(self.status_label, "color:#4ade80;")
             self.status_label.setText(report.get("summary_ru", "Сравнение готово"))
 
     def _end_scan_ui(self) -> None:
@@ -1395,10 +1454,10 @@ class MainWindow(QMainWindow):
         self.audio_enabled = self._scan_audio_was_enabled
         if self._scan_audio_was_enabled and has_device:
             self.audio_label.setText("Аудио вкл")
-            self.audio_label.setStyleSheet("color:#4ade80; padding:0 8px;")
+            set_style(self.audio_label, "color:#4ade80; padding:0 8px;")
         else:
             self.audio_label.setText("Аудио выкл")
-            self.audio_label.setStyleSheet("color:#8fa6c0; padding:0 8px;")
+            set_style(self.audio_label, "color:#8fa6c0; padding:0 8px;")
         self._update_controls()
         self.scan_panel.set_can_compare(self._last_scan_bundle is not None)
 
@@ -1510,11 +1569,11 @@ class MainWindow(QMainWindow):
         self.scan_panel.set_can_compare(False)
         if self._drone_audio_was_enabled:
             self.audio_label.setText("Аудио: пауза (дрон-монитор)")
-            self.audio_label.setStyleSheet("color:#8fa6c0; padding:0 8px;")
+            set_style(self.audio_label, "color:#8fa6c0; padding:0 8px;")
         self.drone_panel.begin_monitor(
             devices, len(bands), len(chunks)
         )
-        self.status_label.setStyleSheet("color:#f472b6;")
+        set_style(self.status_label, "color:#f472b6;")
         self.status_label.setText(
             f"Дрон-монитор: {len(bands)} полос, {len(chunks)} кусков"
             f"{rate_note}…"
@@ -1539,7 +1598,7 @@ class MainWindow(QMainWindow):
 
     def _fail_drone(self, message: str) -> None:
         self.drone_panel.fail(message)
-        self.status_label.setStyleSheet("color:#f87171;")
+        set_style(self.status_label, "color:#f87171;")
         self.status_label.setText(message)
         self.drone_done.emit(
             {"failure": message, "events_total": 0,
@@ -1580,12 +1639,12 @@ class MainWindow(QMainWindow):
             self.status_label.setText(
                 "Нет IQ-фрагмента: включите запись IQ в дрон-мониторе."
             )
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             return
         clip = Path(event.clip_path)
         if not clip.exists():
             self.status_label.setText("IQ-фрагмент не найден.")
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             return
         note = f"ML feedback: {event_id}"
         for info in list_recordings(RECORDINGS_DIR):
@@ -1596,7 +1655,7 @@ class MainWindow(QMainWindow):
                 self.status_label.setText(
                     f"Метка исправления обновлена: {label}"
                 )
-                self.status_label.setStyleSheet("color:#c4b5fd;")
+                set_style(self.status_label, "color:#c4b5fd;")
                 return
         try:
             meta = json.loads(
@@ -1608,7 +1667,7 @@ class MainWindow(QMainWindow):
         center = float(meta.get("center_hz") or event.clip_center_hz or 0.0)
         if fs <= 0:
             self.status_label.setText("Неизвестная частота дискретизации клипа.")
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             return
         info = new_recording_info(
             RECORDINGS_DIR,
@@ -1623,7 +1682,7 @@ class MainWindow(QMainWindow):
             shutil.copyfile(clip, info.cf32_path)
         except Exception as exc:
             self.status_label.setText(f"Не удалось сохранить клип: {exc}")
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             return
         info.samples = info.path.stat().st_size // 8
         info.complete = info.samples > 0
@@ -1635,13 +1694,13 @@ class MainWindow(QMainWindow):
         self.status_label.setText(
             f"Пример сохранён: {label}. Теперь ML → «Обучить на записях»."
         )
-        self.status_label.setStyleSheet("color:#4ade80;")
+        set_style(self.status_label, "color:#4ade80;")
 
     def _on_drone_event(self, event, is_new: bool) -> None:
         self.drone_panel.add_event(event, is_new)
         if (is_new and event.drone_like
                 and not self.drone_panel.is_confirmed(event)):
-            self.status_label.setStyleSheet("color:#fb923c;")
+            set_style(self.status_label, "color:#fb923c;")
             self.status_label.setText(
                 f"Кандидат: {event.class_ru} · "
                 f"{format_freq(event.freq_hz)} · ждём подтверждения"
@@ -1650,7 +1709,7 @@ class MainWindow(QMainWindow):
     def _on_drone_alarm(self, event) -> None:
         QApplication.beep()
         self.drone_panel.show_alarm(event)
-        self.status_label.setStyleSheet("color:#f87171;")
+        set_style(self.status_label, "color:#f87171;")
         self.status_label.setText(
             f"ВОЗМОЖНЫЙ ДРОН: {event.band_name} · {event.class_ru} · "
             f"{format_freq(event.freq_hz)}"
@@ -1660,11 +1719,9 @@ class MainWindow(QMainWindow):
         self.drone_panel.update_status(text)
 
     def _on_drone_error(self, message: str) -> None:
-        self.drone_panel.status.setStyleSheet(
-            "color:#f87171; font-size:11px;"
-        )
+        set_style(self.drone_panel.status, "color:#f87171; font-size:11px;")
         self.drone_panel.status.setText(message)
-        self.status_label.setStyleSheet("color:#f87171;")
+        set_style(self.status_label, "color:#f87171;")
         self.status_label.setText(message)
 
     def _on_drone_finished(self, summary: dict, path: str) -> None:
@@ -1676,10 +1733,10 @@ class MainWindow(QMainWindow):
         ))
         failure = summary.get("failure")
         if failure:
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             self.status_label.setText(f"Дрон-монитор: {failure}")
         else:
-            self.status_label.setStyleSheet("color:#4ade80;")
+            set_style(self.status_label, "color:#4ade80;")
             self.status_label.setText(
                 f"Дрон-монитор остановлен: событий {total}, "
                 f"подтверждённых тревог {alarms}"
@@ -1738,17 +1795,17 @@ class MainWindow(QMainWindow):
                     self._last_frame = None
         if self._drone_audio_was_enabled and has:
             self.audio_label.setText("Аудио вкл")
-            self.audio_label.setStyleSheet("color:#4ade80; padding:0 8px;")
+            set_style(self.audio_label, "color:#4ade80; padding:0 8px;")
         else:
             self.audio_label.setText("Аудио выкл")
-            self.audio_label.setStyleSheet("color:#8fa6c0; padding:0 8px;")
+            set_style(self.audio_label, "color:#8fa6c0; padding:0 8px;")
         self._pre_drone_frame = None
         self._update_controls()
         self.scan_panel.set_can_compare(self._last_scan_bundle is not None)
 
     def _compare_scan(self) -> None:
         if not self._last_scan_bundle:
-            self.status_label.setStyleSheet("color:#facc15;")
+            set_style(self.status_label, "color:#facc15;")
             self.status_label.setText(
                 "Сначала выполните скан: сравнивать пока нечего."
             )
@@ -1774,7 +1831,7 @@ class MainWindow(QMainWindow):
             report = compare_background_files(filename, current)
         except Exception as exc:
             log.warning("manual comparison failed: %s", exc)
-            self.status_label.setStyleSheet("color:#f87171;")
+            set_style(self.status_label, "color:#f87171;")
             self.status_label.setText(f"Сравнение не удалось: {exc}")
             return
         from ..scanner.compare import save_report

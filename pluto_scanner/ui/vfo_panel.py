@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from ..config import format_freq
 from ..model import VFOConfig
+from .themes import set_style
 
 
 class VFOPanel(QGroupBox):
@@ -57,9 +58,7 @@ class VFOPanel(QGroupBox):
         layout.addWidget(self.freq_spin)
 
         self.offset_label = QLabel()
-        self.offset_label.setStyleSheet(
-            "color:#64748b; font-size:10px; font-family:Consolas,monospace;"
-        )
+        set_style(self.offset_label, "color:#64748b; font-size:10px; font-family:Consolas,monospace;")
         layout.addWidget(self.offset_label)
 
         row = QHBoxLayout()
@@ -144,7 +143,7 @@ class VFOPanel(QGroupBox):
             "Клик по спектру/водопаду ставит VFO."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#64748b; font-size:10px;")
+        set_style(hint, "color:#64748b; font-size:10px;")
         layout.addWidget(hint)
 
         self.set_context(self._center, self._span, VFOConfig())

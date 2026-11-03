@@ -20,6 +20,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from ..config import format_freq
+from .themes import set_style, tcol, trgba
 
 GRAPH_BINS = 8192
 
@@ -33,7 +34,7 @@ class ScanGraph(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        self.plot = pg.PlotWidget(background="#0a0f1e")
+        self.plot = pg.PlotWidget(background=tcol("graph_bg"))
         self.plot.setMenuEnabled(False)
         self.plot.showGrid(x=True, y=True, alpha=0.12)
         self.plot.setLabel("bottom", "Частота", units="MHz")
@@ -47,25 +48,25 @@ class ScanGraph(QWidget):
 
         self.background_curve = self.plot.plot(
             [], [],
-            pen=pg.mkPen("#475569", width=1.0, style=Qt.PenStyle.DashLine),
+            pen=pg.mkPen(tcol("#475569"), width=1.0, style=Qt.PenStyle.DashLine),
         )
         self.maxhold_curve = self.plot.plot(
-            [], [], pen=pg.mkPen("#f59e0b", width=1.5)
+            [], [], pen=pg.mkPen(tcol("#f59e0b"), width=1.5)
         )
         self.current_curve = self.plot.plot(
-            [], [], pen=pg.mkPen("#22d3ee", width=1.0)
+            [], [], pen=pg.mkPen(tcol("#22d3ee"), width=1.0)
         )
         self.peak_scatter = pg.ScatterPlotItem(
             size=7, symbol="o",
-            brush=pg.mkBrush(245, 158, 11, 190),
-            pen=pg.mkPen("#fbbf24"),
+            brush=pg.mkBrush(trgba(245, 158, 11, 190)),
+            pen=pg.mkPen(tcol("#fbbf24")),
         )
         self.plot.addItem(self.peak_scatter)
         self.current_line = pg.InfiniteLine(
             pos=0, angle=90, movable=False,
-            pen=pg.mkPen("#f472b6", width=1, style=Qt.PenStyle.DotLine),
+            pen=pg.mkPen(tcol("#f472b6"), width=1, style=Qt.PenStyle.DotLine),
             label="LO",
-            labelOpts={"position": 0.04, "color": "#f472b6"},
+            labelOpts={"position": 0.04, "color": tcol("#f472b6")},
         )
         self.plot.addItem(self.current_line)
         self.current_line.hide()
@@ -75,7 +76,7 @@ class ScanGraph(QWidget):
             "жёлтый — накопленный максимум."
         )
         self.hint.setWordWrap(True)
-        self.hint.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.hint, "color:#8fa6c0; font-size:10px;")
         layout.addWidget(self.hint)
 
         self._start_hz = 325e6

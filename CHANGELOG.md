@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-03
+
+- Theme engine: every colour now goes through a palette, so the whole UI can
+  be re-skinned without touching widgets.
+- Five built-in themes: `mono` (new default, pure black-and-white terminal),
+  `mono-acid`, `mono-ember`, `mono-ice` (monochrome plus one rare accent) and
+  the previous blue `classic`.
+- User themes: drop a `.json` into `user_data/themes/`; the folder is created
+  on first run with a README and a full example.
+- Theme picker in the status bar, `--theme NAME` flag, and the choice is
+  remembered in `user_data/settings.json`.
+- Switching a theme is live: stored stylesheet templates are re-applied and
+  graphs re-colour their pens and waterfall colormap (grey for mono themes).
+- `docs/THEMES.md`: token list, JSON format, font/radius/waterfall options.
+
 ## [0.14.2] - 2026-11-03
 
 - The `.exe` version resource is now generated from `pyproject.toml` on every

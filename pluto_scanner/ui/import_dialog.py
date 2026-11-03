@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from ..drone.features import CLASS_RU
 from ..ml.importers import import_raw_iq, import_sigmf
+from .themes import set_style
 
 _LABELS = [
     "FHSS", "TELEMETRY", "VIDEO_ANALOG", "VIDEO_DIGITAL", "WIFI", "NARROW",
@@ -35,23 +36,21 @@ class DatasetImportDialog(QDialog):
         self.result_info = None
         self.setWindowTitle("Импорт IQ-датасета")
         self.resize(620, 320)
-        self.setStyleSheet("QDialog { background:#0b1020; }")
+        set_style(self, "QDialog { background:#0b1020; }")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(14, 12, 14, 12)
         root.setSpacing(8)
 
         title = QLabel("ИМПОРТ SIGMF / RAW IQ")
-        title.setStyleSheet(
-            "color:#67e8f9; font-size:16px; font-weight:700;"
-        )
+        set_style(title, "color:#67e8f9; font-size:16px; font-weight:700;")
         root.addWidget(title)
         hint = QLabel(
             "Скачайте датасет с первоисточника. Сюда кладётся только "
             "выбранный файл; лицензия остаётся у автора."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(hint, "color:#8fa6c0; font-size:10px;")
         root.addWidget(hint)
 
         form = QFormLayout()
@@ -104,7 +103,7 @@ class DatasetImportDialog(QDialog):
 
         self.status = QLabel("")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet("color:#94a3b8; font-size:10px;")
+        set_style(self.status, "color:#94a3b8; font-size:10px;")
         root.addWidget(self.status)
 
         buttons = QDialogButtonBox(
@@ -153,6 +152,6 @@ class DatasetImportDialog(QDialog):
             QMessageBox.critical(self, "Импорт", str(exc))
             return
         self.result_info = result.info
-        self.status.setStyleSheet("color:#4ade80; font-size:10px;")
+        set_style(self.status, "color:#4ade80; font-size:10px;")
         self.status.setText(f"Импортировано: {result.info.recording_id}")
         self.accept()

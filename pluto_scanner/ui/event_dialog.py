@@ -25,6 +25,7 @@ from ..drone.tracker import DroneEvent
 from ..drone.features import CLASS_RU
 from ..signatures import SignatureStore, match_event
 from ..drone.whitelist import DroneWhitelist
+from .themes import set_style, tcol
 
 
 class DroneEventDialog(QDialog):
@@ -41,22 +42,18 @@ class DroneEventDialog(QDialog):
         self.setWindowTitle(f"Событие {event.event_id}")
         self.resize(980, 820)
         self.setMinimumSize(780, 680)
-        self.setStyleSheet(
-            "QDialog { background:#0b1020; }"
+        set_style(self, "QDialog { background:#0b1020; }"
             "QPushButton { background:#17233b; color:#d7e2f0;"
             " border:1px solid #2b3d5f; border-radius:5px;"
             " padding:5px 9px; }"
-            "QPushButton:hover { background:#22345a; border-color:#3b5b8a; }"
-        )
+            "QPushButton:hover { background:#22345a; border-color:#3b5b8a; }")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(14, 12, 14, 12)
         root.setSpacing(8)
 
         title = QLabel(event.class_ru.upper())
-        title.setStyleSheet(
-            "color:#f472b6; font-size:20px; font-weight:700;"
-        )
+        set_style(title, "color:#f472b6; font-size:20px; font-weight:700;")
         root.addWidget(title)
 
         subtitle = QLabel(
@@ -65,31 +62,25 @@ class DroneEventDialog(QDialog):
             f"{event.count} подтверждений · "
             f"уверенность {event.confidence * 100:.0f}%"
         )
-        subtitle.setStyleSheet("color:#d7e2f0; font-size:13px;")
+        set_style(subtitle, "color:#d7e2f0; font-size:13px;")
         root.addWidget(subtitle)
 
         self.whitelist_label = QLabel(self._whitelist_text())
         self.whitelist_label.setWordWrap(True)
-        self.whitelist_label.setStyleSheet(
-            "color:#4ade80; font-size:11px;" if event.whitelisted
-            else "color:#64748b; font-size:11px;"
-        )
+        set_style(self.whitelist_label, "color:#4ade80; font-size:11px;" if event.whitelisted
+            else "color:#64748b; font-size:11px;")
         root.addWidget(self.whitelist_label)
 
         self.ml_label = QLabel(self._ml_text())
         self.ml_label.setWordWrap(True)
-        self.ml_label.setStyleSheet(
-            "color:#c4b5fd; font-size:11px;" if event.ml
-            else "color:#64748b; font-size:11px;"
-        )
+        set_style(self.ml_label, "color:#c4b5fd; font-size:11px;" if event.ml
+            else "color:#64748b; font-size:11px;")
         root.addWidget(self.ml_label)
 
         self.binary_label = QLabel(self._binary_text())
         self.binary_label.setWordWrap(True)
-        self.binary_label.setStyleSheet(
-            "color:#fda4af; font-size:12px; font-weight:600;"
-            if event.binary else "color:#64748b; font-size:11px;"
-        )
+        set_style(self.binary_label, "color:#fda4af; font-size:12px; font-weight:600;"
+            if event.binary else "color:#64748b; font-size:11px;")
         root.addWidget(self.binary_label)
 
         if event.wideband:
@@ -100,7 +91,7 @@ class DroneEventDialog(QDialog):
                 "(посмотрите, есть ли рядом точка доступа)."
             )
             wide_label.setWordWrap(True)
-            wide_label.setStyleSheet("color:#facc15; font-size:11px;")
+            set_style(wide_label, "color:#facc15; font-size:11px;")
             root.addWidget(wide_label)
 
         grid = QGridLayout()
@@ -124,9 +115,9 @@ class DroneEventDialog(QDialog):
         ]
         for row, (key, value) in enumerate(values):
             key_label = QLabel(key)
-            key_label.setStyleSheet("color:#8fa6c0; font-size:11px;")
+            set_style(key_label, "color:#8fa6c0; font-size:11px;")
             value_label = QLabel(value)
-            value_label.setStyleSheet("color:#d7e2f0; font-size:11px;")
+            set_style(value_label, "color:#d7e2f0; font-size:11px;")
             value_label.setTextInteractionFlags(
                 Qt.TextInteractionFlag.TextSelectableByMouse
             )
@@ -137,40 +128,40 @@ class DroneEventDialog(QDialog):
         plots = QHBoxLayout()
         plots.setSpacing(8)
 
-        spectrum_plot = pg.PlotWidget(background="#0a0f1e")
+        spectrum_plot = pg.PlotWidget(background=tcol("graph_bg"))
         spectrum_plot.setMenuEnabled(False)
         spectrum_plot.showGrid(x=True, y=True, alpha=0.12)
         spectrum_plot.setLabel("bottom", "Частота", units="MHz")
         spectrum_plot.setLabel("left", "dBFS")
-        spectrum_plot.setTitle("Спектр события", color="#67e8f9", size="10pt")
+        spectrum_plot.setTitle("Спектр события", color=tcol("#67e8f9"), size="10pt")
         if event.spectrum_freqs_hz and event.spectrum_db:
             xs = [f / 1e6 for f in event.spectrum_freqs_hz]
             spectrum_plot.plot(
                 xs, event.spectrum_db,
-                pen=pg.mkPen("#22d3ee", width=1.5),
+                pen=pg.mkPen(tcol("#22d3ee"), width=1.5),
             )
             peak_x = event.freq_hz / 1e6
             spectrum_plot.addItem(pg.InfiniteLine(
                 pos=peak_x, angle=90,
-                pen=pg.mkPen("#f472b6", width=1,
+                pen=pg.mkPen(tcol("#f472b6"), width=1,
                              style=Qt.PenStyle.DotLine),
             ))
         spectrum_plot.setMinimumHeight(220)
         plots.addWidget(spectrum_plot, 1)
 
-        envelope_plot = pg.PlotWidget(background="#0a0f1e")
+        envelope_plot = pg.PlotWidget(background=tcol("graph_bg"))
         envelope_plot.setMenuEnabled(False)
         envelope_plot.showGrid(x=True, y=True, alpha=0.12)
         envelope_plot.setLabel("bottom", "Время", units="мс")
         envelope_plot.setLabel("left", "dB")
-        envelope_plot.setTitle("Огибающая", color="#67e8f9", size="10pt")
+        envelope_plot.setTitle("Огибающая", color=tcol("#67e8f9"), size="10pt")
         if event.envelope_ms and event.envelope_db:
             envelope_plot.plot(
                 event.envelope_ms, event.envelope_db,
-                pen=pg.mkPen("#f59e0b", width=1.6),
+                pen=pg.mkPen(tcol("#f59e0b"), width=1.6),
             )
         else:
-            label = pg.TextItem("нет данных", color="#64748b", anchor=(0.5, 0.5))
+            label = pg.TextItem("нет данных", color=tcol("#64748b"), anchor=(0.5, 0.5))
             label.setPos(0.5, 0.5)
             envelope_plot.addItem(label)
         envelope_plot.setMinimumHeight(200)
@@ -178,16 +169,12 @@ class DroneEventDialog(QDialog):
         root.addLayout(plots, 1)
 
         matches_title = QLabel("ПОХОЖИЕ СИГНАЛЫ В БИБЛИОТЕКЕ")
-        matches_title.setStyleSheet(
-            "color:#a78bfa; font-size:11px; font-weight:600; margin-top:4px;"
-        )
+        set_style(matches_title, "color:#a78bfa; font-size:11px; font-weight:600; margin-top:4px;")
         root.addWidget(matches_title)
         self.matches_label = QLabel(self._matches_html())
         self.matches_label.setWordWrap(True)
-        self.matches_label.setStyleSheet(
-            "color:#d7e2f0; font-size:10px; background:#0d1426;"
-            "border:1px solid #22304a; border-radius:6px; padding:6px;"
-        )
+        set_style(self.matches_label, "color:#d7e2f0; font-size:10px; background:#0d1426;"
+            "border:1px solid #22304a; border-radius:6px; padding:6px;")
         self.matches_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
@@ -195,7 +182,7 @@ class DroneEventDialog(QDialog):
 
         self.status = QLabel("")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet("color:#8fa6c0; font-size:11px;")
+        set_style(self.status, "color:#8fa6c0; font-size:11px;")
         root.addWidget(self.status)
 
         buttons = QHBoxLayout()
@@ -317,7 +304,7 @@ class DroneEventDialog(QDialog):
         self.feedback_requested.emit(
             self.drone_event.event_id, keys[index]
         )
-        self.status.setStyleSheet("color:#4ade80; font-size:11px;")
+        set_style(self.status, "color:#4ade80; font-size:11px;")
         self.status.setText(
             "Пример сохранён. Во вкладке ML нажмите «Обучить на записях»."
         )
@@ -337,18 +324,16 @@ class DroneEventDialog(QDialog):
         try:
             entry = self.whitelist.add_event(self.drone_event)
         except Exception as exc:
-            self.status.setStyleSheet("color:#f87171; font-size:11px;")
+            set_style(self.status, "color:#f87171; font-size:11px;")
             self.status.setText(f"Не удалось добавить в белый список: {exc}")
             return
         self.drone_event.whitelisted = True
         self.drone_event.whitelist_name = entry.name
         self.whitelist_label.setText(self._whitelist_text())
-        self.whitelist_label.setStyleSheet(
-            "color:#4ade80; font-size:11px;"
-        )
+        set_style(self.whitelist_label, "color:#4ade80; font-size:11px;")
         self.white_btn.setText("Уже в белом списке")
         self.white_btn.setEnabled(False)
-        self.status.setStyleSheet("color:#4ade80; font-size:11px;")
+        set_style(self.status, "color:#4ade80; font-size:11px;")
         self.status.setText(f"Добавлено в белый список: {entry.name}")
 
     def _matches_html(self) -> str:
@@ -363,13 +348,13 @@ class DroneEventDialog(QDialog):
             ref = signature.references[0] if signature.references else "—"
             lines.append(
                 f"<b>{index}. {signature.name}</b> — "
-                f"<span style='color:#4ade80'>{score:.0f}%</span> · "
+                f"<span style='color:{tcol('#4ade80')}'>{score:.0f}%</span> · "
                 f"{signature.category} · {reasons}<br>"
-                f"<span style='color:#8fa6c0'>источник: "
+                f"<span style='color:{tcol('#8fa6c0')}'>источник: "
                 f"{signature.source_class} · {ref}</span>"
             )
         lines.append(
-            "<span style='color:#64748b'>Гипотеза по признакам; "
+            f"<span style='color:{tcol('#64748b')}'>Гипотеза по признакам; "
             "не подтверждение модели дрона.</span>"
         )
         return "<br>".join(lines)
@@ -403,8 +388,8 @@ class DroneEventDialog(QDialog):
                 matches=[match.to_dict() for match in self.matches],
             )
         except Exception as exc:
-            self.status.setStyleSheet("color:#f87171; font-size:11px;")
+            set_style(self.status, "color:#f87171; font-size:11px;")
             self.status.setText(f"Ошибка экспорта: {exc}")
             return
-        self.status.setStyleSheet("color:#4ade80; font-size:11px;")
+        set_style(self.status, "color:#4ade80; font-size:11px;")
         self.status.setText(f"Экспортировано: {path}")

@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from ..config import WATERFALL_HISTORY
 from ..model import SpectrumFrame
+from .themes import active_theme, tcol
 
 
 class WaterfallView(QWidget):
@@ -18,7 +19,7 @@ class WaterfallView(QWidget):
         self.history = WATERFALL_HISTORY
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.plot = pg.PlotWidget(background="#0a0f1e")
+        self.plot = pg.PlotWidget(background=tcol("graph_bg"))
         self.plot.setMenuEnabled(False)
         self.plot.setLabel("bottom", "Частота", units="MHz")
         self.plot.getAxis("left").hide()
@@ -30,7 +31,7 @@ class WaterfallView(QWidget):
         self.image = pg.ImageItem(axisOrder="row-major")
         self.plot.addItem(self.image)
         try:
-            self.image.setColorMap(pg.colormap.get("viridis"))
+            self.image.setColorMap(pg.colormap.get(active_theme().waterfall))
         except Exception:
             pass
         self.image.setLevels((-122.0, -35.0))
@@ -41,6 +42,13 @@ class WaterfallView(QWidget):
         self.plot.scene().sigMouseClicked.connect(self._mouse_clicked)
         self.plot.setXRange(-0.5, 0.5, padding=0)
         self.plot.setYRange(0, self.history, padding=0)
+
+    def retheme(self) -> None:
+        self.plot.setBackground(tcol("graph_bg"))
+        try:
+            self.image.setColorMap(pg.colormap.get(active_theme().waterfall))
+        except Exception:
+            pass
 
     def _mouse_clicked(self, event) -> None:
         if event.button() != Qt.MouseButton.LeftButton:

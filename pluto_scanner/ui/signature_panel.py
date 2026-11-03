@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from ..config import format_bw, format_freq
 from ..signatures import SignatureStore, SignalSignature
+from .themes import set_style
 
 
 class SignaturePanel(QWidget):
@@ -34,16 +35,14 @@ class SignaturePanel(QWidget):
         root.setSpacing(6)
 
         title = QLabel("БИБЛИОТЕКА СИГНАТУР")
-        title.setStyleSheet(
-            "color:#a78bfa; font-size:15px; font-weight:600; padding:2px;"
-        )
+        set_style(title, "color:#a78bfa; font-size:15px; font-weight:600; padding:2px;")
         root.addWidget(title)
         hint = QLabel(
             "Справочник типовых сигналов и открытых источников. "
             "Совпадение — гипотеза, а не подтверждение модели."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(hint, "color:#8fa6c0; font-size:10px;")
         root.addWidget(hint)
 
         row = QHBoxLayout()
@@ -54,7 +53,7 @@ class SignaturePanel(QWidget):
         )
         self.search_edit.textChanged.connect(self.refresh)
         self.count_label = QLabel("")
-        self.count_label.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.count_label, "color:#8fa6c0; font-size:10px;")
         row.addWidget(self.search_edit, 1)
         row.addWidget(self.count_label)
         root.addLayout(row)
@@ -75,7 +74,7 @@ class SignaturePanel(QWidget):
         self.table.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
-        self.table.setStyleSheet("QTableWidget { font-size: 10px; }")
+        set_style(self.table, "QTableWidget { font-size: 10px; }")
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
@@ -87,10 +86,8 @@ class SignaturePanel(QWidget):
 
         self.details = QTextBrowser()
         self.details.setOpenExternalLinks(True)
-        self.details.setStyleSheet(
-            "QTextBrowser { background:#0d1426; border:1px solid #22304a;"
-            " border-radius:6px; padding:6px; font-size:11px; }"
-        )
+        set_style(self.details, "QTextBrowser { background:#0d1426; border:1px solid #22304a;"
+            " border-radius:6px; padding:6px; font-size:11px; }")
         root.addWidget(self.details, 2)
 
         buttons = QHBoxLayout()
@@ -109,7 +106,7 @@ class SignaturePanel(QWidget):
 
         self.status = QLabel(f"База хранится в {store.path}")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.status, "color:#8fa6c0; font-size:10px;")
         root.addWidget(self.status)
 
         self.refresh()
@@ -153,8 +150,8 @@ class SignaturePanel(QWidget):
             for ref in signature.references
         ) or "—"
         self.details.setHtml(
-            f"<h3 style='color:#67e8f9; margin:0 0 6px 0'>{signature.name}</h3>"
-            f"<p style='color:#d7e2f0'>{signature.notes or '—'}</p>"
+            f"<h3 style='color:{tcol('#67e8f9')}; margin:0 0 6px 0'>{signature.name}</h3>"
+            f"<p style='color:{tcol('#d7e2f0')}'>{signature.notes or '—'}</p>"
             f"<p><b>Категория:</b> {signature.category} · "
             f"<b>Источник:</b> {signature.source_class} · "
             f"<b>Hop:</b> {signature.hop}</p>"
@@ -165,7 +162,7 @@ class SignaturePanel(QWidget):
             f"<b>Скважность:</b> {signature.duty * 100:.0f}% · "
             f"<b>Импульс:</b> {signature.burst_ms:.1f} мс</p>"
             f"<p><b>Ссылки:</b><br>{refs}</p>"
-            f"<p style='color:#64748b'><b>Лицензия:</b> "
+            f"<p style='color:{tcol('#64748b')}'><b>Лицензия:</b> "
             f"{signature.license or '—'}</p>"
         )
 
@@ -181,11 +178,11 @@ class SignaturePanel(QWidget):
         try:
             count = self.store.import_file(filename)
         except Exception as exc:
-            self.status.setStyleSheet("color:#f87171; font-size:10px;")
+            set_style(self.status, "color:#f87171; font-size:10px;")
             self.status.setText(f"Ошибка импорта: {exc}")
             return
         self.refresh(self.search_edit.text())
-        self.status.setStyleSheet("color:#4ade80; font-size:10px;")
+        set_style(self.status, "color:#4ade80; font-size:10px;")
         self.status.setText(f"Импортировано записей: {count}")
 
     def _export(self) -> None:
@@ -200,8 +197,8 @@ class SignaturePanel(QWidget):
         try:
             path = self.store.export_file(filename)
         except Exception as exc:
-            self.status.setStyleSheet("color:#f87171; font-size:10px;")
+            set_style(self.status, "color:#f87171; font-size:10px;")
             self.status.setText(f"Ошибка экспорта: {exc}")
             return
-        self.status.setStyleSheet("color:#4ade80; font-size:10px;")
+        set_style(self.status, "color:#4ade80; font-size:10px;")
         self.status.setText(f"Экспортировано: {path}")

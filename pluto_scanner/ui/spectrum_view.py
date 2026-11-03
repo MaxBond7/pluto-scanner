@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from ..model import SpectrumFrame
+from .themes import qss, tcol, trgba
 
 
 class SpectrumView(QWidget):
@@ -15,7 +16,7 @@ class SpectrumView(QWidget):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        self.plot = pg.PlotWidget(background="#0a0f1e")
+        self.plot = pg.PlotWidget(background=tcol("graph_bg"))
         self.plot.setMenuEnabled(False)
         self.plot.showGrid(x=True, y=True, alpha=0.12)
         self.plot.setLabel("bottom", "Частота", units="MHz")
@@ -26,30 +27,45 @@ class SpectrumView(QWidget):
         layout.addWidget(self.plot)
 
         self.curve = self.plot.plot(
-            [], [], pen=pg.mkPen("#22d3ee", width=1.3), name="Live"
+            [], [], pen=pg.mkPen(tcol("#22d3ee"), width=1.3), name="Live"
         )
         self.baseline_curve = self.plot.plot(
             [], [],
-            pen=pg.mkPen("#64748b", width=1.0, style=Qt.PenStyle.DashLine),
+            pen=pg.mkPen(tcol("#64748b"), width=1.0, style=Qt.PenStyle.DashLine),
             name="Background",
         )
         self.det_scatter = pg.ScatterPlotItem(
             size=8, symbol="t",
-            brush=pg.mkBrush("#f59e0b"),
-            pen=pg.mkPen("#fbbf24"),
+            brush=pg.mkBrush(tcol("#f59e0b")),
+            pen=pg.mkPen(tcol("#fbbf24")),
         )
         self.plot.addItem(self.det_scatter)
         self.vfo_line = pg.InfiniteLine(
             pos=0, angle=90, movable=False,
-            pen=pg.mkPen("#f472b6", width=2),
+            pen=pg.mkPen(tcol("#f472b6"), width=2),
             label="VFO",
-            labelOpts={"position": 0.96, "color": "#f472b6"},
+            labelOpts={"position": 0.96, "color": tcol("#f472b6")},
         )
         self.plot.addItem(self.vfo_line)
         self.plot.setYRange(-125, -20, padding=0)
         self._labels: list[pg.TextItem] = []
         self._range_key: tuple | None = None
         self.plot.scene().sigMouseClicked.connect(self._mouse_clicked)
+
+    def retheme(self) -> None:
+        self.plot.setBackground(tcol("graph_bg"))
+        for name in ("left", "bottom"):
+            axis = self.plot.getAxis(name)
+            axis.setPen(pg.mkPen(tcol("graph_fg")))
+            axis.setTextPen(pg.mkPen(tcol("graph_fg")))
+        self.curve.setPen(pg.mkPen(tcol("#22d3ee"), width=1.3))
+        self.baseline_curve.setPen(
+            pg.mkPen(tcol("#64748b"), width=1.0, style=Qt.PenStyle.DashLine)
+        )
+        self.det_scatter.setBrush(pg.mkBrush(tcol("#f59e0b")))
+        self.det_scatter.setPen(pg.mkPen(tcol("#fbbf24")))
+        self.vfo_line.setPen(pg.mkPen(tcol("#f472b6"), width=2))
+        self._clear_labels()
 
     def _mouse_clicked(self, event) -> None:
         if event.button() != Qt.MouseButton.LeftButton:
@@ -87,8 +103,8 @@ class SpectrumView(QWidget):
             for det in frame.detections[:7]:
                 text = f"{det.type.value} {det.confidence * 100:.0f}%"
                 label = pg.TextItem(
-                    text, color="#fbbf24", anchor=(0.5, 1.15),
-                    fill=pg.mkBrush(13, 20, 38, 190),
+                    text, color=tcol("#fbbf24"), anchor=(0.5, 1.15),
+                    fill=pg.mkBrush(trgba(13, 20, 38, 190)),
                 )
                 label.setPos(det.freq_hz / 1e6, det.peak_db)
                 self.plot.addItem(label)

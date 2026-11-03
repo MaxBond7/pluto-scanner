@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from ..config import format_freq
 from ..drone.features import CLASS_RU
 from ..recordings import RecordingInfo, estimated_bytes, format_size
+from .themes import set_style, tcol
 
 ML_LABEL_CLASSES = [
     "FHSS", "TELEMETRY", "VIDEO_ANALOG", "VIDEO_DIGITAL", "WIFI", "NARROW",
@@ -56,9 +57,7 @@ class RecordingPanel(QWidget):
         root.setSpacing(6)
 
         title = QLabel("ЗАПИСЬ IQ")
-        title.setStyleSheet(
-            "color:#a78bfa; font-size:15px; font-weight:600; padding:2px;"
-        )
+        set_style(title, "color:#a78bfa; font-size:15px; font-weight:600; padding:2px;")
         root.addWidget(title)
 
         hint = QLabel(
@@ -66,7 +65,7 @@ class RecordingPanel(QWidget):
             "демодуляция и повторное воспроизведение без платы."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(hint, "color:#8fa6c0; font-size:10px;")
         root.addWidget(hint)
 
         params = QGroupBox("Новая запись")
@@ -74,7 +73,7 @@ class RecordingPanel(QWidget):
         grid.setSpacing(5)
 
         self.device_label = QLabel("Устройство: —")
-        self.device_label.setStyleSheet("color:#d7e2f0; font-size:11px;")
+        set_style(self.device_label, "color:#d7e2f0; font-size:11px;")
         grid.addWidget(self.device_label)
 
         row = QHBoxLayout()
@@ -96,7 +95,7 @@ class RecordingPanel(QWidget):
 
         self.estimate = QLabel("")
         self.estimate.setWordWrap(True)
-        self.estimate.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.estimate, "color:#8fa6c0; font-size:10px;")
         grid.addWidget(self.estimate)
 
         self.progress = QProgressBar()
@@ -107,7 +106,7 @@ class RecordingPanel(QWidget):
         grid.addWidget(self.progress)
         self.status = QLabel("Выберите устройство и нажмите «Начать запись».")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet("color:#94a3b8; font-size:10px;")
+        set_style(self.status, "color:#94a3b8; font-size:10px;")
         grid.addWidget(self.status)
         root.addWidget(params)
 
@@ -131,7 +130,7 @@ class RecordingPanel(QWidget):
         self.table.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
         )
-        self.table.setStyleSheet("QTableWidget { font-size: 10px; }")
+        set_style(self.table, "QTableWidget { font-size: 10px; }")
         self.table.itemSelectionChanged.connect(self._update_buttons)
         self.table.itemDoubleClicked.connect(lambda *_: self._play())
         header = self.table.horizontalHeader()
@@ -143,7 +142,7 @@ class RecordingPanel(QWidget):
         box_layout.addWidget(self.table, 1)
 
         self.summary = QLabel("Записей: 0")
-        self.summary.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(self.summary, "color:#8fa6c0; font-size:10px;")
         box_layout.addWidget(self.summary)
 
         label_row = QHBoxLayout()
@@ -203,17 +202,17 @@ class RecordingPanel(QWidget):
             self.device_label.setText(f"Устройство: {name}")
         if changed and not self._busy:
             if name and kind != "iqfile":
-                self.status.setStyleSheet("color:#94a3b8; font-size:10px;")
+                set_style(self.status, "color:#94a3b8; font-size:10px;")
                 self.status.setText(
                     f"Готов к записи: {name}, {self._fs / 1e6:.3f} MS/s."
                 )
             elif kind == "iqfile":
-                self.status.setStyleSheet("color:#facc15; font-size:10px;")
+                set_style(self.status, "color:#facc15; font-size:10px;")
                 self.status.setText(
                     "Это воспроизведение: записывать с него нельзя."
                 )
             else:
-                self.status.setStyleSheet("color:#94a3b8; font-size:10px;")
+                set_style(self.status, "color:#94a3b8; font-size:10px;")
                 self.status.setText(
                     "Выберите устройство и нажмите «Начать запись»."
                 )
@@ -249,11 +248,11 @@ class RecordingPanel(QWidget):
                     item.setToolTip(tip)
                 if column == 5:
                     if info.complete:
-                        item.setForeground(QColor("#4ade80"))
+                        item.setForeground(QColor(tcol("#4ade80")))
                     elif info.exists:
-                        item.setForeground(QColor("#facc15"))
+                        item.setForeground(QColor(tcol("#facc15")))
                     else:
-                        item.setForeground(QColor("#f87171"))
+                        item.setForeground(QColor(tcol("#f87171")))
                 self.table.setItem(row, column, item)
             if info.recording_id == selected:
                 self.table.selectRow(row)
@@ -324,7 +323,7 @@ class RecordingPanel(QWidget):
         self.duration_spin.setEnabled(False)
         self.progress.setRange(0, 1000)
         self.progress.setValue(0)
-        self.status.setStyleSheet("color:#a78bfa; font-size:10px;")
+        set_style(self.status, "color:#a78bfa; font-size:10px;")
         self.status.setText(
             f"Пишу {info.device_name}: {info.center_freq / 1e6:.3f} МГц, "
             f"{info.sample_rate / 1e6:.3f} МГц полоса, {seconds:.1f} с…"
@@ -347,9 +346,9 @@ class RecordingPanel(QWidget):
         self.progress.setValue(100 if info and info.complete else 0)
         if info is None:
             self.status.setText("Запись не началась.")
-            self.status.setStyleSheet("color:#f87171; font-size:10px;")
+            set_style(self.status, "color:#f87171; font-size:10px;")
         elif info.complete:
-            self.status.setStyleSheet("color:#4ade80; font-size:10px;")
+            set_style(self.status, "color:#4ade80; font-size:10px;")
             extra = (
                 f", потеряно {info.dropped_samples}"
                 if info.dropped_samples else ""
@@ -359,7 +358,7 @@ class RecordingPanel(QWidget):
                 f"{format_size(info.size_bytes)}{extra}."
             )
         else:
-            self.status.setStyleSheet("color:#facc15; font-size:10px;")
+            set_style(self.status, "color:#facc15; font-size:10px;")
             self.status.setText(
                 f"Запись не завершена: {info.error or 'нет данных'}. "
                 "Файл сохранён, играть можно."

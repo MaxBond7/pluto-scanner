@@ -26,6 +26,7 @@ from ..ml.binary import BinaryModel
 from ..ml.dataset import dataset_summary, train_from_recordings
 from ..ml.model import SoftmaxModel, train_and_save
 from ..paths import DATA_DIR, DEFAULT_BINARY_MODEL, DEFAULT_ML_MODEL, RECORDINGS_DIR
+from .themes import set_style
 
 
 class _TrainWorker(QThread):
@@ -91,9 +92,7 @@ class MLPanel(QWidget):
         root.setSpacing(6)
 
         title = QLabel("ML-КЛАССИФИКАТОР")
-        title.setStyleSheet(
-            "color:#c4b5fd; font-size:15px; font-weight:600; padding:2px;"
-        )
+        set_style(title, "color:#c4b5fd; font-size:15px; font-weight:600; padding:2px;")
         root.addWidget(title)
 
         hint = QLabel(
@@ -101,7 +100,7 @@ class MLPanel(QWidget):
             "синтетическом IQ; модель не заменяет декодирование протокола."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color:#8fa6c0; font-size:10px;")
+        set_style(hint, "color:#8fa6c0; font-size:10px;")
         root.addWidget(hint)
 
         box = QGroupBox("Модель")
@@ -109,30 +108,22 @@ class MLPanel(QWidget):
         bl.setSpacing(5)
         self.model_label = QLabel("")
         self.model_label.setWordWrap(True)
-        self.model_label.setStyleSheet(
-            "color:#d7e2f0; font-size:11px;"
-        )
+        set_style(self.model_label, "color:#d7e2f0; font-size:11px;")
         bl.addWidget(self.model_label)
 
         self.data_label = QLabel("")
         self.data_label.setWordWrap(True)
-        self.data_label.setStyleSheet(
-            "color:#8fa6c0; font-size:10px;"
-        )
+        set_style(self.data_label, "color:#8fa6c0; font-size:10px;")
         bl.addWidget(self.data_label)
 
         self.accuracy_label = QLabel("")
         self.accuracy_label.setWordWrap(True)
-        self.accuracy_label.setStyleSheet(
-            "color:#4ade80; font-size:11px;"
-        )
+        set_style(self.accuracy_label, "color:#4ade80; font-size:11px;")
         bl.addWidget(self.accuracy_label)
 
         self.binary_label = QLabel("")
         self.binary_label.setWordWrap(True)
-        self.binary_label.setStyleSheet(
-            "color:#fda4af; font-size:11px;"
-        )
+        set_style(self.binary_label, "color:#fda4af; font-size:11px;")
         bl.addWidget(self.binary_label)
 
         row = QHBoxLayout()
@@ -165,7 +156,7 @@ class MLPanel(QWidget):
         bl.addWidget(self.progress)
         self.status = QLabel("")
         self.status.setWordWrap(True)
-        self.status.setStyleSheet("color:#94a3b8; font-size:10px;")
+        set_style(self.status, "color:#94a3b8; font-size:10px;")
         bl.addWidget(self.status)
         root.addWidget(box)
 
@@ -195,10 +186,8 @@ class MLPanel(QWidget):
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setMaximumHeight(110)
-        self.log.setStyleSheet(
-            "QPlainTextEdit { background:#080d19; color:#8fa6c0;"
-            " border:1px solid #1e2d4a; font-size:10px; }"
-        )
+        set_style(self.log, "QPlainTextEdit { background:#080d19; color:#8fa6c0;"
+            " border:1px solid #1e2d4a; font-size:10px; }")
         root.addWidget(self.log)
 
         self.refresh()
@@ -319,7 +308,7 @@ class MLPanel(QWidget):
         else:
             self.log.appendPlainText("Генерация датасета и обучение…")
             self.status.setText("Это может занять 10–40 секунд.")
-        self.status.setStyleSheet("color:#c4b5fd; font-size:10px;")
+        set_style(self.status, "color:#c4b5fd; font-size:10px;")
         self._worker = _TrainWorker(
             self.model_path, per_class=60, epochs=600, seed=1,
             mode=mode, recordings_dir=self.recordings_dir,
@@ -340,7 +329,7 @@ class MLPanel(QWidget):
         self.train_btn.setEnabled(True)
         self.refresh_btn.setEnabled(True)
         self.progress.setValue(100)
-        self.status.setStyleSheet("color:#4ade80; font-size:10px;")
+        set_style(self.status, "color:#4ade80; font-size:10px;")
         source = metrics.get("source", "synthetic")
         real = metrics.get("real_blocks")
         suffix = (
@@ -359,7 +348,7 @@ class MLPanel(QWidget):
         self.real_btn.setEnabled(True)
         self.refresh_btn.setEnabled(True)
         self.progress.setValue(0)
-        self.status.setStyleSheet("color:#f87171; font-size:10px;")
+        set_style(self.status, "color:#f87171; font-size:10px;")
         self.status.setText(f"Ошибка обучения: {message}")
         self._worker = None
 

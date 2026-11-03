@@ -6,4 +6,4 @@ The application is split into three layers:
     ui       - PySide6/pyqtgraph front end
 """
 
-__version__ = "0.14.2"
+__version__ = "0.15.0"

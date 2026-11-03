@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from ..config import format_bw, format_freq
 from ..model import Contact
+from .themes import set_style, tcol
 
 
 class ContactTable(QWidget):
@@ -38,9 +39,7 @@ class ContactTable(QWidget):
         layout.setSpacing(5)
 
         self.title = QLabel("КОНТАКТЫ  ·  0")
-        self.title.setStyleSheet(
-            "color:#67e8f9; font-size:15px; font-weight:600; padding:2px 2px 4px 2px;"
-        )
+        set_style(self.title, "color:#67e8f9; font-size:15px; font-weight:600; padding:2px 2px 4px 2px;")
         layout.addWidget(self.title)
 
         self.table = QTableWidget(0, len(self.HEADERS))
@@ -82,9 +81,7 @@ class ContactTable(QWidget):
 
         self.detail = QLabel("Топ-3: —")
         self.detail.setWordWrap(True)
-        self.detail.setStyleSheet(
-            "color:#67e8f9; font-size:11px; padding:2px 2px 0 2px;"
-        )
+        set_style(self.detail, "color:#67e8f9; font-size:11px; padding:2px 2px 0 2px;")
         layout.addWidget(self.detail)
         self._update_buttons()
 
@@ -104,20 +101,20 @@ class ContactTable(QWidget):
             badge_item = QTableWidgetItem(badge)
             badge_item.setData(Qt.ItemDataRole.UserRole, c.contact_id)
             if is_new:
-                badge_item.setForeground(QColor("#4ade80"))
+                badge_item.setForeground(QColor(tcol("#4ade80")))
             elif c.known:
-                badge_item.setForeground(QColor("#94a3b8"))
+                badge_item.setForeground(QColor(tcol("#94a3b8")))
             elif c.active:
-                badge_item.setForeground(QColor("#f59e0b"))
+                badge_item.setForeground(QColor(tcol("#f59e0b")))
             else:
-                badge_item.setForeground(QColor("#64748b"))
+                badge_item.setForeground(QColor(tcol("#64748b")))
 
             freq_item = QTableWidgetItem(format_freq(c.freq_hz))
-            freq_item.setForeground(QColor("#e2e8f0"))
+            freq_item.setForeground(QColor(tcol("#e2e8f0")))
             bw_item = QTableWidgetItem(format_bw(c.bw_hz))
             snr_item = QTableWidgetItem(f"{c.last_snr_db:.1f} dB")
             type_item = QTableWidgetItem(c.type.ru)
-            type_item.setForeground(QColor("#67e8f9" if not c.known else "#94a3b8"))
+            type_item.setForeground(QColor(tcol("#67e8f9" if not c.known else "#94a3b8")))
             conf_item = QTableWidgetItem(f"{c.confidence * 100:.0f}%")
             dev_item = QTableWidgetItem(
                 self._device_names.get(c.device_id, c.device_id)
@@ -130,7 +127,7 @@ class ContactTable(QWidget):
             if not c.active:
                 for item in (freq_item, bw_item, snr_item, type_item,
                              conf_item, dev_item, hits_item, last_item):
-                    item.setForeground(QColor("#64748b"))
+                    item.setForeground(QColor(tcol("#64748b")))
 
             alt = ", ".join(
                 f"{t.value} {p * 100:.0f}%" for t, p in c.alternatives
