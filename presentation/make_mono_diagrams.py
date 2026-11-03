@@ -188,10 +188,53 @@ def binary_model() -> None:
     print("written", OUT / "mono_binary.png")
 
 
+def limits() -> None:
+    width, height = 1400, 430
+    image = bm.canvas(width, height)
+    d = ImageDraw.Draw(image)
+    bm.frame(d, width, height)
+    bm.label(d, (56, 50), "WHAT IT DOES / WHAT IT DOES NOT", 16, color=bm.WHITE)
+
+    can = [
+        "видеть сигнал и измерять ширину, скважность, SNR",
+        "классифицировать 6 типов активности",
+        "оценивать «дрон / не дрон» с порогом и калибровкой",
+        "сохранять IQ-доказательство и JSON-журнал",
+        "работать полностью офлайн",
+    ]
+    cannot = [
+        "декодировать протокол и назвать модель дрона",
+        "заменить Remote ID",
+        "измерить дальность или направление",
+        "отличить Wi-Fi-дрон от обычного Wi-Fi",
+        "дать гарантию 100% на любой дрон",
+    ]
+    column_w = (width - 2 * 56 - 60) // 2
+    for index, (title, items, mark) in enumerate(
+        (("МОЖЕТ", can, "+"), ("НЕ МОЖЕТ", cannot, "−"))
+    ):
+        x = 56 + index * (column_w + 60)
+        bm.label(d, (x, 96), title, 14, color=bm.WHITE, bold=True)
+        d.line([(x, 118), (x + column_w, 118)], fill=bm.WHITE, width=1)
+        y = 136
+        for item in items:
+            bm.label(d, (x, y), f"{mark} {item}", 12, color=bm.DIM)
+            y += 40
+
+    bm.label(
+        d, (56, height - 40),
+        "ЧЕСТНАЯ ЭВРИСТИКА, А НЕ СЕРТИФИЦИРОВАННОЕ СРЕДСТВО БЕЗОПАСНОСТИ",
+        11, color=bm.FAINT,
+    )
+    image.convert("RGB").save(OUT / "mono_limits.png", quality=95)
+    print("written", OUT / "mono_limits.png")
+
+
 def main() -> int:
     band_map()
     pipeline()
     binary_model()
+    limits()
     return 0
 
 
