@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.15.1-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.16.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-MIT-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -112,8 +112,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.15.0-portable.zip        архив
-dist\PlutoScanner-Setup-0.15.0.exe           установщик
+dist\PlutoScanner-0.16.0-portable.zip        архив
+dist\PlutoScanner-Setup-0.16.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -171,6 +171,7 @@ IQ (Pluto / симулятор / запись)
 | [PACKAGING](docs/PACKAGING.md) | сборка, ZIP, установщик, чистая Windows |
 | [ANTIVIRUS](docs/ANTIVIRUS.md) | ложные срабатывания Defender и что с ними делать |
 | [THEMES](docs/THEMES.md) | темы оформления и свои JSON-темы |
+| [PERFORMANCE](docs/PERFORMANCE.md) | замеры, что ускорено и как проверить |
 | [SIGNATURES](docs/SIGNATURES.md) | библиотека сигнатур и источники |
 | [ML](docs/ML.md) | модель, признаки, синтетика, разметка записей |
 | [BINARY](docs/BINARY.md) | бинарная модель «дрон / не дрон», обучение на DroneRF |
@@ -187,7 +188,7 @@ IQ (Pluto / симулятор / запись)
 
 ## СТАТУС И ЛИЦЕНЗИЯ
 
-- Версия: **0.15.0**
+- Версия: **0.16.0**
 - Тесты: `pytest`, симулятор и реальные Pluto+
 - Лицензия: **MIT** — см. [LICENSE](LICENSE); сторонние компоненты —
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)

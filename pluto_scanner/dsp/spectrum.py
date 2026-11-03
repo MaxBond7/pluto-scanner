@@ -21,27 +21,36 @@ class SpectrumAnalyzer:
 
     def compute(self, iq: np.ndarray, sample_rate: float,
                 center_freq: float) -> tuple[np.ndarray, np.ndarray]:
-        iq = np.asarray(iq, dtype=np.complex128).ravel()
+        iq = np.asarray(iq).ravel()
         nfft = self.nfft
         nseg = iq.size // nfft
         if nseg < 1:
             segs = np.zeros((1, nfft), dtype=np.complex128)
-            segs[0, : iq.size] = iq
+            segs[0, : iq.size] = iq[:nfft]
             nseg = 1
         else:
-            segs = iq[: nseg * nfft].reshape(nseg, nfft)
-        if nseg > self.max_segments:
-            # Use the most recent segments, but spread them over the block.
-            idx = np.linspace(nseg - self.max_segments, nseg - 1,
-                              self.max_segments).astype(int)
-            segs = segs[idx]
-            nseg = self.max_segments
+            if nseg > self.max_segments:
+                # Use the most recent segments, but spread them over the block.
+                idx = np.linspace(nseg - self.max_segments, nseg - 1,
+                                  self.max_segments).astype(int)
+            else:
+                idx = np.arange(nseg)
+            # Copy only the samples that are actually used.  Converting the
+            # whole block to complex128 wasted megabytes per frame.
+            base = idx * nfft
+            offsets = np.arange(nfft)
+            segs = np.asarray(iq[base[:, None] + offsets], dtype=np.complex128)
+        # Window in place: segs is a fresh copy, so this avoids a second
+        # block-sized allocation.
+        segs *= self._win[None, :]
 
-        spec = np.fft.fftshift(
-            np.fft.fft(segs * self._win[None, :], axis=1), axes=1
-        )
-        power = np.mean(np.abs(spec) ** 2, axis=0) / self._scale
-        psd = 10.0 * np.log10(power + 1e-20)
+        spec = np.fft.fft(segs, axis=1)
+        # real^2 + imag^2 instead of abs()**2: skips a square root over every
+        # bin of every segment.
+        power = np.mean(spec.real ** 2 + spec.imag ** 2, axis=0) / self._scale
+        # Shift the 1-D result, not the 32 x nfft spectrum: the block-sized
+        # copy cost more than the FFT itself.
+        psd = np.fft.fftshift(10.0 * np.log10(power + 1e-20))
         freqs = np.fft.fftshift(
             np.fft.fftfreq(nfft, d=1.0 / float(sample_rate))
         ) + float(center_freq)

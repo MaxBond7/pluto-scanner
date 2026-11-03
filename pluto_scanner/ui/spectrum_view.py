@@ -48,7 +48,17 @@ class SpectrumView(QWidget):
         )
         self.plot.addItem(self.vfo_line)
         self.plot.setYRange(-125, -20, padding=0)
+        # A small pool of labels: creating and destroying TextItems on every
+        # frame used to dominate the UI update.
         self._labels: list[pg.TextItem] = []
+        for _ in range(7):
+            label = pg.TextItem(
+                "", color=tcol("#fbbf24"), anchor=(0.5, 1.15),
+                fill=pg.mkBrush(trgba(13, 20, 38, 190)),
+            )
+            label.setVisible(False)
+            self.plot.addItem(label)
+            self._labels.append(label)
         self._range_key: tuple | None = None
         self.plot.scene().sigMouseClicked.connect(self._mouse_clicked)
 
@@ -65,6 +75,9 @@ class SpectrumView(QWidget):
         self.det_scatter.setBrush(pg.mkBrush(tcol("#f59e0b")))
         self.det_scatter.setPen(pg.mkPen(tcol("#fbbf24")))
         self.vfo_line.setPen(pg.mkPen(tcol("#f472b6"), width=2))
+        for label in self._labels:
+            label.setColor(tcol("#fbbf24"))
+            label.fill = pg.mkBrush(trgba(13, 20, 38, 190))
         self._clear_labels()
 
     def _mouse_clicked(self, event) -> None:
@@ -77,8 +90,7 @@ class SpectrumView(QWidget):
 
     def _clear_labels(self) -> None:
         for label in self._labels:
-            self.plot.removeItem(label)
-        self._labels.clear()
+            label.setVisible(False)
 
     def update_frame(self, frame: SpectrumFrame, vfo_abs_hz: float) -> None:
         if len(frame.freqs) == 0:
@@ -99,16 +111,13 @@ class SpectrumView(QWidget):
             xs = [d.freq_hz / 1e6 for d in frame.detections]
             ys = [d.peak_db for d in frame.detections]
             self.det_scatter.setData(xs, ys)
-            self._clear_labels()
-            for det in frame.detections[:7]:
-                text = f"{det.type.value} {det.confidence * 100:.0f}%"
-                label = pg.TextItem(
-                    text, color=tcol("#fbbf24"), anchor=(0.5, 1.15),
-                    fill=pg.mkBrush(trgba(13, 20, 38, 190)),
-                )
+            shown = frame.detections[: len(self._labels)]
+            for label, det in zip(self._labels, shown):
+                label.setText(f"{det.type.value} {det.confidence * 100:.0f}%")
                 label.setPos(det.freq_hz / 1e6, det.peak_db)
-                self.plot.addItem(label)
-                self._labels.append(label)
+                label.setVisible(True)
+            for label in self._labels[len(shown):]:
+                label.setVisible(False)
         else:
             self.det_scatter.setData([], [])
             self._clear_labels()

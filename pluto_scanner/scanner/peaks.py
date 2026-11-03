@@ -143,14 +143,19 @@ def decimate_mean(values: np.ndarray, target: int) -> np.ndarray:
 
     Keeps per-step JSON small while preserving narrow peaks reasonably well
     (the full-resolution peak list is stored separately).
+
+    The segmented mean is done with ``np.add.reduceat``: one C call instead of
+    a Python loop over hundreds of slices.  This function runs for every
+    spectrum snapshot and every scan step, so the loop version was visible in
+    profiles.
     """
     values = np.asarray(values, dtype=np.float64)
     target = max(1, int(target))
     if values.size <= target:
         return values.copy()
-    edges = np.linspace(0, values.size, target + 1).astype(int)
-    out = np.empty(target, dtype=np.float64)
-    for i in range(target):
-        lo, hi = edges[i], max(edges[i] + 1, edges[i + 1])
-        out[i] = float(np.mean(values[lo:hi]))
-    return out
+    edges = np.linspace(0, values.size, target + 1).astype(np.int64)
+    edges[-1] = values.size
+    starts = edges[:-1]
+    counts = np.diff(edges)
+    sums = np.add.reduceat(values, starts)
+    return sums / np.maximum(counts, 1)

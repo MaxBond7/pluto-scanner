@@ -139,6 +139,7 @@ class MainWindow(QMainWindow):
         self.selected_id: str | None = None
         self.contacts_by_device: dict[str, dict[str, Contact]] = {}
         self._last_frame: SpectrumFrame | None = None
+        self._cal_state = ""
         self._last_status = ""
         self._shutting_down = False
         self._scan_controller: ScanController | None = None
@@ -908,9 +909,12 @@ class MainWindow(QMainWindow):
         self.spectrum.update_frame(frame, vfo_abs)
         self.waterfall.update_frame(frame)
         if frame.calibrated:
-            self.cal_label.setText("Фон: готов")
-            set_style(self.cal_label, "color:#4ade80; padding:0 8px;")
+            if self._cal_state != "ready":
+                self._cal_state = "ready"
+                self.cal_label.setText("Фон: готов")
+                set_style(self.cal_label, "color:#4ade80; padding:0 8px;")
         else:
+            self._cal_state = "cal"
             self.cal_label.setText(
                 f"Калибровка: {frame.calibration_progress * 100:.0f}%"
             )

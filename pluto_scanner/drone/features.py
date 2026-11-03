@@ -205,8 +205,10 @@ def _time_features(
         usable = samples.size
         win = samples.size
     chunk = samples[:usable]
-    power = np.abs(chunk.astype(np.complex128)) ** 2
-    env = power.reshape(-1, win).mean(axis=1)
+    # complex64 -> float32 keeps the block at 1.6 MB instead of converting
+    # 400k samples to complex128 (6.4 MB) for every 20 ms block.
+    power = np.abs(chunk.astype(np.complex64, copy=False)) ** 2
+    env = power.reshape(-1, win).mean(axis=1).astype(np.float64)
     env_db = 10.0 * np.log10(env + 1e-20)
     duration = usable / float(sample_rate)
     low = float(np.percentile(env_db, 5.0))

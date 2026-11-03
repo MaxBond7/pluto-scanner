@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-03
+
+- Performance pass over the hot paths, measured with `tools/bench.py`:
+  spectrum 2.1× faster, drone feature extraction 2.2× faster, spectrum plot
+  update 13.8× faster, spectrum decimation 80–100× faster.
+- `decimate_mean` now uses `np.add.reduceat` instead of a Python loop over
+  hundreds of slices.
+- `SpectrumAnalyzer` windows in place, converts only the segments that reach
+  the FFT, shifts the 1-D PSD instead of the 32×nfft matrix, and computes
+  power as `re² + im²` without a square root.
+- Drone `_time_features` no longer casts 400k samples to complex128.
+- The spectrum plot reuses a pool of seven label items instead of creating
+  and destroying `TextItem`s on every frame.
+- The calibration status label is re-styled only when the state changes.
+- New `docs/PERFORMANCE.md`, `tools/bench.py` and `tests/test_performance.py`
+  with correctness cross-checks and loose budgets.
+
 ## [0.15.1] - 2026-11-03
 
 - Fixed a crash when selecting a signature in the library: the panel used the
