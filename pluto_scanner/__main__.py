@@ -15,15 +15,6 @@ from PySide6.QtWidgets import QApplication
 from . import __version__
 from .config import APP_NAME, DEFAULT_CENTER_FREQ, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE
 from .paths import DATA_DIR, DATA_HOME, ICON_PATH, ensure_data_home
-from .ui.main_window import MainWindow
-from .ui.themes import (
-    DEFAULT_THEME,
-    apply_theme,
-    ensure_theme_dir,
-    load_settings,
-    resolve_theme,
-    theme_dir,
-)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -118,11 +109,73 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--theme", default="", metavar="NAME",
                    help="start with a theme (classic, mono, mono-acid, "
                         "mono-ember, mono-ice, or a file from user_data/themes)")
+    p.add_argument("--no-splash", action="store_true",
+                   help="do not show the boot splash")
     p.add_argument("--version", action="version",
                    version=f"%(prog)s {__version__}")
     p.add_argument("--log-level", default="INFO",
                    choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return p
+
+
+def _splash_disabled(args) -> bool:
+    if getattr(args, "no_splash", False):
+        return True
+    for name in (
+        "screenshot", "screenshot_after_scan",
+        "screenshot_after_drone", "screenshot_after_record",
+    ):
+        if getattr(args, name, None):
+            return True
+    return False
+
+
+def _open_splash(app, args):
+    """Show the boot splash and preload the heavy modules while it animates."""
+    if _splash_disabled(args):
+        return None
+    try:
+        from .ui.splash import SplashScreen
+    except Exception:
+        return None
+
+    splash = SplashScreen()
+    splash.center_on_screen()
+    splash.show()
+    splash.set_progress(0.12, "ГРАФИКА")
+    app.processEvents()
+
+    import threading
+    import time
+
+    state: dict = {"value": 0.15, "stage": "ГРАФИКА", "done": False, "error": None}
+
+    def worker() -> None:
+        try:
+            state["stage"], state["value"] = "ГРАФИКА", 0.32
+            import pyqtgraph  # noqa: F401
+            state["stage"], state["value"] = "ИНТЕРФЕЙС", 0.62
+            import pluto_scanner.ui.main_window  # noqa: F401
+            state["stage"], state["value"] = "ТЕМА", 0.82
+            import pluto_scanner.ui.themes  # noqa: F401
+            state["value"] = 0.86
+        except BaseException as exc:  # noqa: BLE001 - shown to the user
+            state["error"] = exc
+        finally:
+            state["done"] = True
+
+    threading.Thread(target=worker, name="ui-preload", daemon=True).start()
+    deadline = time.monotonic() + 30.0
+    while not state["done"] and time.monotonic() < deadline:
+        app.processEvents()
+        splash.set_progress(state["value"], state["stage"])
+        time.sleep(0.01)
+    if state["error"] is not None:
+        splash.close()
+        raise state["error"]
+    splash.set_progress(0.86, "ТЕМА")
+    app.processEvents()
+    return splash
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -221,6 +274,17 @@ def main(argv: list[str] | None = None) -> int:
     if ICON_PATH.exists():
         app.setWindowIcon(QIcon(str(ICON_PATH)))
 
+    splash = _open_splash(app, args)
+    from .ui.main_window import MainWindow
+    from .ui.themes import (
+        DEFAULT_THEME,
+        apply_theme,
+        ensure_theme_dir,
+        load_settings,
+        resolve_theme,
+        theme_dir,
+    )
+
     settings = load_settings(DATA_DIR / "settings.json")
     requested = args.theme or str(settings.get("theme") or DEFAULT_THEME)
     theme = resolve_theme(requested, theme_dir(DATA_DIR))
@@ -237,9 +301,16 @@ def main(argv: list[str] | None = None) -> int:
         target=_preload_audio, name="scipy-preload", daemon=True
     ).start()
 
+    if splash is not None:
+        splash.set_progress(0.9, "СБОРКА ОКНА")
     window = MainWindow(args)
     window.show()
     app.aboutToQuit.connect(window.shutdown)
+    if splash is not None:
+        splash.set_progress(1.0, "ГОТОВО")
+        app.processEvents()
+        splash.close()
+        splash.deleteLater()
     if args.no_audio:
         window.audio_btn.setChecked(False)
         window.audio_btn.setEnabled(False)

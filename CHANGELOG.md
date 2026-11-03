@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-04
+
+- Boot splash with an animated ASCII bird: the window appears ~125 ms after
+  launch, before pyqtgraph and the UI panels are imported, so the start feels
+  instant instead of blank.
+- The bird is a blurred seagull silhouette (`tools/make_ascii_bird.py`
+  generates the grid); individual characters blink out and come back at 18 fps,
+  and the progress bar names the current stage.
+- `--no-splash` disables it; screenshot modes skip it automatically.
+
 ## [0.16.1] - 2026-11-04
 
 - Faster startup: time to a visible window dropped from ~1.38 s to ~0.72 s

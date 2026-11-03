@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.16.1-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.17.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-MIT-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -77,6 +77,11 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
   <sub><code>IQ RECORD</code> — cf32 + JSON, без платы при воспроизведении</sub>
 </p>
 
+<p align="center">
+  <img src="presentation/splash.png" alt="Загрузочный экран: ASCII-птица и полоса загрузки" width="72%"><br>
+  <sub><code>BOOT</code> — окно отклика через ~125 мс, ещё до импорта интерфейса</sub>
+</p>
+
 ## КАК ЭТО РАБОТАЕТ
 
 ![Путь сигнала: Pluto → DSP → эвристика и бинарная модель → UI](presentation/mono_pipeline.png)
@@ -112,8 +117,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.16.1-portable.zip        архив
-dist\PlutoScanner-Setup-0.16.1.exe           установщик
+dist\PlutoScanner-0.17.0-portable.zip        архив
+dist\PlutoScanner-Setup-0.17.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
