@@ -7,7 +7,8 @@ detection work and is clearly documented in the UI.  It is *not* dBm.
 from __future__ import annotations
 
 import numpy as np
-from scipy import signal
+
+from .arrayops import get_window
 
 
 class SpectrumAnalyzer:
@@ -16,7 +17,7 @@ class SpectrumAnalyzer:
         self.nfft = max(256, int(nfft))
         self.window_name = window
         self.max_segments = max(1, int(max_segments))
-        self._win = signal.get_window(window, self.nfft, fftbins=True).astype(np.float64)
+        self._win = get_window(window, self.nfft, fftbins=True).astype(np.float64)
         self._scale = float(np.sum(self._win)) ** 2
 
     def compute(self, iq: np.ndarray, sample_rate: float,

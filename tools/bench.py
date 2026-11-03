@@ -91,11 +91,35 @@ def make_frame(device: str = "sim") -> SpectrumFrame:
     )
 
 
+def startup_import_ms() -> float:
+    """Import time of the application in a fresh interpreter."""
+    import subprocess
+    import sys
+
+    code = (
+        "import time; t=time.perf_counter(); import pluto_scanner.__main__; "
+        "print((time.perf_counter()-t)*1000)"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=120,
+    )
+    if result.returncode != 0:
+        return float("nan")
+    try:
+        return float(result.stdout.strip())
+    except ValueError:
+        return float("nan")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repeat", type=int, default=10)
     args = parser.parse_args()
     repeat = max(1, args.repeat)
+
+    print("== Startup ==")
+    print(f"{'import of pluto_scanner.__main__':44s} "
+          f"{startup_import_ms():8.0f} ms")
 
     iq_1m = make_iq(204_800)          # 200 ms at 1.024 MS/s (scanner block)
     iq_20m = make_iq(409_600)         # 20 ms at 20.48 MS/s (drone block)

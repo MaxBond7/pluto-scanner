@@ -228,6 +228,15 @@ def main(argv: list[str] | None = None) -> int:
     ensure_theme_dir(DATA_DIR)
     apply_theme(app, theme)
 
+    # scipy.signal costs about 0.5 s to import and is only needed when audio
+    # actually runs.  Load it in the background while the window is built.
+    import threading
+
+    from .dsp.demod import preload as _preload_audio
+    threading.Thread(
+        target=_preload_audio, name="scipy-preload", daemon=True
+    ).start()
+
     window = MainWindow(args)
     window.show()
     app.aboutToQuit.connect(window.shutdown)

@@ -14,9 +14,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-from scipy import ndimage
 
 from ..model import Detection
+from ..dsp.arrayops import close_gaps, median_filter_1d, runs
 from ..dsp.classifier import SignalClassifier
 
 
@@ -61,39 +61,33 @@ def find_peaks(
     if not np.isfinite(noise_floor):
         return PeakResult([], noise_floor, float(threshold_db))
 
-    smooth = ndimage.median_filter(
-        work, size=max(1, int(smooth_bins)), mode="nearest"
-    )
+    smooth = median_filter_1d(work, max(1, int(smooth_bins)))
     diff = smooth - noise_floor
     enter = diff >= float(threshold_db)
     exit_ = diff >= max(1.5, float(threshold_db) * 0.45)
     if not enter.any():
         return PeakResult([], noise_floor, float(threshold_db))
 
-    low_work = exit_.copy()
-    if max_gap_bins > 0:
-        low_work = ndimage.binary_closing(
-            low_work, structure=np.ones(max_gap_bins + 1, dtype=bool)
-        )
-    labels, count = ndimage.label(low_work)
+    low_work = close_gaps(exit_, max_gap_bins) if max_gap_bins > 0 else exit_
     bin_hz = float(abs(freqs[1] - freqs[0]))
     if classifier is None:
         classifier = SignalClassifier()
 
     peaks: list[Detection] = []
-    for label in range(1, count + 1):
-        idx = np.flatnonzero(labels == label)
-        if idx.size < max(1, int(min_bins)):
+    for run_start, run_end in runs(low_work):
+        if run_end - run_start + 1 < max(1, int(min_bins)):
             continue
-        if not enter[idx].any():
+        if not enter[run_start:run_end + 1].any():
             continue
         # Drop border bins added by binary closing that are not really above
         # the exit threshold.
-        valid = idx[exit_[idx] | enter[idx]]
+        valid = np.flatnonzero(
+            exit_[run_start:run_end + 1] | enter[run_start:run_end + 1]
+        )
         if valid.size == 0:
             continue
-        start = int(valid[0])
-        end = int(valid[-1])
+        start = run_start + int(valid[0])
+        end = run_start + int(valid[-1])
         if end - start + 1 < max(1, int(min_bins)):
             continue
         region_diff = diff[start:end + 1]

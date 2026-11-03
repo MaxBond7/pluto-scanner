@@ -16,8 +16,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-from scipy import ndimage
 
+from ..dsp.arrayops import close_gaps, runs
 from ..dsp.spectrum import SpectrumAnalyzer
 from ..scanner.peaks import decimate_mean
 from .bands import DroneBand
@@ -140,31 +140,29 @@ def _region(
     above = psd >= noise_floor_db + float(threshold_db)
     if not above.any():
         return None
-    above = ndimage.binary_closing(above, structure=np.ones(3, dtype=bool))
-    labels, count = ndimage.label(above)
-    if count == 0:
+    closed = close_gaps(above, 1)
+    regions = runs(closed)
+    if not regions:
         return None
 
-    best_label = 0
+    best: tuple[int, int] | None = None
     best_level = -np.inf
-    for label in range(1, count + 1):
-        idx = np.flatnonzero(labels == label)
-        if idx.size == 0:
-            continue
-        level = float(np.max(psd[idx]))
+    for start, end in regions:
+        level = float(np.max(psd[start:end + 1]))
         if level > best_level:
             best_level = level
-            best_label = label
-    if best_label == 0:
+            best = (start, end)
+    if best is None:
         return None
 
-    idx = np.flatnonzero(labels == best_label)
+    start, end = best
     # Remove edge bins added by closing that are not really above threshold.
-    valid = idx[above[idx]]
+    base = start
+    valid = np.flatnonzero(above[base:end + 1])
     if valid.size == 0:
         return None
-    start = int(valid[0])
-    end = int(valid[-1])
+    start = base + int(valid[0])
+    end = base + int(valid[-1])
     peak_local = int(np.argmax(psd[start:end + 1]))
     peak_idx = start + peak_local
     peak_db = float(psd[peak_idx])
@@ -213,21 +211,22 @@ def _time_features(
     duration = usable / float(sample_rate)
     low = float(np.percentile(env_db, 5.0))
     high = float(np.percentile(env_db, 95.0))
+    burst_regions: list[tuple[int, int]] = []
     if high - low < 3.0:
         active = np.ones(env_db.size, dtype=bool)
         burst_count = 1
     else:
         active = env_db > (low + float(threshold_db))
-        active = ndimage.binary_closing(active, structure=np.ones(2, dtype=bool))
-        labels, burst_count = ndimage.label(active)
-        burst_count = int(burst_count)
+        active = close_gaps(active, 1)
+        burst_regions = runs(active)
+        burst_count = int(len(burst_regions))
+        if not burst_regions and active.any():
+            burst_regions = [(0, active.size - 1)]
 
     if active.any():
-        labels, count = ndimage.label(active)
-        lengths = [
-            int(np.count_nonzero(labels == label))
-            for label in range(1, count + 1)
-        ]
+        if not burst_regions:
+            burst_regions = runs(active)
+        lengths = [end - start + 1 for start, end in burst_regions]
         durations_ms = [
             length * (duration / max(1, active.size)) * 1000.0
             for length in lengths

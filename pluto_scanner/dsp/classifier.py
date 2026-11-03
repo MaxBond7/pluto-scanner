@@ -9,9 +9,37 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy.signal import find_peaks
 
 from ..model import Detection, SignalType
+
+
+def _count_peaks(values: np.ndarray, prominence: float,
+                 distance: int = 2) -> int:
+    """Local maxima above a prominence, at least ``distance`` bins apart.
+
+    Replaces ``scipy.signal.find_peaks`` for the small region arrays the
+    classifier sees, so the startup does not import SciPy.
+    """
+    data = np.asarray(values, dtype=np.float64)
+    n = data.size
+    if n < 3:
+        return 0
+    left_min = np.minimum.accumulate(data)
+    right_min = np.minimum.accumulate(data[::-1])[::-1]
+    count = 0
+    last = -10 ** 9
+    for index in range(1, n - 1):
+        value = data[index]
+        if value <= data[index - 1] or value < data[index + 1]:
+            continue
+        base = max(left_min[index - 1], right_min[index + 1])
+        if value - base < prominence:
+            continue
+        if index - last < distance:
+            continue
+        count += 1
+        last = index
+    return count
 
 
 @dataclass
@@ -80,11 +108,7 @@ class SignalClassifier:
         min_db = float(np.min(db))
         occupancy = float(np.mean(db > peak_db - 3.0))
         prominence = max(0.75, (peak_db - float(np.median(db))) * 0.15)
-        try:
-            peaks, _ = find_peaks(db, prominence=prominence, distance=2)
-            n_peaks = int(peaks.size)
-        except Exception:
-            n_peaks = 0
+        n_peaks = _count_peaks(db, prominence, distance=2)
         grad = np.abs(np.diff(db)) if db.size > 1 else np.zeros(1)
         edge = float(np.max(grad) / (peak_db - min_db + 1e-9)) if grad.size else 0.0
         duty = float(temporal.get("duty", 1.0)) if temporal else 1.0

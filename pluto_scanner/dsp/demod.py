@@ -8,9 +8,32 @@ background and why wobble is smooth.
 from __future__ import annotations
 
 import numpy as np
-from scipy import signal
 
 from ..model import VFOConfig
+
+_signal_module = None
+
+
+def _signal():
+    """Import scipy.signal on first use.
+
+    It costs about 500 ms to import and is only needed when audio actually
+    runs, so keeping it out of the startup path is worth it.  ``preload`` is
+    called from a background thread right after the window appears.
+    """
+    global _signal_module
+    if _signal_module is None:
+        from scipy import signal as module
+        _signal_module = module
+    return _signal_module
+
+
+def preload() -> None:
+    """Warm up the import in a background thread; failures are harmless."""
+    try:
+        _signal()
+    except Exception:
+        pass
 
 
 class Demodulator:
@@ -51,7 +74,7 @@ class Demodulator:
             cutoff = bw / 2.0
         cutoff = float(np.clip(cutoff, 100.0, 0.45 * rate))
 
-        self._ddc_sos = signal.butter(
+        self._ddc_sos = _signal().butter(
             4, cutoff / (fs / 2.0), btype="low", output="sos"
         )
         self._ddc_zi = np.zeros((self._ddc_sos.shape[0], 2), dtype=np.complex128)
@@ -65,7 +88,7 @@ class Demodulator:
             "CW": 1400.0,
         }.get(mode, 4500.0)
         audio_cut = float(np.clip(audio_cut, 200.0, 0.45 * rate))
-        self._audio_sos = signal.butter(
+        self._audio_sos = _signal().butter(
             4, audio_cut / (rate / 2.0), btype="low", output="sos"
         )
         self._audio_zi = np.zeros((self._audio_sos.shape[0], 2), dtype=np.float64)
@@ -108,7 +131,7 @@ class Demodulator:
 
         # Software mixing of the VFO channel to 0 Hz.
         mixed = iq * np.exp(-2j * np.pi * float(cfg.offset_hz) * t)
-        filtered, self._ddc_zi = signal.sosfilt(
+        filtered, self._ddc_zi = _signal().sosfilt(
             self._ddc_sos, mixed, zi=self._ddc_zi
         )
         baseband = filtered[:: self._ddc_decim]
@@ -143,7 +166,7 @@ class Demodulator:
 
         audio = np.asarray(audio, dtype=np.float64)
         if audio.size:
-            audio, self._audio_zi = signal.sosfilt(
+            audio, self._audio_zi = _signal().sosfilt(
                 self._audio_sos, audio, zi=self._audio_zi
             )
         if self._audio_decim > 1:

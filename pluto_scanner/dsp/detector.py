@@ -11,9 +11,9 @@ from collections import deque
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy import ndimage
 
 from ..model import Detection
+from .arrayops import close_gaps, median_filter_1d, runs
 
 
 @dataclass
@@ -32,25 +32,20 @@ def _label_regions(low: np.ndarray, high: np.ndarray, max_gap: int) -> list[tupl
     """
     if not low.any() or not high.any():
         return []
-    low_work = low.copy()
-    if max_gap > 0:
-        low_work = ndimage.binary_closing(
-            low_work, structure=np.ones(max_gap + 1, dtype=bool)
-        )
-    labels, count = ndimage.label(low_work)
+    work = close_gaps(low, max_gap) if max_gap > 0 else low
     regions: list[tuple[int, int]] = []
-    for label in range(1, count + 1):
-        idx = np.flatnonzero(labels == label)
-        if idx.size == 0:
-            continue
-        inside_high = high[idx]
-        if not inside_high.any():
+    for run_start, run_end in runs(work):
+        if not high[run_start:run_end + 1].any():
             continue
         # Keep only the meaningful part, dropping closed-border noise.
-        valid = idx[low[idx] | high[idx]]
+        valid = np.flatnonzero(
+            low[run_start:run_end + 1] | high[run_start:run_end + 1]
+        )
         if valid.size == 0:
             continue
-        regions.append((int(valid[0]), int(valid[-1])))
+        regions.append(
+            (run_start + int(valid[0]), run_start + int(valid[-1]))
+        )
     # Merge regions which only just touch after labeling.
     merged: list[tuple[int, int]] = []
     for start, end in regions:
@@ -113,9 +108,7 @@ class Detector:
         assert self.baseline is not None
         diff = psd - self.baseline
         if self.smoothing_bins > 1:
-            smooth = ndimage.median_filter(
-                diff, size=self.smoothing_bins, mode="nearest"
-            )
+            smooth = median_filter_1d(diff, self.smoothing_bins)
         else:
             smooth = diff
 

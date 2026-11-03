@@ -110,3 +110,40 @@ def test_detector_process_is_fast():
     for _ in range(30):
         detector.process(freqs, psd)
     assert _median_ms(lambda: detector.process(freqs, psd)) < 8.0
+
+def test_startup_does_not_import_scipy():
+    """SciPy must stay out of the startup path: it costs ~0.5 s."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sys, pluto_scanner.__main__; "
+        "print(int('scipy.signal' in sys.modules), "
+        "int('scipy.ndimage' in sys.modules))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True, text=True, timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "0 0", result.stdout
+
+
+def test_arrayops_match_scipy():
+    from scipy import ndimage
+
+    from pluto_scanner.dsp.arrayops import close_gaps, median_filter_1d, runs
+
+    rng = np.random.default_rng(7)
+    values = rng.normal(0.0, 1.0, 97)
+    assert np.allclose(
+        median_filter_1d(values, 3),
+        ndimage.median_filter(values, size=3, mode="nearest"),
+    )
+
+    mask = np.array([0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=bool)
+    assert runs(mask) == [(1, 2), (5, 7), (9, 9)]
+    assert not close_gaps(mask, 1)[3:5].any()
+    filled = close_gaps(mask, 2)
+    assert filled[3:5].all()
+    assert not filled[10:].any()

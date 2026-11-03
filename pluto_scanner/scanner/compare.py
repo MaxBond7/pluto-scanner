@@ -20,8 +20,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import numpy as np
-from scipy import ndimage
-
+from ..dsp.arrayops import close_gaps, runs
 from .recorder import load_bundle, ranges_overlap
 
 COMPARE_VERSION = 1
@@ -253,21 +252,17 @@ def compare_spectrum(
     above = diff >= float(margin_db)
     if not above.any():
         return []
-    above = ndimage.binary_closing(
-        above, structure=np.ones(3, dtype=bool)
-    )
-    labels, count = ndimage.label(above)
+    above = close_gaps(above, 1)
     rises: list[dict[str, Any]] = []
-    for label in range(1, count + 1):
-        idx = np.flatnonzero(labels == label)
-        if idx.size < max(1, int(min_bins)):
+    for start, end in runs(above):
+        if end - start + 1 < max(1, int(min_bins)):
             continue
-        peak_local = int(np.argmax(diff[idx]))
-        idx_peak = int(idx[peak_local])
+        peak_local = int(np.argmax(diff[start:end + 1]))
+        idx_peak = start + peak_local
         rises.append({
             "freq_hz": float(grid[idx_peak]),
-            "freq_start_hz": float(grid[idx[0]]),
-            "freq_end_hz": float(grid[idx[-1]]),
+            "freq_start_hz": float(grid[start]),
+            "freq_end_hz": float(grid[end]),
             "delta_db": round(float(diff[idx_peak]), 2),
             "level_db": round(float(current_values[idx_peak]), 2),
             "background_db": round(float(reference[idx_peak]), 2),

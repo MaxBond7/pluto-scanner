@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-04
+
+- Faster startup: time to a visible window dropped from ~1.38 s to ~0.72 s
+  (import 1040 → 482 ms) by removing SciPy from the import path.
+- `scipy.ndimage` replaced with `dsp/arrayops.py` (1-D median filter, gap
+  closing, run labelling) — same behaviour, no 235 ms import.
+- `scipy.signal.get_window` replaced with NumPy Hann/Hamming/Blackman.
+- `scipy.signal.find_peaks` in the classifier replaced with a local-maximum
+  counter; `dsp/demod.py` imports `scipy.signal` lazily and a background
+  thread preloads it right after the window appears.
+
 ## [0.16.0] - 2026-11-03
 
 - Performance pass over the hot paths, measured with `tools/bench.py`:
