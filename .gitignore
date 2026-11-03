@@ -43,3 +43,8 @@ dist/
 *.bak
 .vscode/
 .idea/
+
+# Personal manual (not published)
+/Pluto_Scanner_Manual.docx
+/Pluto_Scanner_Manual.pdf
+/tools/make_manual.py
