@@ -145,16 +145,28 @@ class ContactTable(QWidget):
         else:
             badge = "●" if contact.active else "○"
         if is_new:
-            badge_color = "#4ade80"
+            badge_color = "ok"
         elif contact.known:
-            badge_color = "#94a3b8"
+            badge_color = "fg_muted"
         elif contact.active:
-            badge_color = "#f59e0b"
+            badge_color = "warn"
         else:
-            badge_color = "#64748b"
+            badge_color = "fg_muted"
         muted = not contact.active
-        text_color = "#64748b" if muted else "#e2e8f0"
-        type_color = "#94a3b8" if (muted or contact.known) else "#67e8f9"
+        text_color = "fg_muted" if muted else "fg"
+        type_color = "fg_muted" if (muted or contact.known) else "accent"
+        if contact.known or muted:
+            severity_color, strong = "fg_muted", False
+            severity_ru = "известный" if contact.known else "неактивный"
+        elif contact.confidence >= 0.75:
+            severity_color, strong = "danger", True
+            severity_ru = "серьёзный"
+        elif contact.confidence >= 0.5:
+            severity_color, strong = "warn", False
+            severity_ru = "кандидат"
+        else:
+            severity_color, strong = "accent", False
+            severity_ru = "слабый"
         values = (
             badge,
             format_freq(contact.freq_hz),
@@ -168,13 +180,14 @@ class ContactTable(QWidget):
         )
         colors = (
             badge_color, text_color, text_color, text_color, type_color,
-            text_color, text_color, text_color, text_color,
+            severity_color, text_color, text_color, text_color,
         )
         alt = ", ".join(
             f"{t.value} {p * 100:.0f}%" for t, p in contact.alternatives
         )
         tooltip = (
             f"ID: {contact.contact_id}\n"
+            f"Уровень: {severity_ru}\n"
             f"{format_freq(contact.freq_hz)}  {format_bw(contact.bw_hz)}\n"
             f"Тип: {contact.type.ru}  уверенность {contact.confidence * 100:.0f}%\n"
             f"Гипотезы: {alt}\n"
@@ -196,6 +209,11 @@ class ContactTable(QWidget):
             color = _qcolor(token)
             if item.foreground().color() != color:
                 item.setForeground(color)
+            bold = strong and column == 5
+            if item.font().bold() != bold:
+                font = item.font()
+                font.setBold(bold)
+                item.setFont(font)
             if item.toolTip() != tooltip:
                 item.setToolTip(tooltip)
             if column == 0:

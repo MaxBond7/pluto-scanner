@@ -54,3 +54,47 @@ def test_background_event_does_not_pop_the_banner():
     panel.add_event(_event(0.1), True)
     assert panel.alarm.text() != ""
     panel.deleteLater()
+
+
+def test_weak_single_hit_is_hidden_by_default():
+    _app()
+    panel = DronePanel()
+    weak = _event(0.0)
+    weak.count = 1
+    weak.confidence = 0.65
+    weak.drone_like = False
+    panel.add_event(weak, True)
+    assert panel.table.rowCount() == 0
+    assert panel.events_title.text().endswith("0")
+
+    panel.only_important.setChecked(False)
+    assert panel.table.rowCount() == 1
+    panel.deleteLater()
+
+
+def test_background_is_hidden_until_requested():
+    _app()
+    panel = DronePanel()
+    panel.add_event(_event(0.9), True)
+    assert panel.table.rowCount() == 0
+
+    panel.show_background.setChecked(True)
+    assert panel.table.rowCount() == 1
+    panel.deleteLater()
+
+
+def test_confirmed_event_uses_the_theme_danger_colour():
+    from PySide6.QtGui import QColor
+
+    from sdr_scanner.ui.themes import BUILTIN_THEMES, apply_theme, tcol
+
+    app = _app()
+    apply_theme(app, BUILTIN_THEMES["classic"])
+    try:
+        panel = DronePanel()
+        panel.add_event(_event(0.0), True)
+        colour = panel.table.item(0, 5).foreground().color()
+        assert colour.name() == QColor(tcol("danger")).name()
+        panel.deleteLater()
+    finally:
+        apply_theme(app, BUILTIN_THEMES["mono"])

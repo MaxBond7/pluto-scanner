@@ -288,9 +288,11 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     settings = load_settings(DATA_DIR / "settings.json")
+    explicit_theme = bool(args.theme)
     requested = args.theme or str(settings.get("theme") or DEFAULT_THEME)
     theme = resolve_theme(requested, theme_dir(DATA_DIR))
     args.theme = theme.name
+    args.theme_explicit = explicit_theme
     ensure_theme_dir(DATA_DIR)
     apply_theme(app, theme)
 

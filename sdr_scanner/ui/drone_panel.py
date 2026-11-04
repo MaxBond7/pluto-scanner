@@ -78,9 +78,11 @@ class DronePanel(QWidget):
     background_requested = Signal()
     background_stop_requested = Signal()
 
+    # The event table lives in a narrow side column now, so it keeps only the
+    # fields needed to judge a contact at a glance.  Everything else is in the
+    # tooltip and in the event card.
     HEADERS = [
-        "Время", "Полоса", "Класс", "Частота", "Ширина",
-        "SNR", "Хиты", "Скваж.", "Увер.", "Дрон", "Устр.",
+        "", "Время", "Класс", "Частота", "Хиты", "Увер.", "Дрон",
     ]
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -108,6 +110,14 @@ class DronePanel(QWidget):
         set_style(hint, "color:#8fa6c0; font-size:10px;")
         root.addWidget(hint)
 
+        # Left: bands, parameters and the live graph.  Right: devices and the
+        # event list, so new contacts no longer push the graph off-screen.
+        body = QHBoxLayout()
+        body.setSpacing(8)
+        left = QVBoxLayout()
+        left.setSpacing(4)
+        body.addLayout(left, 1)
+
         bands_box = QGroupBox("Полосы")
         bgrid = QGridLayout(bands_box)
         bgrid.setHorizontalSpacing(8)
@@ -128,9 +138,7 @@ class DronePanel(QWidget):
         left_col.setSpacing(4)
         left_col.addWidget(bands_box)
 
-        self.extended_check = QCheckBox(
-            "Разрешить 5.8 ГГц (Pluto+ / расширенный диапазон)"
-        )
+        self.extended_check = QCheckBox("Разрешить 5.8 ГГц (Pluto+)")
         self.extended_check.setChecked(True)
         self.extended_check.setToolTip(
             "У stock ADALM-PLUTO паспортный диапазон 325 МГц – 3.8 ГГц. "
@@ -174,7 +182,7 @@ class DronePanel(QWidget):
         self.threshold_spin.setValue(8.0)
         self.threshold_spin.setKeyboardTracking(False)
 
-        self.use_all_check = QCheckBox("Использовать все устройства")
+        self.use_all_check = QCheckBox("Все устройства")
         self.use_all_check.setChecked(True)
         self.use_all_check.setToolTip(
             "Две Pluto+ делят куски диапазона между собой. "
@@ -201,7 +209,7 @@ class DronePanel(QWidget):
         )
 
         self.high_usb_check = QCheckBox(
-            "Разрешить 20.48/30.72 MS/s на двух USB (риск)"
+            "20.48/30.72 MS/s на двух USB (риск)"
         )
         self.high_usb_check.setChecked(True)
         self.high_usb_check.setToolTip(
@@ -308,7 +316,6 @@ class DronePanel(QWidget):
             "border:1px solid $danger_fg; "
             "border-radius:5px; padding:7px; font-weight:600;",
         )
-        root.addWidget(self.alarm)
         self._alarm_timer = QTimer(self)
         self._alarm_timer.setSingleShot(True)
         self._alarm_timer.timeout.connect(lambda: self.alarm.setVisible(False))
@@ -319,21 +326,74 @@ class DronePanel(QWidget):
         self.device_hint = QLabel("Устройства появятся после старта.")
         set_style(self.device_hint, "color:#64748b; font-size:10px;")
         self.device_layout.addWidget(self.device_hint)
-        side.addWidget(self.device_box)
 
         self.controls.addLayout(side, 2)
-        root.addLayout(self.controls)
+        left.addLayout(self.controls)
+
+        left.addWidget(self.alarm)
 
         self.graph = DroneGraph()
         self.graph.setMinimumHeight(200)
-        root.addWidget(self.graph, 3)
+        left.addWidget(self.graph, 1)
+
+        self.status = QLabel("Выберите полосы и нажмите «Старт мониторинга».")
+        self.status.setWordWrap(True)
+        set_style(self.status, "color:#94a3b8; font-size:11px;")
+        left.addWidget(self.status)
+
+        # Right column: devices on top, events below.
+        self.side_column = QWidget()
+        self.side_column.setFixedWidth(420)
+        right = QVBoxLayout(self.side_column)
+        right.setContentsMargins(0, 0, 0, 0)
+        right.setSpacing(4)
+        right.addWidget(self.device_box)
+
+        events_head = QHBoxLayout()
+        events_head.setSpacing(6)
+        self.events_title = QLabel("СОБЫТИЯ · 0")
+        set_style(
+            self.events_title,
+            "color:#f472b6; font-size:12px; font-weight:600;",
+        )
+        self.only_important = QCheckBox("Только важные")
+        self.only_important.setChecked(True)
+        self.only_important.setToolTip(
+            "Скрывать слабые и фоновые сигналы. Сами события остаются в "
+            "журнале и в карточке, поэтому ничего не теряется."
+        )
+        self.show_background = QCheckBox("Фон")
+        self.show_background.setToolTip(
+            "Показывать сигналы, которые были в эфире всё время обучения фона."
+        )
+        set_style(
+            self.only_important,
+            "color:#8fa6c0; font-size:10px;",
+        )
+        set_style(self.show_background, "color:#8fa6c0; font-size:10px;")
+        events_head.addWidget(self.events_title, 1)
+        right.addLayout(events_head)
+
+        filters = QHBoxLayout()
+        filters.setSpacing(8)
+        filters.addWidget(self.only_important)
+        filters.addWidget(self.show_background)
+        filters.addStretch(1)
+        right.addLayout(filters)
+
+        self.severity_legend = QLabel("")
+        self.severity_legend.setWordWrap(True)
+        set_style(self.severity_legend, "font-size:9px;")
+        right.addWidget(self.severity_legend)
+        self._update_legend()
 
         self.table = QTableWidget(0, len(self.HEADERS))
         self.table.setHorizontalHeaderLabels(self.HEADERS)
-        self.table.setMinimumHeight(150)
+        self.table.setMinimumHeight(220)
         self.table.verticalHeader().setVisible(False)
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
+        self.table.setWordWrap(False)
         self.table.setSelectionMode(
             QAbstractItemView.SelectionMode.SingleSelection
         )
@@ -345,21 +405,20 @@ class DronePanel(QWidget):
         )
         set_style(self.table, "QTableWidget { font-size: 10px; }")
         header = self.table.horizontalHeader()
-        header.setMinimumSectionSize(40)
+        header.setMinimumSectionSize(16)
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        for column, width in enumerate(
-            (50, 55, 0, 88, 52, 34, 38, 42, 36, 72, 58)
-        ):
+        for column, width in enumerate((18, 46, 0, 88, 38, 42, 46)):
             if column != 2:
                 self.table.setColumnWidth(column, width)
-        root.addWidget(self.table, 3)
         self.table.cellDoubleClicked.connect(self._on_cell_double_click)
+        right.addWidget(self.table, 1)
 
-        self.status = QLabel("Выберите полосы и нажмите «Старт мониторинга».")
-        self.status.setWordWrap(True)
-        set_style(self.status, "color:#94a3b8; font-size:11px;")
-        root.addWidget(self.status)
+        self.only_important.toggled.connect(self._rebuild_events)
+        self.show_background.toggled.connect(self._rebuild_events)
+
+        body.addWidget(self.side_column, 0)
+        root.addLayout(body, 1)
 
         for check in self.band_checks.values():
             check.toggled.connect(self._sync_extended)
@@ -489,8 +548,10 @@ class DronePanel(QWidget):
         return self._events.get(event_id)
 
     def refresh_events(self) -> None:
+        self._update_legend()
         for event in list(self._events.values()):
             self.add_event(event, False)
+        self._update_events_title()
 
     def extended_allowed(self) -> bool:
         return bool(self.extended_check.isChecked())
@@ -528,6 +589,7 @@ class DronePanel(QWidget):
         self.table.setRowCount(0)
         self._rows.clear()
         self._events.clear()
+        self._update_events_title()
         self.alarm.setVisible(False)
         self.set_devices(devices)
         for widget in (
@@ -554,8 +616,99 @@ class DronePanel(QWidget):
     def update_observation(self, obs: DroneObservation) -> None:
         self.graph.add_observation(obs)
 
+    def _severity(self, event: DroneEvent) -> tuple[str, str, bool]:
+        """How serious the contact is, and which theme token colours it."""
+        if event.whitelisted:
+            return "whitelisted", "fg_muted", False
+        if event.background >= BACKGROUND_MARK:
+            return "background", "fg_muted", False
+        if self.is_confirmed(event):
+            return "alarm", "danger", True
+        if event.drone_like:
+            return "candidate", "warn", True
+        if event.confidence >= 0.6:
+            return "watch", "accent", False
+        return "low", "fg_muted", False
+
+    def _visible(self, event: DroneEvent) -> bool:
+        backgrounded = event.background >= BACKGROUND_MARK
+        if backgrounded:
+            return bool(self.show_background.isChecked())
+        if not self.only_important.isChecked():
+            return True
+        if self.is_confirmed(event):
+            return True
+        if event.class_key in ("WIFI", "NARROW"):
+            return False
+        # A single weak burst is exactly the Wi-Fi/Bluetooth noise that used to
+        # flood the list; require either a drone-like classification with at
+        # least two confirmations, or a very confident repeated signal.
+        if event.drone_like and event.confidence >= 0.60 and event.count >= 2:
+            return True
+        return event.confidence >= 0.80 and event.count >= 2
+
+    def _trim_events(self) -> None:
+        """Keep a long watch from growing the in-memory event list forever."""
+        limit = 1200
+        excess = len(self._events) - limit
+        if excess <= 0:
+            return
+        old = sorted(
+            (event for event in self._events.values() if not event.active),
+            key=lambda event: event.last_seen,
+        )
+        for event in old[:excess]:
+            self._events.pop(event.event_id, None)
+            self._remove_row(event.event_id)
+
+    def _remove_row(self, event_id: str) -> None:
+        row = self._rows.pop(event_id, None)
+        if row is None:
+            return
+        self.table.removeRow(row)
+        self._rows = {
+            key: (value - 1 if value > row else value)
+            for key, value in self._rows.items()
+        }
+
+    def _update_legend(self) -> None:
+        parts = (
+            ("●", "danger", "тревога"),
+            ("▲", "warn", "кандидат"),
+            ("○", "accent", "интерес"),
+            ("·", "fg_muted", "фон"),
+        )
+        self.severity_legend.setText(" &nbsp; ".join(
+            f"<span style='color:{tcol(token)}'>{symbol} {label}</span>"
+            for symbol, token, label in parts
+        ))
+
+    def _update_events_title(self) -> None:
+        visible = sum(1 for event in self._events.values()
+                      if self._visible(event))
+        total = len(self._events)
+        self.events_title.setText(f"СОБЫТИЯ · {visible}")
+        self.events_title.setToolTip(
+            f"Показано {visible} из {total}. Скрытые остаются в журнале "
+            "и открываются по двойному клику из полного списка."
+        )
+
+    def _rebuild_events(self, *_args) -> None:
+        self.table.setRowCount(0)
+        self._rows.clear()
+        for event in sorted(self._events.values(),
+                            key=lambda item: item.last_seen):
+            self.add_event(event, False)
+        self._update_events_title()
+
     def add_event(self, event: DroneEvent, is_new: bool) -> None:
         self._events[event.event_id] = event
+        self._trim_events()
+        if not self._visible(event):
+            self._remove_row(event.event_id)
+            self._update_events_title()
+            return
+
         row = self._rows.get(event.event_id)
         if row is None:
             if self.table.rowCount() >= 500:
@@ -569,39 +722,47 @@ class DronePanel(QWidget):
             self._rows[event.event_id] = row
             for column in range(len(self.HEADERS)):
                 self.table.setItem(row, column, QTableWidgetItem(""))
-        color = QColor(tcol(_CLASS_COLORS.get(event.class_key, "#d7e2f0")))
-        if event.whitelisted:
-            color = QColor(tcol("#64748b"))
-        elif event.class_key == "OVERLOAD":
-            color = QColor(tcol("#facc15"))
-        elif event.background >= BACKGROUND_MARK:
-            color = QColor(tcol("#64748b"))
-        elif self.is_confirmed(event):
-            color = QColor(tcol("#f87171"))
-        elif event.drone_like:
-            color = QColor(tcol("#fb923c"))
+
+        severity, token, strong = self._severity(event)
+        severity_ru = {
+            "alarm": "тревога",
+            "candidate": "кандидат",
+            "watch": "интерес",
+            "background": "фон",
+            "whitelisted": "белый список",
+            "low": "слабый",
+        }.get(severity, severity)
+        # Shape as well as colour: in the mono themes danger and warning share
+        # the same hue, and the list must still be readable there.
+        dot = {
+            "alarm": "●",
+            "candidate": "▲",
+            "watch": "○",
+            "whitelisted": "✓",
+        }.get(severity, "·")
+        muted = not event.active or severity in ("background", "whitelisted")
+        base = QColor(tcol("fg_muted" if muted else "fg"))
+        class_color = QColor(tcol(
+            "#64748b" if muted else _CLASS_COLORS.get(event.class_key, "#d7e2f0")
+        ))
+        severity_color = QColor(tcol(token))
         values = [
+            dot,
             time.strftime("%H:%M:%S", time.localtime(event.last_seen)),
-            event.band_name,
             _CLASS_SHORT.get(event.class_key, event.class_ru),
             format_freq(event.freq_hz),
-            format_bw(event.bw_hz),
-            f"{event.max_snr_db:.1f}",
             str(event.count),
-            f"{event.max_duty * 100:.0f}%",
             f"{event.confidence * 100:.0f}%",
             _binary_short(event),
-            ", ".join(
-                self._device_names.get(device_id, device_id)
-                .replace("Симулятор", "SIM")
-                for device_id in event.device_ids
-            ),
         ]
-        tips = []
+        tips = [f"Уровень: {severity_ru}"]
+        tips.append(
+            f"{event.band_name} · {format_bw(event.bw_hz)} · "
+            f"SNR {event.max_snr_db:.1f} дБ · скважность "
+            f"{event.max_duty * 100:.0f}% · подтверждений {event.count}"
+        )
         if event.whitelisted:
-            tips.append(
-                f"В белом списке: {event.whitelist_name or 'да'}"
-            )
+            tips.append(f"В белом списке: {event.whitelist_name or 'да'}")
         if event.ml:
             tips.append(
                 "ML: "
@@ -620,7 +781,23 @@ class DronePanel(QWidget):
                 "Широкополосный сигнал: занимает почти всю полосу. "
                 "Так же выглядит занятый Wi-Fi — проверьте вручную."
             )
+        devices = ", ".join(
+            self._device_names.get(device_id, device_id)
+            .replace("Симулятор", "SIM")
+            for device_id in event.device_ids
+        )
+        if devices:
+            tips.append(f"Устройства: {devices}")
         tooltip = "\n".join(tips)
+
+        tint = None
+        if severity == "alarm":
+            tint = QColor(tcol("danger"))
+            tint.setAlpha(46)
+        elif severity == "candidate":
+            tint = QColor(tcol("warn"))
+            tint.setAlpha(34)
+
         for column, text in enumerate(values):
             item = self.table.item(row, column)
             if item is None:
@@ -632,18 +809,35 @@ class DronePanel(QWidget):
                 item.setText(text)
             if item.data(Qt.ItemDataRole.UserRole) != event.event_id:
                 item.setData(Qt.ItemDataRole.UserRole, event.event_id)
-            if item.foreground().color() != color:
-                item.setForeground(color)
+            if column in (0, 5):
+                colour = severity_color
+            elif column == 2:
+                colour = class_color
+            else:
+                colour = base
+            if item.foreground().color() != colour:
+                item.setForeground(colour)
+            if tint is not None:
+                item.setBackground(tint)
+            elif item.background().color().alpha() != 0:
+                item.setBackground(QColor(0, 0, 0, 0))
             if tooltip and item.toolTip() != tooltip:
                 item.setToolTip(tooltip)
-            if column in (5, 6, 7, 8, 9):
+            bold = strong and column in (0, 5)
+            if item.font().bold() != bold:
+                font = item.font()
+                font.setBold(bold)
+                item.setFont(font)
+            if column in (4, 5, 6):
                 item.setTextAlignment(
                     Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
                 )
+            elif column == 0:
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._update_events_title()
         if is_new:
             self.table.scrollToBottom()
-        if (event.drone_like and is_new
-                and event.background < BACKGROUND_MARK):
+        if (is_new and self.is_confirmed(event)):
             self.show_alarm(event)
 
     def show_alarm(self, event: DroneEvent) -> None:

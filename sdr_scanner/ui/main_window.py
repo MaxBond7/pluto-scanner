@@ -185,6 +185,17 @@ class MainWindow(QMainWindow):
 
         self._initial_devices()
 
+        # Some widgets build their own palettes during construction.  Re-apply
+        # the saved theme once the window exists so a restart never falls back
+        # to the default look.
+        settings = load_settings(DATA_DIR / "settings.json")
+        saved_theme = str(settings.get("theme") or "")
+        if (not getattr(self.args, "theme_explicit", False)
+                and saved_theme and saved_theme != active_theme().name):
+            index = self.theme_combo.findData(saved_theme)
+            if index >= 0:
+                self.theme_combo.setCurrentIndex(index)
+
     # ------------------------------------------------------------------ UI build
     def _build_ui(self) -> None:
         central = QWidget()
@@ -2340,10 +2351,16 @@ class MainWindow(QMainWindow):
         print(f"SCREENSHOT {'OK' if ok else 'FAILED'}: {path.resolve()}", flush=True)
         return str(path.resolve())
 
+    def _save_theme(self) -> None:
+        settings = load_settings(DATA_DIR / "settings.json")
+        settings["theme"] = active_theme().name
+        save_settings(DATA_DIR / "settings.json", settings)
+
     def closeEvent(self, event: QCloseEvent) -> None:
         window = getattr(self, "drone_window", None)
         if window is not None:
             window.close()
+        self._save_theme()
         self.shutdown()
         super().closeEvent(event)
 
@@ -2351,6 +2368,7 @@ class MainWindow(QMainWindow):
         if self._shutting_down:
             return
         self._shutting_down = True
+        self._save_theme()
         window = getattr(self, "drone_window", None)
         if window is not None:
             try:

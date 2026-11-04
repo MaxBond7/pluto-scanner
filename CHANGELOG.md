@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-05
+
+- **The drone event list moved into the right-hand column**, under
+  «Устройства», instead of a full-width strip at the bottom. The graph keeps
+  the full height of the window and new events no longer push it around.
+- Compact columns for the side list: severity dot, time, class, frequency,
+  confirmations, confidence and the binary verdict. SNR, duty, bandwidth and
+  devices are in the tooltip and the event card.
+- **Severity is visible by theme colour and shape**: ● alarm, ▲ candidate,
+  ○ interesting, · background, with a legend above the list. High-confidence
+  rows are tinted and bolded; the contact list in the main window uses the
+  same theme tokens for its confidence column.
+- **«Только важные» is on by default.** It hides single weak bursts, `NARROW`
+  and `WIFI` contacts unless they are confirmed drone-like events, and hides
+  background signals until «Фон» is ticked. Everything still goes to the
+  journal and the summary; the counter shows how many are hidden.
+- The in-memory event list is capped at 1200 entries (oldest inactive first),
+  so a multi-hour watch no longer grows without bound.
+- **Themes now survive a restart**: the choice is saved again on shutdown and
+  re-applied after the window is built. An explicit `--theme` still wins over
+  the saved value.
+- The window opens wider (up to 1520 px) and the parameter labels are shorter,
+  so the new side column does not squeeze the controls.
+
 ## [0.25.0] - 2026-11-05
 
 - **Renamed from Pluto Scanner to SDR Scanner.** The app has outgrown one

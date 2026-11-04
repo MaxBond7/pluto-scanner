@@ -43,7 +43,7 @@ class DroneWindow(QMainWindow):
         self.setWindowTitle(f"Дрон-монитор — {APP_NAME} {__version__}")
         if ICON_PATH.exists():
             self.setWindowIcon(QIcon(str(ICON_PATH)))
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(1040, 640)
         self._restore_geometry()
 
     # ------------------------------------------------------------- geometry
@@ -66,8 +66,8 @@ class DroneWindow(QMainWindow):
             screen.availableGeometry() if screen is not None
             else QApplication.primaryScreen().availableGeometry()
         )
-        width = min(1320, max(900, available.width() - 80))
-        height = min(900, max(620, available.height() - 80))
+        width = min(1520, max(1100, available.width() - 80))
+        height = min(940, max(640, available.height() - 80))
         self.resize(width, height)
         self.move(
             available.x() + (available.width() - width) // 2,
