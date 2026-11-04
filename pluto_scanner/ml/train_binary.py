@@ -61,6 +61,7 @@ from .dronerf import (
     scan_recordings,
     analyze_window,
 )
+from .cardrf import collect_cardrf
 from .binary_features import BINARY_FEATURE_NAMES, from_observation
 
 BINARY_SAMPLE_RATE = 20.48e6
@@ -597,6 +598,38 @@ def main(argv: list[str] | None = None) -> int:
         help="Synthetic blocks per class.",
     )
     parser.add_argument(
+        "--cardrf", default="",
+        help="CARDRF.zip or a folder with CardRF .mat files (optional).",
+    )
+    parser.add_argument(
+        "--cardrf-split", default="Train",
+        help="Which CardRF split to learn from (Train, Test or all).",
+    )
+    parser.add_argument(
+        "--cardrf-rate", type=float, default=4.096e6,
+        help="Baseband bandwidth/rate taken from CardRF, in Hz.",
+    )
+    parser.add_argument(
+        "--cardrf-windows", type=int, default=8,
+        help="20 ms windows per CardRF folder.",
+    )
+    parser.add_argument(
+        "--cardrf-limit", type=int, default=0,
+        help="Captures per CardRF folder; 0 means all.",
+    )
+    parser.add_argument(
+        "--cardrf-negatives-only", action="store_true",
+        help="Use CardRF only for Wi-Fi/Bluetooth negatives.",
+    )
+    parser.add_argument(
+        "--cardrf-cache", default="",
+        help="Cache of CardRF baseband blocks (.npz).",
+    )
+    parser.add_argument(
+        "--cardrf-workers", type=int, default=0,
+        help="Processes for reading CardRF (0 = auto).",
+    )
+    parser.add_argument(
         "--out", default=str(DEFAULT_ML_MODEL.parent / "ml_drone_binary.json"),
     )
     parser.add_argument("--cache", default="")
@@ -641,7 +674,26 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"  блоков: {len(synthetic)}")
 
-    full = merge(dataset, recordings, synthetic)
+    cardrf = _empty()
+    if args.cardrf:
+        print("CardRF...")
+        cardrf = collect_cardrf(
+            args.cardrf,
+            split=args.cardrf_split,
+            baseband_rate=args.cardrf_rate,
+            windows_per_group=args.cardrf_windows,
+            limit_per_group=args.cardrf_limit,
+            negatives_only=args.cardrf_negatives_only,
+            workers=args.cardrf_workers,
+            chunk_cache=args.cardrf_cache,
+            seed=args.seed + 9,
+            progress=lambda i, n, name: print(
+                f"  [{i}/{n}] {name}", flush=True
+            ) if i % 200 == 0 or i == n else None,
+        )
+        print(f"  блоков: {len(cardrf)}")
+
+    full = merge(dataset, recordings, synthetic, cardrf)
     if len(full) == 0:
         print("Нет данных для обучения.")
         return 2
@@ -650,6 +702,13 @@ def main(argv: list[str] | None = None) -> int:
     cross = cross_family_report(full) if args.cross_check else {}
     if cross:
         report.model.metadata["cross_family"] = cross
+    if len(cardrf):
+        report.model.metadata["source"] = (
+            "dronerf+recordings+synthetic+cardrf"
+        )
+        report.model.metadata.setdefault("datasets", []).append(
+            "CardRF, Medaiyese et al. 2020, CC BY 4.0"
+        )
 
     out = Path(args.out)
     report.model.save(out)

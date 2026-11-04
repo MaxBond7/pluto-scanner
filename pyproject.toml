@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pluto-scanner"
-version = "0.17.1"
+version = "0.18.0"
 description = "Desktop SDR scanner and passive drone-band monitor for ADALM-PLUTO / Pluto+"
 readme = "README.md"
 license = {text = "MIT"}
@@ -31,6 +31,7 @@ dependencies = [
 
 [project.optional-dependencies]
 hardware = ["pyadi-iio>=0.0.21"]
+ml = ["h5py>=3.10"]
 dev = ["pytest>=8.0", "pyinstaller>=6.10"]
 
 [project.scripts]

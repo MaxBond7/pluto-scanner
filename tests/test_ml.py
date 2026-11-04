@@ -255,3 +255,28 @@ def test_import_mat_reads_struct_fields(tmp_path):
     )
     assert result.info.samples == n
     assert "Channel_1.Data" in result.info.notes
+
+def test_import_mat_reads_v73_hdf5(tmp_path):
+    try:
+        import h5py
+    except ImportError:  # optional dependency
+        return
+
+    from pluto_scanner.ml.importers import import_mat
+
+    fs = 1.024e6
+    n = 4096
+    rng = np.random.default_rng(11)
+    data = (rng.normal(size=n) * 1000).astype(np.int16)
+    src = tmp_path / "cardrf_v73.mat"
+    with h5py.File(src, "w") as handle:
+        group = handle.create_group("Channel_1")
+        group.create_dataset("Data", data=data.reshape(1, -1))
+
+    result = import_mat(
+        src, tmp_path / "out", sample_rate=fs, label="WIFI", max_seconds=1.0,
+    )
+    assert result.info.samples == n
+    assert "Channel_1.Data" in result.info.notes
+    saved = np.fromfile(result.info.cf32_path, dtype=np.complex64)
+    assert saved.size == n

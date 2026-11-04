@@ -220,18 +220,10 @@ def _iter_arrays(value, prefix: str = "", depth: int = 0):
             yield from _iter_arrays(child, label, depth + 1)
 
 
-def _pick_mat_iq(payload: dict, variable: str = "") -> tuple[str, np.ndarray]:
-    """Find the IQ array inside a MATLAB file.
-
-    CardRF and similar datasets store one long complex vector, but some
-    exports use two rows/columns for I and Q.  Both layouts are accepted, and
-    struct fields are searched (``x.Channel_1.Data``).
-    """
-    candidates: list[tuple[str, np.ndarray]] = []
-    for key, value in payload.items():
-        if str(key).startswith("__"):
-            continue
-        candidates.extend(_iter_arrays(value, str(key)))
+def _choose_candidate(
+    candidates: list[tuple[str, np.ndarray]], variable: str = "",
+) -> tuple[str, np.ndarray]:
+    """Pick the IQ array out of everything found in a file."""
     if variable:
         candidates = [
             item for item in candidates
@@ -252,6 +244,60 @@ def _pick_mat_iq(payload: dict, variable: str = "") -> tuple[str, np.ndarray]:
     if pair_items:
         return max(pair_items, key=lambda item: item[1].size)
     return max(candidates, key=lambda item: item[1].size)
+
+
+def _pick_mat_iq(payload: dict, variable: str = "") -> tuple[str, np.ndarray]:
+    """Find the IQ array inside a MATLAB file.
+
+    CardRF and similar datasets store one long complex vector, but some
+    exports use two rows/columns for I and Q.  Both layouts are accepted, and
+    struct fields are searched (``x.Channel_1.Data``).
+    """
+    candidates: list[tuple[str, np.ndarray]] = []
+    for key, value in payload.items():
+        if str(key).startswith("__"):
+            continue
+        candidates.extend(_iter_arrays(value, str(key)))
+    return _choose_candidate(candidates, variable)
+
+
+def _is_hdf5(path: Path) -> bool:
+    """True when the file carries the HDF5 signature (MATLAB v7.3)."""
+    try:
+        with path.open("rb") as handle:
+            head = handle.read(600)
+    except OSError:
+        return False
+    return b"\x89HDF\r\n\x1a\n" in head
+
+
+def _read_mat73(path: Path, variable: str = "") -> tuple[str, np.ndarray]:
+    """Read a MATLAB v7.3 file, which is really an HDF5 container.
+
+    ``scipy.io.loadmat`` refuses these files.  MATLAB stores every array as a
+    dataset, so the same "biggest numeric array" rule applies; the ``#refs#``
+    bookkeeping group is skipped.
+    """
+    try:
+        import h5py
+    except ImportError as exc:  # pragma: no cover - depends on the install
+        raise RuntimeError(
+            "для .mat версии 7.3 нужен h5py: pip install h5py"
+        ) from exc
+
+    candidates: list[tuple[str, np.ndarray]] = []
+    with h5py.File(path, "r") as handle:
+        def visit(name: str, item: object) -> None:
+            if not isinstance(item, h5py.Dataset):
+                return
+            if name.startswith("#") or not np.issubdtype(item.dtype, np.number):
+                return
+            if item.size < 256:
+                return
+            candidates.append((name.replace("/", "."), np.asarray(item[...])))
+
+        handle.visititems(visit)
+    return _choose_candidate(candidates, variable)
 
 
 def _mat_to_complex(array: np.ndarray) -> np.ndarray:
@@ -289,8 +335,11 @@ def import_mat(
     sample_rate = float(sample_rate)
     if sample_rate <= 0:
         raise ValueError("нужна частота дискретизации")
-    payload = loadmat(path, squeeze_me=True, struct_as_record=False)
-    name, array = _pick_mat_iq(payload, variable)
+    if _is_hdf5(path):
+        name, array = _read_mat73(path, variable)
+    else:
+        payload = loadmat(path, squeeze_me=True, struct_as_record=False)
+        name, array = _pick_mat_iq(payload, variable)
     iq = _mat_to_complex(array)
 
     # Raw ADC counts would trip the dBFS overload rule; scale to a known peak.

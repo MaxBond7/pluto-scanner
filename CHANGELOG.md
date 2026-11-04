@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-04
+
+- CardRF support: MATLAB v7.3 (HDF5) files are now read by the importer, and a
+  new adapter (`pluto_scanner.ml.cardrf`) reads the 71 GB Cardinal RF archive
+  straight from the ZIP — 2.4 GHz captures, carrier search, 4.096 MHz
+  baseband slice, 20 ms windows.
+- `tools/capture_pluto.py` records IQ from a real Pluto/Pluto+ into the app's
+  own `cf32` + JSON format, without opening the GUI.
+- `tools/check_binary.py` scores a drone/not-drone model on your own
+  recordings, per file and per label.
+- Measured the USB 2.0 ceiling of the Pluto: 4.096 MHz is the widest
+  gap-free rate, 20.48 MHz delivers only 29% of real time. Documented in
+  `docs/HARDWARE.md`.
+- Trained with CardRF (real Wi-Fi/Bluetooth/drone recordings) and measured the
+  result: the Wi-Fi-versus-drone trade is physical, not a data shortage.
+  The shipped model is unchanged; the numbers are in `docs/BINARY.md`.
+
 ## [0.17.1] - 2026-11-04
 
 - New monochrome application icon: black rounded square with white spectrum
