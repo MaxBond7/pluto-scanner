@@ -206,13 +206,20 @@ class MainWindow(QMainWindow):
         self.band_group = QGroupBox("Диапазоны")
         bl = QVBoxLayout(self.band_group)
         self.band_combo = QComboBox()
+        # Long band names must not force the whole left column wider than
+        # its pane; the combo elides instead.
+        self.band_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.band_combo.setMinimumContentsLength(12)
         for b in BANDS:
             self.band_combo.addItem(f"{b.name}  ·  {format_freq(b.frequency)}", b.frequency)
         bl.addWidget(self.band_combo)
         self.band_btn = QPushButton("Настроить диапазон")
         self.band_btn.clicked.connect(lambda: self._tune_band())
         bl.addWidget(self.band_btn)
-        note = QLabel("Стоковый Pluto: 325 МГц – 3.8 ГГц")
+        note = QLabel("Стоковый Pluto: 325 МГц - 3.8 ГГц")
+        note.setWordWrap(True)
         set_style(note, "color:#64748b; font-size:10px;")
         bl.addWidget(note)
         ll.addWidget(self.band_group)
@@ -231,7 +238,7 @@ class MainWindow(QMainWindow):
         left_scroll.setWidgetResizable(True)
         left_scroll.setFrameShape(QFrame.Shape.NoFrame)
         left_scroll.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
         left_scroll.setMinimumWidth(310)
         left_scroll.setMaximumWidth(400)
