@@ -247,7 +247,7 @@ class DronePanel(QWidget):
         self.background_seconds_spin = QDoubleSpinBox()
         self.background_seconds_spin.setRange(20.0, 600.0)
         self.background_seconds_spin.setDecimals(0)
-        self.background_seconds_spin.setSuffix(" ?")
+        self.background_seconds_spin.setSuffix(" с")
         self.background_seconds_spin.setValue(60.0)
         bg_row.addWidget(self.background_seconds_spin)
         self.background_status = QLabel("Фон: не записан")
