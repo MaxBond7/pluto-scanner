@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-04
+
+- New monochrome application icon: black rounded square with white spectrum
+  bars, drawn separately for each ICO size (16/24/32/48/64/128/256) so the
+  16 px version stays crisp instead of turning into a grey blob.
+- The installer and window icon use the same file, so the taskbar, Start menu
+  and Setup now match the `mono` theme.
+
 ## [0.17.0] - 2026-11-04
 
 - Boot splash with an animated ASCII bird: the window appears ~125 ms after

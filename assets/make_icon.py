@@ -1,4 +1,9 @@
-"""Generate the Pluto Scanner icon (ICO + PNG)."""
+"""Generate the Pluto Scanner icon (ICO + PNG) in the monochrome style.
+
+Black square, white spectrum bars, no colour, sharp geometry — the same
+language as the ``mono`` theme and the boot splash.  Drawn directly at each
+size so 16×16 stays crisp instead of becoming grey mush.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,60 +11,87 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent
-SIZE = 256
-BG = (7, 11, 22, 255)
-BORDER = (34, 211, 238, 255)
-CYAN = (34, 211, 238, 255)
-PINK = (244, 114, 182, 255)
-AMBER = (245, 158, 11, 255)
-VIOLET = (167, 139, 250, 255)
+SIZES = (16, 24, 32, 48, 64, 128, 256)
+MASTER = 1024
+
+BLACK = (0, 0, 0, 255)
+WHITE = (242, 242, 242, 255)
 
 
-def make(size: int = SIZE) -> Image.Image:
-    im = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    pad = max(2, size // 24)
-    radius = size // 5
-    d.rounded_rectangle(
-        [pad, pad, size - pad, size - pad],
-        radius=radius, fill=BG, outline=BORDER, width=max(2, size // 32),
+def make(size: int = MASTER) -> Image.Image:
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(image)
+
+    radius = max(1, round(size * 0.10))
+    d.rounded_rectangle([0, 0, size - 1, size - 1], radius=radius, fill=BLACK)
+
+    # Bars: integer layout so every size keeps a 1 px gap instead of merging.
+    # At 16 px four bars are too thin, so the smallest size uses three.
+    heights = (
+        (0.34, 0.86, 0.52) if size <= 20
+        else (0.30, 0.58, 0.86, 0.46)
     )
-    # spectrum bars
-    bars = [
-        (0.18, 0.40, 0.075, CYAN),
-        (0.32, 0.62, 0.075, PINK),
-        (0.46, 0.82, 0.080, AMBER),
-        (0.60, 0.52, 0.075, VIOLET),
-        (0.74, 0.70, 0.075, CYAN),
-    ]
-    baseline = int(size * 0.78)
-    for x, h, w, color in bars:
-        x0 = int(size * x)
-        x1 = int(size * (x + w))
-        y0 = int(size * (0.78 - h * 0.55))
-        d.rounded_rectangle(
-            [x0, y0, x1, baseline], radius=max(2, size // 50), fill=color
+    base_y = round(size * 0.80)
+    start_px = round(size * 0.12)
+    end_px = round(size * 0.90)
+    total = max(4, end_px - start_px)
+    gap = max(1, round(size * 0.04))
+    bar_w = max(2, (total - gap * (len(heights) - 1)) // len(heights))
+    last_right = start_px
+    for index, height in enumerate(heights):
+        left = start_px + index * (bar_w + gap)
+        right = left + bar_w - 1
+        top = round(base_y - height * size * 0.62)
+        d.rectangle([left, top, right, base_y - 1], fill=WHITE)
+        last_right = right
+
+    # Baseline spans the whole bar group.
+    line_h = max(1, round(size * 0.035))
+    d.rectangle(
+        [start_px, base_y, last_right, base_y + line_h - 1],
+        fill=WHITE,
+    )
+
+    return image
+
+
+def save_ico(path: Path, frames: list[Image.Image]) -> None:
+    """Write a multi-size ICO with a PNG-compressed image per size.
+
+    Pillow resizes one bitmap for every entry; drawing each size separately
+    keeps 16×16 crisp, so the container is assembled by hand.
+    """
+    import io
+    import struct
+
+    payloads = []
+    for frame in frames:
+        buffer = io.BytesIO()
+        frame.save(buffer, format="PNG")
+        payloads.append(buffer.getvalue())
+
+    header = struct.pack("<HHH", 0, 1, len(frames))
+    offset = len(header) + 16 * len(frames)
+    entries = b""
+    for frame, payload in zip(frames, payloads):
+        size = frame.width
+        entries += struct.pack(
+            "<BBBBHHII",
+            0 if size >= 256 else size,
+            0 if size >= 256 else size,
+            0, 0, 1, 32, len(payload), offset,
         )
-    # baseline
-    d.line(
-        [(int(size * 0.14), baseline), (int(size * 0.86), baseline)],
-        fill=BORDER, width=max(2, size // 48),
-    )
-    # small antenna dot
-    d.ellipse(
-        [int(size * 0.46), int(size * 0.14),
-         int(size * 0.54), int(size * 0.22)],
-        fill=PINK,
-    )
-    return im
+        offset += len(payload)
+    path.write_bytes(header + entries + b"".join(payloads))
 
 
 def main() -> None:
-    im = make(SIZE)
-    im.save(ROOT / "pluto_scanner.png")
-    sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
-    im.save(ROOT / "pluto_scanner.ico", sizes=sizes)
-    print("icon written to", ROOT)
+    master = make(MASTER)
+    master.save(ROOT / "pluto_scanner.png")
+
+    frames = [make(size) for size in SIZES]
+    save_ico(ROOT / "pluto_scanner.ico", frames)
+    print("icon written to", ROOT, "sizes", SIZES)
 
 
 if __name__ == "__main__":
