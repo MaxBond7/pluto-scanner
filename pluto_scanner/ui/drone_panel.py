@@ -232,8 +232,12 @@ class DronePanel(QWidget):
         self.alarm = QLabel("")
         self.alarm.setWordWrap(True)
         self.alarm.setVisible(False)
-        set_style(self.alarm, "background:#7f1d1d; color:#fecaca; border:1px solid #ef4444; "
-            "border-radius:5px; padding:7px; font-weight:600;")
+        set_style(
+            self.alarm,
+            "background:$danger_bg; color:$danger_fg; "
+            "border:1px solid $danger_fg; "
+            "border-radius:5px; padding:7px; font-weight:600;",
+        )
         root.addWidget(self.alarm)
         self._alarm_timer = QTimer(self)
         self._alarm_timer.setSingleShot(True)

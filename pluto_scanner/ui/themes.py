@@ -44,6 +44,8 @@ TOKENS = (
     "ok",
     "warn",
     "danger",
+    "danger_bg",
+    "danger_fg",
     "selection_bg",
     "selection_fg",
     "graph_bg",
@@ -122,6 +124,8 @@ CLASSIC_COLORS: dict[str, str] = {
     "ok": "#4ade80",
     "warn": "#facc15",
     "danger": "#f87171",
+    "danger_bg": "#7f1d1d",
+    "danger_fg": "#fecaca",
     "selection_bg": "#155e75",
     "selection_fg": "#ffffff",
     "graph_bg": "#0a0f1e",
@@ -145,6 +149,8 @@ MONO_COLORS: dict[str, str] = {
     "ok": "#dcdcdc",
     "warn": "#ffffff",
     "danger": "#ffffff",
+    "danger_bg": "#f2f2f2",
+    "danger_fg": "#000000",
     "selection_bg": "#ffffff",
     "selection_fg": "#000000",
     "graph_bg": "#000000",
@@ -162,6 +168,8 @@ def _mono_accent(color: str) -> dict[str, str]:
     palette.update({
         "accent": color,
         "danger": color,
+        "danger_bg": color,
+        "danger_fg": "#000000",
         "warn": "#ffffff",
         "ok": "#dcdcdc",
         "accent_soft": color,
@@ -492,6 +500,7 @@ def active_theme() -> Theme:
 
 
 _HEX_RE = re.compile(r"#[0-9a-fA-F]{6}\b")
+_TOKEN_RE = re.compile(r"\$([a-z_]+)\b")
 
 
 def tcol(value: Any) -> str:
@@ -502,12 +511,25 @@ def tcol(value: Any) -> str:
 
 
 def qss(text: Any) -> str:
-    """Rewrite every legacy hex colour in a stylesheet for the active theme."""
+    """Rewrite a widget stylesheet for the active theme.
+
+    Two things happen here:
+
+    * legacy hex literals (``#f87171``) are mapped to semantic tokens, so a
+      theme only has to redefine tokens;
+    * ``$token`` placeholders are substituted with that theme's colour.
+
+    The second form matters when a widget needs *two* related colours, for
+    example a red banner: ``background:$danger_bg; color:$danger_fg``.  With
+    plain hex literals both would collapse into the single ``danger`` token
+    and the text would vanish into its own background.
+    """
     if text is None:
         return ""
     if not isinstance(text, str):
         return text
-    return _HEX_RE.sub(lambda match: tcol(match.group(0)), text)
+    text = _HEX_RE.sub(lambda match: tcol(match.group(0)), text)
+    return _TOKEN_RE.sub(lambda match: _active.color(match.group(1)), text)
 
 
 def trgba(red: int, green: int, blue: int, alpha: int = 255) -> QColor:

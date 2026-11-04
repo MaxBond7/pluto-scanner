@@ -133,3 +133,41 @@ def test_ensure_theme_dir_creates_readme(tmp_path):
     assert (folder / "README.txt").exists()
     text = (folder / "README.txt").read_text(encoding="utf-8")
     assert "colors" in text and "bg" in text
+
+def _luminance(colour: str) -> float:
+    value = colour.lstrip("#")
+    channels = [int(value[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
+    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+              for c in channels]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
+def _contrast(first: str, second: str) -> float:
+    l1, l2 = sorted((_luminance(first), _luminance(second)), reverse=True)
+    return (l1 + 0.05) / (l2 + 0.05)
+
+
+def test_alarm_banner_text_stays_visible_in_every_theme():
+    """The alarm banner used to paint its text in the same colour as its own
+    background: both #7f1d1d and #fecaca collapsed into the single ``danger``
+    token, so the warning looked empty."""
+    from PySide6.QtWidgets import QApplication, QLabel
+
+    from pluto_scanner.ui.themes import apply_theme, set_style
+
+    app = QApplication.instance() or QApplication([])
+    try:
+        for name, theme in BUILTIN_THEMES.items():
+            apply_theme(app, theme)
+            background = theme.color("danger_bg")
+            foreground = theme.color("danger_fg")
+            assert background != foreground, name
+            assert _contrast(background, foreground) >= 4.5, name
+
+            label = QLabel("ВНИМАНИЕ")
+            set_style(label, "background:$danger_bg; color:$danger_fg;")
+            sheet = label.styleSheet()
+            assert "$" not in sheet, name
+            assert background in sheet and foreground in sheet, name
+    finally:
+        apply_theme(app, BUILTIN_THEMES[DEFAULT_THEME])

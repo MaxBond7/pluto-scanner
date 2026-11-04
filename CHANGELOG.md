@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-11-04
+
+- Fixed the drone alarm banner: its background and its text were both taken
+  from the single `danger` token, so in every theme the warning looked like an
+  empty coloured strip. The theme engine now has separate `danger_bg` and
+  `danger_fg` tokens, and widget styles can use `$token` placeholders, which
+  keeps the two colours apart when a theme is switched.
+- The mono themes show the banner as a white block with black text, the accent
+  themes use their accent colour, and `classic` keeps the dark red.
+
 ## [0.18.0] - 2026-11-04
 
 - CardRF support: MATLAB v7.3 (HDF5) files are now read by the importer, and a

@@ -52,6 +52,8 @@
     "ok": "#dcdcdc",
     "warn": "#ffffff",
     "danger": "#ffffff",
+    "danger_bg": "#f2f2f2",
+    "danger_fg": "#000000",
     "selection_bg": "#ffffff",
     "selection_fg": "#000000",
     "graph_bg": "#000000",
