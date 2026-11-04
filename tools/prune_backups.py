@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Keep only the newest backup folders and delete the older ones.
 
@@ -28,7 +28,7 @@ import stat
 import sys
 from pathlib import Path
 
-DEFAULT_ROOT = r"Z:\PlutoScanner_Backups"
+DEFAULT_ROOT = r"Z:\SDRScanner_Backups"
 VERSION_RE = re.compile(r"_v(\d+)\.(\d+)\.(\d+)(?:_|$)")
 
 

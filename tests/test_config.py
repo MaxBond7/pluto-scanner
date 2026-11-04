@@ -1,8 +1,8 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from __future__ import annotations
 
-from pluto_scanner.config import (BANDS, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE,
+from sdr_scanner.config import (BANDS, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE,
                                   format_bw, format_freq,
                                   in_stock_pluto_range)
 

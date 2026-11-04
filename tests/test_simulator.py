@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from __future__ import annotations
 
 import numpy as np
 
-from pluto_scanner.devices.simulator import SimulatorWorker
-from pluto_scanner.model import DeviceConfig
+from sdr_scanner.devices.simulator import SimulatorWorker
+from sdr_scanner.model import DeviceConfig
 
 
 def _worker(tmp_path=None):

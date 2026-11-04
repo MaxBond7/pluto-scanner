@@ -1,10 +1,10 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from __future__ import annotations
 
 import numpy as np
 
-from pluto_scanner.dsp.detector import Detector
+from sdr_scanner.dsp.detector import Detector
 
 
 def _axis(fs=1.024e6, nfft=2048, center=433.92e6):

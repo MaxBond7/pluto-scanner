@@ -15,13 +15,13 @@
         StringTable(
           u'040904B0',
           [
-            StringStruct(u'CompanyName', u'Pluto Scanner contributors'),
-            StringStruct(u'FileDescription', u'Pluto Scanner - SDR spectrum and drone-band monitor'),
+            StringStruct(u'CompanyName', u'SDR Scanner contributors'),
+            StringStruct(u'FileDescription', u'SDR Scanner - SDR spectrum and drone-band monitor'),
             StringStruct(u'FileVersion', u'0.24.0'),
-            StringStruct(u'InternalName', u'PlutoScanner'),
+            StringStruct(u'InternalName', u'SDRScanner'),
             StringStruct(u'LegalCopyright', u'GPL-3.0-only'),
-            StringStruct(u'OriginalFilename', u'PlutoScanner.exe'),
-            StringStruct(u'ProductName', u'Pluto Scanner'),
+            StringStruct(u'OriginalFilename', u'SDRScanner.exe'),
+            StringStruct(u'ProductName', u'SDR Scanner'),
             StringStruct(u'ProductVersion', u'0.24.0')
           ]
         )

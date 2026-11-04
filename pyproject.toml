@@ -3,14 +3,17 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pluto-scanner"
-version = "0.24.0"
-description = "Desktop SDR scanner and passive drone-band monitor for ADALM-PLUTO / Pluto+"
+name = "sdr-scanner"
+version = "0.25.0"
+description = "Desktop SDR spectrum, scanner and passive drone-band monitor for Pluto+, HackRF One and IQ files"
 readme = "README.md"
 license = {text = "GPL-3.0-only"}
-authors = [{name = "Pluto Scanner contributors"}]
+authors = [{name = "SDR Scanner contributors"}]
 requires-python = ">=3.10"
-keywords = ["SDR", "ADALM-PLUTO", "Pluto+", "spectrum", "drone", "RF"]
+keywords = [
+    "SDR", "ADALM-PLUTO", "Pluto+", "HackRF", "spectrum", "scanner",
+    "drone", "RF",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Win32 (MS Windows)",
@@ -35,10 +38,10 @@ ml = ["h5py>=3.10"]
 dev = ["pytest>=8.0", "pyinstaller>=6.10"]
 
 [project.scripts]
-pluto-scanner = "pluto_scanner.__main__:main"
+sdr-scanner = "sdr_scanner.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["pluto_scanner*"]
+include = ["sdr_scanner*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

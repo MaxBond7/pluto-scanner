@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for writing/loading scan JSON bundles."""
 from __future__ import annotations
@@ -7,7 +7,7 @@ import json
 
 import numpy as np
 
-from pluto_scanner.scanner.recorder import (
+from sdr_scanner.scanner.recorder import (
     ScanRecorder,
     find_latest_background,
     load_bundle,

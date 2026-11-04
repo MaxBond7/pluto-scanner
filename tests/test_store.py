@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from __future__ import annotations
 
 import time
 
-from pluto_scanner.model import Contact, SignalType
-from pluto_scanner.store import ContactStore
+from sdr_scanner.model import Contact, SignalType
+from sdr_scanner.store import ContactStore
 
 
 def _contact(freq=433.92e6 + 100e3, bw=10e3):

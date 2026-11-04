@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Unit tests for the DSP core.  Run with ``python -m pytest``."""
 from __future__ import annotations
@@ -8,7 +8,7 @@ import math
 import numpy as np
 import pytest
 
-from pluto_scanner.dsp.spectrum import SpectrumAnalyzer
+from sdr_scanner.dsp.spectrum import SpectrumAnalyzer
 
 
 def _tone_iq(fs: float, n: int, offset_hz: float, amp: float = 1.0) -> np.ndarray:

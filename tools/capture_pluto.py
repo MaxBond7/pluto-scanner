@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Record IQ from a real Pluto/Pluto+ into the app's own recording format.
 
@@ -27,13 +27,13 @@ from pathlib import Path
 
 import numpy as np
 
-from pluto_scanner.devices.pluto import (
+from sdr_scanner.devices.pluto import (
     PLUTO_ADC_FULL_SCALE,
     _ensure_pylibiio_windows,
     scan_pluto_uris,
 )
-from pluto_scanner.paths import RECORDINGS_DIR
-from pluto_scanner.recordings import (
+from sdr_scanner.paths import RECORDINGS_DIR
+from sdr_scanner.recordings import (
     format_size,
     new_recording_info,
     save_info,

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import time
 
 import numpy as np
 
-from pluto_scanner.dsp.tracker import ContactTracker
-from pluto_scanner.model import Detection, SignalType
-from pluto_scanner.store import ContactStore
+from sdr_scanner.dsp.tracker import ContactTracker
+from sdr_scanner.model import Detection, SignalType
+from sdr_scanner.store import ContactStore
 
 
 def _det(freq=433.92e6 + 100e3, bw=1500.0, snr=30.0,

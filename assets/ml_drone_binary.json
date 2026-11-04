@@ -206,7 +206,7 @@
       "candidate": 0.6,
       "target_fpr": 0.01
     },
-    "features": "12 features from pluto_scanner.ml.features",
+    "features": "12 features from sdr_scanner.ml.features",
     "datasets": [
       "DroneRF, Al-Sa'd et al. 2019, CC BY 4.0, doi:10.17632/f4c2b4n755.1",
       "own IQ recordings (iq_recordings)",

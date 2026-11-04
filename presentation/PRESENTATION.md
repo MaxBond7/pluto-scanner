@@ -1,10 +1,10 @@
 ---
-title: "Pluto Scanner"
+title: "SDR Scanner"
 subtitle: "От спектроанализатора до монитора эфира"
-author: "Pluto Scanner"
+author: "SDR Scanner"
 ---
 
-# Pluto Scanner
+# SDR Scanner
 
 ## Программный комплекс для исследования эфира на ADALM-PLUTO / Pluto+
 
@@ -33,7 +33,7 @@ author: "Pluto Scanner"
 
 # Что это сейчас
 
-## Pluto Scanner
+## SDR Scanner
 
 - Desktop-приложение на **Python + PySide6 + pyqtgraph**
 - Работает с **ADALM-PLUTO / Pluto+** и с симулятором
@@ -309,7 +309,7 @@ IQ (Pluto / симулятор)
 
 # Итог
 
-## Pluto Scanner сегодня
+## SDR Scanner сегодня
 
 - Рабочий инструмент для реального Pluto+ под Windows
 - Закрывает путь: **увидеть → измерить → сохранить → сравнить**

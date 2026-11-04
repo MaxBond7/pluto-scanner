@@ -26,7 +26,7 @@ python -m pip install pyadi-iio
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe -m compileall -q pluto_scanner
+.\.venv\Scripts\python.exe -m compileall -q sdr_scanner
 ```
 
 All tests must pass without a Pluto connected. The simulator is the reference
@@ -35,7 +35,7 @@ for automated tests.
 ## Project layout
 
 ```text
-pluto_scanner/
+sdr_scanner/
   devices/       IQ producers (Pluto / simulator)
   dsp/           spectrum, detector, tracker, classifier, demod
   scanner/       full-range sweep, JSON recorder, comparison

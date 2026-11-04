@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-05
+
+- **Renamed from Pluto Scanner to SDR Scanner.** The app has outgrown one
+  radio: it already supports Pluto+, HackRF One, IQ files and a simulator.
+  The window title, About box, executable (`SDRScanner.exe`), installer,
+  portable archive, data folder and documentation now use the new name.
+  «Pluto» remains only where it means the hardware.
+- The Python package is now `sdr_scanner` and the console script is
+  `sdr-scanner`.
+- Installed builds use `%LOCALAPPDATA%\SDRScanner`; the old `PlutoScanner`
+  folder is moved there on first start, so models, background maps and
+  recordings survive the rename. `SDR_SCANNER_DATA_DIR` replaces
+  `PLUTO_SCANNER_DATA_DIR` (the old name is still accepted).
+- GitHub banner, social preview and icon regenerated with the new wordmark
+  and the multi-device line.
+
 ## [0.24.0] - 2026-11-05
 
 - **Deep look** (`drone/deep_look.py`): the event card has a **«Проверить
@@ -192,7 +208,7 @@ All notable changes to this project are documented here.
 ## [0.18.0] - 2026-11-04
 
 - CardRF support: MATLAB v7.3 (HDF5) files are now read by the importer, and a
-  new adapter (`pluto_scanner.ml.cardrf`) reads the 71 GB Cardinal RF archive
+  new adapter (`sdr_scanner.ml.cardrf`) reads the 71 GB Cardinal RF archive
   straight from the ZIP — 2.4 GHz captures, carrier search, 4.096 MHz
   baseband slice, 20 ms windows.
 - `tools/capture_pluto.py` records IQ from a real Pluto/Pluto+ into the app's
@@ -329,7 +345,7 @@ All notable changes to this project are documented here.
 - Domain-gap report comparing fresh synthetic, augmented synthetic and real
   recordings, with accuracy, coverage, confidence, per-class results and
   feature drift.
-- CLI `python -m pluto_scanner.ml.domain_gap` and `--domain-gap` flag.
+- CLI `python -m sdr_scanner.ml.domain_gap` and `--domain-gap` flag.
 - Current real 433 MHz result: 72.7% on 11 NARROW blocks vs 98.9% on
   synthetic; report in `docs/DOMAIN_GAP.md`.
 
@@ -374,7 +390,7 @@ All notable changes to this project are documented here.
 
 - Import external IQ datasets into the local recording format:
   SigMF (`.sigmf-meta` + `.sigmf-data`) and raw interleaved float32 `.dat`.
-- `python -m pluto_scanner.ml.import_dataset` with start/max seconds, centre
+- `python -m sdr_scanner.ml.import_dataset` with start/max seconds, centre
   frequency, sample rate and optional morphology label.
 - Dataset catalogue with verified sizes, licences and fit for our six classes:
   DroneDetect, DroneRFa, RadioML, WiSig, SigMF, SigIDWiki, RadioScanner.
@@ -400,7 +416,7 @@ All notable changes to this project are documented here.
   NumPy softmax regression, JSON persistence.
 - Synthetic IQ generator for FHSS, telemetry, analog/digital video, Wi-Fi and
   narrowband activity.
-- `python -m pluto_scanner.ml.train` CLI and an in-app ML tab with training
+- `python -m sdr_scanner.ml.train` CLI and an in-app ML tab with training
   progress, holdout accuracy and per-class precision/recall.
 - ML top-3 hypothesis in the event card and `ml` block in event JSON; the
   heuristic classifier remains the primary label.
@@ -412,10 +428,10 @@ All notable changes to this project are documented here.
 - One-command release build: tests, PyInstaller, portable ZIP, SHA256 and an
   optional Inno Setup installer (`-Installer`).
 - Portable builds keep data next to the executable via `portable.flag`;
-  installed builds use `%LOCALAPPDATA%\PlutoScanner` so Program Files stays
+  installed builds use `%LOCALAPPDATA%\SDRScanner` so Program Files stays
   read-only.
 - `--version` and the version in the window title.
-- Rotating application log `pluto_scanner.log` in the active data directory.
+- Rotating application log `sdr_scanner.log` in the active data directory.
 - Build script validates that `pyproject.toml`, `__init__.py` and the release
   version agree.
 - Inno Setup template with per-user install, shortcuts and uninstall entry.
@@ -456,12 +472,12 @@ All notable changes to this project are documented here.
 ## [0.3.0] - 2026-10-30
 
 - Portable Windows one-folder build: `build_windows.ps1` and a PyInstaller
-  spec produce `dist/PlutoScanner/PlutoScanner.exe` without requiring Python
+  spec produce `dist/SDRScanner/SDRScanner.exe` without requiring Python
   on the target machine.
 - Bundled libiio/libiio1 and their dependencies, so the frozen build works
   with a real Pluto+ on a machine without a system-wide libiio install.
 - Frozen builds keep `user_data`, `scan_logs` and `drone_logs` next to the
-  executable and write `pluto_scanner_error.log` plus a message box if
+  executable and write `sdr_scanner_error.log` plus a message box if
   startup fails.
 - Version and icon metadata embedded into the `.exe`.
 - Verified the frozen build with the simulator and a real Pluto+ over USB.
@@ -484,7 +500,7 @@ All notable changes to this project are documented here.
 
 ## [0.1.0] - 2026-10-30
 
-- Initial Pluto Scanner desktop application.
+- Initial SDR Scanner desktop application.
 - Spectrum, waterfall, software VFO, wobble, AM/FM/SSB/CW demodulation.
 - Real ADALM-PLUTO / Pluto+ support and IQ simulator.
 - Contact tracking, known-contact whitelist and JSON persistence.

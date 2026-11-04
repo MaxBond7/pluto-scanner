@@ -2,7 +2,7 @@
 
 ## Scope
 
-Pluto Scanner is a passive SDR receiver and analysis tool. It does not
+SDR Scanner is a passive SDR receiver and analysis tool. It does not
 implement jamming, spoofing, active interception or unauthorised
 transmission.
 

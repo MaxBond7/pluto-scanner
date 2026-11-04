@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for background comparison."""
 from __future__ import annotations
 
 import numpy as np
 
-from pluto_scanner.scanner.compare import (
+from sdr_scanner.scanner.compare import (
     background_compatible,
     compare_bundles,
     compare_spectrum,

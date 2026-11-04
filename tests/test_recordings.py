@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for long IQ recording, metadata and chunked playback reads."""
 from __future__ import annotations
@@ -8,8 +8,8 @@ import time
 
 import numpy as np
 
-from pluto_scanner.model import IQBlock
-from pluto_scanner.recordings import (
+from sdr_scanner.model import IQBlock
+from sdr_scanner.recordings import (
     IqRecorder,
     delete_recording,
     estimated_bytes,

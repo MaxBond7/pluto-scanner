@@ -1,6 +1,6 @@
 # Third-party notices
 
-Pluto Scanner is distributed under the GNU General Public License v3
+SDR Scanner is distributed under the GNU General Public License v3
 (GPL-3.0-only, see `LICENSE`).
 The portable Windows build contains third-party components with their own
 licenses. This file is a notice, not a replacement for the full license texts.
@@ -41,6 +41,6 @@ non-free applications with PyInstaller.
 - Full license texts are available from the upstream projects and from the
   installed Python packages in this repository's virtual environment.
 - If you redistribute the portable build, keep this notice and the GPL
-  `LICENSE` file next to `PlutoScanner.exe`. The GPL also requires that the
+  `LICENSE` file next to `SDRScanner.exe`. The GPL also requires that the
   corresponding source code is available to everyone you convey the binary to;
   the repository above is that source.

@@ -1,9 +1,9 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for drone band chunking."""
 from __future__ import annotations
 
-from pluto_scanner.drone.bands import (
+from sdr_scanner.drone.bands import (
     DRONE_BANDS,
     BANDS_BY_KEY,
     chunks_for_band,

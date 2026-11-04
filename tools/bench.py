@@ -1,6 +1,6 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
-"""Micro-benchmarks for the hot paths of Pluto Scanner.
+"""Micro-benchmarks for the hot paths of SDR Scanner.
 
     python tools/bench.py
     python tools/bench.py --repeat 20
@@ -23,12 +23,12 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from pluto_scanner.dsp.detector import Detector
-from pluto_scanner.dsp.spectrum import SpectrumAnalyzer
-from pluto_scanner.dsp.tracker import ContactTracker
-from pluto_scanner.model import Detection, SpectrumFrame
-from pluto_scanner.scanner.peaks import decimate_mean, find_peaks
-from pluto_scanner.ui.themes import BUILTIN_THEMES, build_stylesheet
+from sdr_scanner.dsp.detector import Detector
+from sdr_scanner.dsp.spectrum import SpectrumAnalyzer
+from sdr_scanner.dsp.tracker import ContactTracker
+from sdr_scanner.model import Detection, SpectrumFrame
+from sdr_scanner.scanner.peaks import decimate_mean, find_peaks
+from sdr_scanner.ui.themes import BUILTIN_THEMES, build_stylesheet
 
 
 def measure(name: str, func: Callable[[], object], repeat: int = 10) -> float:
@@ -99,7 +99,7 @@ def startup_import_ms() -> float:
     import sys
 
     code = (
-        "import time; t=time.perf_counter(); import pluto_scanner.__main__; "
+        "import time; t=time.perf_counter(); import sdr_scanner.__main__; "
         "print((time.perf_counter()-t)*1000)"
     )
     result = subprocess.run(
@@ -120,7 +120,7 @@ def main() -> int:
     repeat = max(1, args.repeat)
 
     print("== Startup ==")
-    print(f"{'import of pluto_scanner.__main__':44s} "
+    print(f"{'import of sdr_scanner.__main__':44s} "
           f"{startup_import_ms():8.0f} ms")
 
     iq_1m = make_iq(204_800)          # 200 ms at 1.024 MS/s (scanner block)
@@ -153,8 +153,8 @@ def main() -> int:
     measure("contact tracker.update, 6 detections",
             lambda: tracker.update(detections, time.time(), 244.0), repeat)
 
-    from pluto_scanner.drone.features import analyze_iq
-    from pluto_scanner.drone.bands import DroneBand
+    from sdr_scanner.drone.features import analyze_iq
+    from sdr_scanner.drone.bands import DroneBand
 
     band = DroneBand("2.4", "2.4", 2400e6, 2483.5e6)
     measure("drone analyze_iq, 20 ms at 20.48 MS/s",
@@ -163,12 +163,12 @@ def main() -> int:
     print("== UI ==")
     measure("theme stylesheet build",
             lambda: build_stylesheet(BUILTIN_THEMES["mono"]), repeat)
-    from pluto_scanner.ui.themes import qss
+    from sdr_scanner.ui.themes import qss
     sample = "color:#f87171; font-size:11px; padding:0 8px; border:1px solid #2b3d5f;"
     measure("qss() on a short stylesheet", lambda: qss(sample), repeat)
 
     print("== IO ==")
-    from pluto_scanner.ui.waterfall_view import WaterfallView  # noqa: F401
+    from sdr_scanner.ui.waterfall_view import WaterfallView  # noqa: F401
     history, bins = 200, 8192
     buffer = np.zeros((history, bins), dtype=np.float32)
     row = np.linspace(-120, -40, bins).astype(np.float32)

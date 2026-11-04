@@ -1,6 +1,6 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
-"""Generate the Pluto Scanner icon (ICO + PNG) in the monochrome style.
+"""Generate the SDR Scanner icon (ICO + PNG) in the monochrome style.
 
 Black square, white spectrum bars, no colour, sharp geometry — the same
 language as the ``mono`` theme and the boot splash.  Drawn directly at each
@@ -89,10 +89,10 @@ def save_ico(path: Path, frames: list[Image.Image]) -> None:
 
 def main() -> None:
     master = make(MASTER)
-    master.save(ROOT / "pluto_scanner.png")
+    master.save(ROOT / "sdr_scanner.png")
 
     frames = [make(size) for size in SIZES]
-    save_ico(ROOT / "pluto_scanner.ico", frames)
+    save_ico(ROOT / "sdr_scanner.ico", frames)
     print("icon written to", ROOT, "sizes", SIZES)
 
 

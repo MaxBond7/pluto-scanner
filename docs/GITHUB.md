@@ -1,6 +1,6 @@
 # GitHub: публикация и версии
 
-Репозиторий: <https://github.com/MaxBond7/pluto-scanner>
+Репозиторий: <https://github.com/MaxBond7/sdr-scanner>
 
 ## 1. Текущий статус
 
@@ -18,8 +18,8 @@
 ## 2. Клонирование и отправка
 
 ```powershell
-git clone https://github.com/MaxBond7/pluto-scanner.git
-cd pluto-scanner
+git clone https://github.com/MaxBond7/sdr-scanner.git
+cd sdr-scanner
 git remote -v
 git log --oneline --decorate -5
 ```
@@ -55,7 +55,7 @@ git push
 ```powershell
 git add .
 git commit -m "Describe the change"
-git tag -a v0.13.0 -m "Pluto Scanner 0.13.0"
+git tag -a v0.13.0 -m "SDR Scanner 0.13.0"
 git push
 git push origin v0.13.0
 ```

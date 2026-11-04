@@ -1,9 +1,9 @@
-# Презентация Pluto Scanner
+# Презентация SDR Scanner
 
 ## Главный файл
 
-- **`Pluto_Scanner.pptx`** — готовая презентация для PowerPoint / LibreOffice / Google Slides.
-- **`Pluto_Scanner.pdf`** — PDF-версия для быстрого просмотра и печати.
+- **`SDR_Scanner.pptx`** — готовая презентация для PowerPoint / LibreOffice / Google Slides.
+- **`SDR_Scanner.pdf`** — PDF-версия для быстрого просмотра и печати.
 - `PRESENTATION.html` — интерактивная версия для браузера (стрелки/пробел).
 - `PRESENTATION.md` — текстовый каркас для редактирования.
 

@@ -2,7 +2,7 @@
 
 ## Коротко
 
-Windows Defender иногда удаляет `PlutoScanner.exe`, portable-сборку и
+Windows Defender иногда удаляет `SDRScanner.exe`, portable-сборку и
 установщик. Это **ложное срабатывание**, а не вирус. Причина — неподписанный
 исполняемый файл без репутации, собранный PyInstaller.
 
@@ -36,7 +36,7 @@ Windows Defender иногда удаляет `PlutoScanner.exe`, portable-сбо
 В каждом релизе есть `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\PlutoScanner-Setup-0.14.2.exe -Algorithm SHA256
+Get-FileHash .\SDRScanner-Setup-0.14.2.exe -Algorithm SHA256
 ```
 
 Хеш должен совпасть с тем, что в файле.
@@ -51,8 +51,8 @@ Get-FileHash .\PlutoScanner-Setup-0.14.2.exe -Algorithm SHA256
 Или из PowerShell с правами администратора:
 
 ```powershell
-Add-MpPreference -ExclusionPath "C:\Users\Вы\AppData\Local\PlutoScanner"
-Add-MpPreference -ExclusionPath "C:\путь\к\PlutoScanner"
+Add-MpPreference -ExclusionPath "C:\Users\Вы\AppData\Local\SDRScanner"
+Add-MpPreference -ExclusionPath "C:\путь\к\SDRScanner"
 ```
 
 ### 2. Отправить в Microsoft как ложное срабатывание (правильный путь)
@@ -60,7 +60,7 @@ Add-MpPreference -ExclusionPath "C:\путь\к\PlutoScanner"
 <https://www.microsoft.com/en-us/wdsi/filesubmission>
 
 - выбрать «Software developer»;
-- загрузить `PlutoScanner.exe` (или установщик);
+- загрузить `SDRScanner.exe` (или установщик);
 - отметить «Incorrectly detected as malware».
 
 Обычно проверка занимает 1–3 дня. После этого файл перестают удалять у всех,
@@ -69,8 +69,8 @@ Add-MpPreference -ExclusionPath "C:\путь\к\PlutoScanner"
 Текст заявки:
 
 ```text
-Pluto Scanner is an open-source (GPL-3.0) passive SDR receiver for the ADALM-PLUTO.
-The binary is built with PyInstaller from https://github.com/MaxBond7/pluto-scanner
+SDR Scanner is an open-source (GPL-3.0) passive SDR receiver for Pluto+, HackRF One and IQ files.
+The binary is built with PyInstaller from https://github.com/MaxBond7/sdr-scanner
 and is not code-signed yet. It contains no packer, no persistence, no telemetry
 and no network calls; it only reads USB SDR samples and displays a spectrum.
 The detection looks like a generic PyInstaller heuristic. Please re-check.
@@ -107,7 +107,7 @@ SHA256: <вставить из SHA256SUMS.txt>
 1. точное имя обнаружения (Безопасность Windows → Журнал защиты →
    последнее обнаружение);
 2. версию сигнатур;
-3. какой именно файл удалён: `PlutoScanner.exe`, `Setup`, `ZIP`.
+3. какой именно файл удалён: `SDRScanner.exe`, `Setup`, `ZIP`.
 
 По имени обнаружения видно семейство эвристики, и можно проверить
 точечно.

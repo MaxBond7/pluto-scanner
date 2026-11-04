@@ -5,17 +5,17 @@
 
 ## Шаг 0. Что скачать
 
-Скачай **установщик** `PlutoScanner-Setup-*.exe` со страницы
-[Releases](https://github.com/MaxBond7/pluto-scanner/releases).
+Скачай **установщик** `SDRScanner-Setup-*.exe` со страницы
+[Releases](https://github.com/MaxBond7/sdr-scanner/releases).
 
-Можно и portable ZIP: распакуй и запусти `PlutoScanner.exe`.
+Можно и portable ZIP: распакуй и запусти `SDRScanner.exe`.
 
 Python не нужен.
 
 ## Шаг 1. Запустить и подключить Pluto
 
 1. Подключи Pluto по USB.
-2. Запусти Pluto Scanner.
+2. Запусти SDR Scanner.
 3. Нажми **«Найти»**, выбери `usb:...` и **«+ Pluto»**.
 4. Убедись, что в списке устройств статус **«работает»**.
 
@@ -67,8 +67,8 @@ Python не нужен.
 
 Модель сохранится в папке данных:
 
-- установленная версия: `%LOCALAPPDATA%\PlutoScanner\user_data\ml_model.json`;
-- portable: рядом с `PlutoScanner.exe`.
+- установленная версия: `%LOCALAPPDATA%\SDRScanner\user_data\ml_model.json`;
+- portable: рядом с `SDRScanner.exe`.
 
 После этого новые события получат строку **ML-гипотеза**.
 
@@ -89,9 +89,9 @@ Python не нужен.
 | Записи IQ | `iq_recordings/` |
 | Исправления ML | там же, с меткой и пометкой `ML feedback` |
 | Журнал дронов | `drone_logs/` |
-| Лог приложения | `pluto_scanner.log` |
+| Лог приложения | `sdr_scanner.log` |
 
-Для установленной версии всё это в `%LOCALAPPDATA%\PlutoScanner`.
+Для установленной версии всё это в `%LOCALAPPDATA%\SDRScanner`.
 Для portable — рядом с `.exe`.
 
 ## Если что-то не работает

@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Window behaviour: geometry memory and restoring from the taskbar."""
 from __future__ import annotations
 
 from PySide6.QtWidgets import QApplication, QWidget
 
-from pluto_scanner.ui.drone_window import DroneWindow
+from sdr_scanner.ui.drone_window import DroneWindow
 
 
 def _app() -> QApplication:
@@ -52,4 +52,4 @@ def test_drone_window_is_standalone(tmp_path):
 
 def test_main_window_module_imports():
     """A stray edit once merged two lines and broke the whole UI import."""
-    import pluto_scanner.ui.main_window  # noqa: F401
+    import sdr_scanner.ui.main_window  # noqa: F401

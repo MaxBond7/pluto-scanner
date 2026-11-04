@@ -1,10 +1,10 @@
-# Model card: Pluto Scanner drone ML
+# Model card: SDR Scanner drone ML
 
 ## 1. Модель
 
 | Поле | Значение |
 |---|---|
-| Название | `pluto-scanner-drone-softmax` |
+| Название | `sdr-scanner-drone-softmax` |
 | Версия | `1` (внутри файла модели) |
 | Версия приложения | `0.13.0` |
 | Тип | softmax-регрессия на 12 признаках IQ |
@@ -42,7 +42,7 @@
 Обучение только на **синтетическом IQ**, сгенерированном кодом проекта:
 
 - 60 блоков на класс, 360 блоков;
-- генератор: `pluto_scanner/ml/synthetic.py`;
+- генератор: `sdr_scanner/ml/synthetic.py`;
 - seed `1`;
 - 600 эпох, Adam, L2 `1e-3`;
 - train/test split стратифицированный, 20% test.
@@ -94,9 +94,9 @@
 ## 7. Проверка и воспроизведение
 
 ```powershell
-python -m pluto_scanner.ml.train --per-class 60 --epochs 600
-python -m pluto_scanner.ml.domain_gap
-python -m pluto_scanner --domain-gap
+python -m sdr_scanner.ml.train --per-class 60 --epochs 600
+python -m sdr_scanner.ml.domain_gap
+python -m sdr_scanner --domain-gap
 ```
 
 Модель по умолчанию проверяется тестом `test_bundled_default_model_loads`.
@@ -124,12 +124,12 @@ python -m pluto_scanner --domain-gap
 
 | Поле | Значение |
 |---|---|
-| Название | `pluto-scanner-drone-binary` |
+| Название | `sdr-scanner-drone-binary` |
 | Тип | логистическая регрессия на 18 признаках спектра и огибающей |
 | Файл | `assets/ml_drone_binary.json` |
 | SHA256 | `7a40d9bc0a64543f903f3f111f93c0990a3f240be85686998ca53f0040436d88` |
 | Размер | 6 063 байта |
-| Признаки | `pluto_scanner/ml/binary_features.py` |
+| Признаки | `sdr_scanner/ml/binary_features.py` |
 | Вход | 256-точечный спектр + огибающая из `DroneObservation` |
 | Выход | одно число `P(дрон)` + вердикт `drone/candidate/background/unknown` |
 | Порог тревоги | 0.952 (подобрано под FPR ≈ 1% на отложенной выборке) |

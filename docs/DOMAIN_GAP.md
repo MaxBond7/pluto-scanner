@@ -13,7 +13,7 @@
 ## Как запустить
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.domain_gap `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.domain_gap `
   --per-class 20 --out user_data\domain_gap
 ```
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the offline drone ML baseline."""
 from __future__ import annotations
@@ -7,19 +7,19 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from pluto_scanner.ml.features import FEATURE_NAMES, feature_vector
-from pluto_scanner.ml.dataset import build_real_dataset, train_from_recordings
-from pluto_scanner.ml.importers import import_raw_iq, import_sigmf
-from pluto_scanner.ml.model import (
+from sdr_scanner.ml.features import FEATURE_NAMES, feature_vector
+from sdr_scanner.ml.dataset import build_real_dataset, train_from_recordings
+from sdr_scanner.ml.importers import import_raw_iq, import_sigmf
+from sdr_scanner.ml.model import (
     SoftmaxModel,
     evaluate,
     train_synthetic,
     train_softmax,
 )
-from pluto_scanner.ml.synthetic import CLASSES, generate_dataset, make_iq
-from pluto_scanner.drone.features import NARROW, TELEMETRY
-from pluto_scanner.paths import DEFAULT_ML_MODEL
-from pluto_scanner.recordings import (
+from sdr_scanner.ml.synthetic import CLASSES, generate_dataset, make_iq
+from sdr_scanner.drone.features import NARROW, TELEMETRY
+from sdr_scanner.paths import DEFAULT_ML_MODEL
+from sdr_scanner.recordings import (
     list_recordings,
     load_info,
     new_recording_info,
@@ -215,7 +215,7 @@ def test_import_raw_float32_iq(tmp_path):
 def test_import_mat_complex_vector_and_iq_pairs(tmp_path):
     from scipy.io import savemat
 
-    from pluto_scanner.ml.importers import import_mat
+    from sdr_scanner.ml.importers import import_mat
 
     fs = 1.024e6
     t = np.arange(4096) / fs
@@ -244,7 +244,7 @@ def test_import_mat_complex_vector_and_iq_pairs(tmp_path):
 def test_import_mat_reads_struct_fields(tmp_path):
     from scipy.io import savemat
 
-    from pluto_scanner.ml.importers import import_mat
+    from sdr_scanner.ml.importers import import_mat
 
     fs = 1.024e6
     n = 4096
@@ -264,7 +264,7 @@ def test_import_mat_reads_v73_hdf5(tmp_path):
     except ImportError:  # optional dependency
         return
 
-    from pluto_scanner.ml.importers import import_mat
+    from sdr_scanner.ml.importers import import_mat
 
     fs = 1.024e6
     n = 4096

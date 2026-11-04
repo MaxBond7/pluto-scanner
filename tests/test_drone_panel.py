@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the drone monitor panel controls."""
 from __future__ import annotations
 
 from PySide6.QtWidgets import QApplication
 
-from pluto_scanner.ui.drone_panel import DronePanel
+from sdr_scanner.ui.drone_panel import DronePanel
 
 
 def _app() -> QApplication:
@@ -33,7 +33,7 @@ def test_high_rate_shows_the_usb_warning():
     panel.deleteLater()
 
 def _event(background: float):
-    from pluto_scanner.drone.tracker import DroneEvent
+    from sdr_scanner.drone.tracker import DroneEvent
 
     return DroneEvent(
         event_id="e1", band_key="2.4", band_name="2.4 ГГц",

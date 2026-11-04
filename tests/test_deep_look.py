@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the deep-look capture and its cautious verdicts."""
 from __future__ import annotations
@@ -10,11 +10,11 @@ import pytest
 from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import QApplication
 
-from pluto_scanner.drone import deep_look
-from pluto_scanner.drone.deep_look import DeepResult, capture, interpret, look
-from pluto_scanner.drone.tracker import DroneEvent
-from pluto_scanner.ml.behavior import Behavior
-from pluto_scanner.ui.event_dialog import DroneEventDialog
+from sdr_scanner.drone import deep_look
+from sdr_scanner.drone.deep_look import DeepResult, capture, interpret, look
+from sdr_scanner.drone.tracker import DroneEvent
+from sdr_scanner.ml.behavior import Behavior
+from sdr_scanner.ui.event_dialog import DroneEventDialog
 
 
 def _app() -> QApplication:

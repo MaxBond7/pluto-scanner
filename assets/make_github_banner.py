@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Generate the GitHub banner in the monochrome ``mono`` style."""
 from __future__ import annotations
@@ -37,7 +37,7 @@ def main() -> None:
     bm.label(d, (left, 64), "CONSOLE // 001", 14)
     bm.label(d, (left + 250, 64), "PASSIVE RX ONLY", 14)
 
-    width = bm.glitch_title(d, (left, 96), "PLUTO", 86)
+    width = bm.glitch_title(d, (left, 96), "SDR", 86)
     bm.glitch_title(d, (left, 186), "SCANNER", 86)
     bm.divider(d, left, 292, left + width)
 
@@ -48,7 +48,7 @@ def main() -> None:
     )
     bm.label(
         d, (left, 348),
-        "ADALM-PLUTO / PLUTO+   ·   WINDOWS   ·   325 MHz — 3.8 GHz",
+        "PLUTO+ / HACKRF ONE / IQ FILES   ·   WINDOWS   ·   RECEIVE ONLY",
         17,
     )
     bm.label(
@@ -56,7 +56,7 @@ def main() -> None:
         "VFO · AM/FM/SSB/CW · IQ EVIDENCE · SIGNATURES · WHITE LIST",
         15,
     )
-    bm.label(d, (left, 416), "github.com/MaxBond7/pluto-scanner", 15)
+    bm.label(d, (left, 416), "github.com/MaxBond7/sdr-scanner", 15)
     bm.label(d, (W - 190, 416), f"REV {app_version()}", 15)
 
     # Right block: spectrum trace in a technical box.

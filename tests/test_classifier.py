@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from __future__ import annotations
 
 import numpy as np
 
-from pluto_scanner.dsp.classifier import SignalClassifier
-from pluto_scanner.model import Detection, SignalType
+from sdr_scanner.dsp.classifier import SignalClassifier
+from sdr_scanner.model import Detection, SignalType
 
 
 def _detection(db, bw_hz, center=433.92e6):

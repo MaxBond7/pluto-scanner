@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="assets/github_banner.png" alt="Pluto Scanner — SDR spectrum, scanner and drone-band monitor" width="100%">
+  <img src="assets/github_banner.png" alt="SDR Scanner — SDR spectrum, scanner and drone-band monitor" width="100%">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.24.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.25.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -12,18 +12,19 @@
 <p align="center">[ <a href="#возможности">ВОЗМОЖНОСТИ</a> ] &nbsp;·&nbsp; [ <a href="#скриншоты">СКРИНШОТЫ</a> ] &nbsp;·&nbsp; [ <a href="#как-это-работает">СХЕМА</a> ] &nbsp;·&nbsp; [ <a href="#быстрый-старт">БЫСТРЫЙ СТАРТ</a> ] &nbsp;·&nbsp; [ <a href="#архитектура">АРХИТЕКТУРА</a> ] &nbsp;·&nbsp; [ <a href="#документация">ДОКУМЕНТАЦИЯ</a> ] &nbsp;·&nbsp; [ <a href="#честные-ограничения">ОГРАНИЧЕНИЯ</a> ]</p>
 
 ```text
-// PLUTO SCANNER
-// пассивный приём: ADALM-PLUTO / Pluto+  ·  Windows 10/11  ·  только RX
+// SDR SCANNER
+// пассивный приём: Pluto+ / HackRF / IQ-файлы / симулятор  ·  Windows 10/11  ·  только RX
 // спектр · водопад · VFO · демодуляция · свип · дрон-монитор · IQ-доказательства
 ```
 
 ## ВОЗМОЖНОСТИ
 
-**Pluto Scanner** — настольное приложение для пассивного приёма и исследования
-эфира на ADALM-PLUTO / Pluto+. Оно закрывает путь от «вижу спектр» до
+**SDR Scanner** — настольное приложение для пассивного приёма и исследования
+эфира. Работает с ADALM-PLUTO / Pluto+, HackRF One, записанными IQ-файлами
+и встроенным симулятором. Оно закрывает путь от «вижу спектр» до
 «сохранил доказательство»: живой спектр и водопад, программный VFO,
-AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновых полос, IQ-записи,
-карточка события и локальная библиотека сигнатур.
+AM/FM/SSB/CW, свип, монитор дроновых полос, IQ-записи, карточка события
+и локальная библиотека сигнатур.
 
 Приложение **не декодирует протоколы и не определяет модель дрона**. Оно
 показывает измеримые признаки и top-3 гипотезы с уверенностью. Это честная
@@ -34,8 +35,9 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
  ------------  --------------------------------------------------------------
  SPECTRUM     dBFS, автошкала под шум, история, клик по частоте
  VFO          программный перенос, wobble, AM / FM / SSB / CW, шумоподавитель
- SCANNER      325 МГц - 3.8 ГГц, пауза/продолжение, CSV, JSON-фон, сравнение
- DRONE        433 / 868 / 915 МГц, 1.2-1.3 / 2.4 / 5.8 ГГц, два Pluto+
+ SCANNER      диапазон устройства (Pluto+ 325 МГц - 3.8 ГГц, HackRF до 6 ГГц),
+              пауза/продолжение, CSV, JSON-фон, сравнение
+ DRONE        433 / 868 / 915 МГц, 1.2-1.3 / 2.4 / 5.8 ГГц, два приёмника
  PROOF        IQ-клип вокруг события, спектр + огибающая, экспорт bundle
  SIGNATURES   SQLite, seed-каталог, top-3, импорт/экспорт, открытые ссылки
  WHITELIST    подавление известных сигналов, профили шума по полосе/усилению
@@ -99,13 +101,13 @@ AM/FM/SSB/CW, свип 325 МГц – 3.8 ГГц, монитор дроновы�
 
 ### 1. Готовая Windows-сборка
 
-Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/pluto-scanner/releases/latest) — portable ZIP, установщик и `SHA256SUMS.txt`.
+Готовые файлы: [GitHub Releases](https://github.com/MaxBond7/sdr-scanner/releases/latest) — portable ZIP, установщик и `SHA256SUMS.txt`.
 
 Собрать самому:
 
 ```powershell
-git clone https://github.com/MaxBond7/pluto-scanner.git
-cd pluto-scanner
+git clone https://github.com/MaxBond7/sdr-scanner.git
+cd sdr-scanner
 py -3.10 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
@@ -116,22 +118,22 @@ python -m pip install pyinstaller
 Результат:
 
 ```text
-dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.24.0-portable.zip        архив
-dist\PlutoScanner-Setup-0.24.0.exe           установщик
+dist\SDRScanner\SDRScanner.exe          portable one-folder
+dist\SDRScanner-0.25.0-portable.zip        архив
+dist\SDRScanner-Setup-0.25.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
-- **Portable** — распаковать архив и запустить `PlutoScanner.exe`.
+- **Portable** — распаковать архив и запустить `SDRScanner.exe`.
 - **Установщик** — ставится per-user, создаёт ярлыки и пункт удаления.
-- **Данные**: portable — рядом с `.exe`; installed — `%LOCALAPPDATA%\PlutoScanner`.
+- **Данные**: portable — рядом с `.exe`; installed — `%LOCALAPPDATA%\SDRScanner`.
 - **Python на целевой машине не нужен.**
 
 ### 2. Запуск из исходников
 
 ```powershell
-python -m pluto_scanner --sim
-python -m pluto_scanner --device usb:1.6.5
+python -m sdr_scanner --sim
+python -m sdr_scanner --device usb:1.6.5
 ```
 
 Полная инструкция, параметры CLI и проверка на чистой Windows —
@@ -140,7 +142,7 @@ python -m pluto_scanner --device usb:1.6.5
 ## АРХИТЕКТУРА
 
 <p align="center">
-  <img src="presentation/mono_architecture.png" alt="Архитектура Pluto Scanner: один поток на устройство, общий GUI" width="100%">
+  <img src="presentation/mono_architecture.png" alt="Архитектура SDR Scanner: один поток на устройство, общий GUI" width="100%">
 </p>
 
 ```text
@@ -202,7 +204,7 @@ IQ (Pluto / симулятор / запись)
 - Лицензия: **GNU GPL v3 (GPL-3.0-only)** — полный текст в
   [LICENSE](LICENSE). Сторонние компоненты сохраняют свои лицензии —
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-- Репозиторий открыт: <https://github.com/MaxBond7/pluto-scanner>
+- Репозиторий открыт: <https://github.com/MaxBond7/sdr-scanner>
 - Локальные данные (`user_data/`, `iq_recordings/`, логи, клипы) в Git не попадают
 
 ## УЧАСТИЕ
@@ -230,9 +232,9 @@ IQ (Pluto / симулятор / запись)
 ```
 
 Результат:
-- `dist\PlutoScanner\PlutoScanner.exe` — portable one-folder;
-- `dist\PlutoScanner-<версия>-portable.zip`;
-- `dist\PlutoScanner-Setup-<версия>.exe` — установщик Inno Setup;
+- `dist\SDRScanner\SDRScanner.exe` — portable one-folder;
+- `dist\SDRScanner-<версия>-portable.zip`;
+- `dist\SDRScanner-Setup-<версия>.exe` — установщик Inno Setup;
 - `dist\SHA256SUMS.txt`.
 
 Python на целевой машине не нужен: внутри уже есть PySide6, numpy, scipy,
@@ -240,9 +242,9 @@ pyqtgraph, sounddevice, pyadi-iio и библиотеки libiio.
 
 Где лежат данные:
 - portable-сборка — рядом с `.exe`, маркер `portable.flag`;
-- установленная версия — `%LOCALAPPDATA%\PlutoScanner`, чтобы Program Files
+- установленная версия — `%LOCALAPPDATA%\SDRScanner`, чтобы Program Files
   оставался только для чтения;
-- логи — `pluto_scanner.log` в той же папке данных.
+- логи — `sdr_scanner.log` в той же папке данных.
 
 Сборка проверена с симулятором и реальным Pluto+ по USB. Подробности,
 ограничения и чеклист — в `docs/PACKAGING.md`.
@@ -257,29 +259,29 @@ py -3.10 -m venv .venv
 python -m pip install -r requirements.txt
 
 # Только симулятор:
-python -m pluto_scanner --sim
+python -m sdr_scanner --sim
 
 # Реальный Pluto:
 python -m pip install pyadi-iio
-python -m pluto_scanner --device usb:1.6.5
+python -m sdr_scanner --device usb:1.6.5
 ```
 
 Номер USB-контекста (`usb:1.6.5`) зависит от того, в какой порт включён Pluto и сколько USB-устройств уже открыто. Точный URI показывает кнопка **«Найти»** или команда:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "from pluto_scanner.devices.pluto import scan_pluto_uris; print(scan_pluto_uris())"
+.\.venv\Scripts\python.exe -c "from sdr_scanner.devices.pluto import scan_pluto_uris; print(scan_pluto_uris())"
 ```
 
 Если URI заранее неизвестен, запустите приложение, нажмите **«Найти»**, выберите найденный `usb:...` или `ip:...` и нажмите **«+ Pluto»**. Для сетевого Pluto обычно подходит `ip:192.168.2.1` или `pluto.local`.
 
 ### Ярлык вместо терминала
 
-На рабочем столе создан ярлык **Pluto Scanner**. Он запускает приложение через `pythonw.exe`, поэтому окно терминала не появляется. При старте лаунчер сам ищет подключённые Pluto: добавляет **все найденные USB-контексты**, а если их нет — IP-контексты. Если ничего не найдено, открывается симулятор. Копия ярлыка лежит в `NEW\Pluto Scanner.lnk`.
+На рабочем столе создан ярлык **SDR Scanner**. Он запускает приложение через `pythonw.exe`, поэтому окно терминала не появляется. При старте лаунчер сам ищет подключённые Pluto: добавляет **все найденные USB-контексты**, а если их нет — IP-контексты. Если ничего не найдено, открывается симулятор. Копия ярлыка лежит в `NEW\SDR Scanner.lnk`.
 
 Если папка `NEW` будет перемещена, ярлык нужно пересоздать. Ручной запуск всё равно доступен:
 
 ```powershell
-.\.venv\Scripts\python.exe launch_pluto_scanner.py
+.\.venv\Scripts\python.exe launch_sdr_scanner.py
 ```
 
 ### Параметры запуска
@@ -331,7 +333,7 @@ python -m pluto_scanner --device usb:1.6.5
 Импорт внешнего датасета:
 
 ```powershell
-python -m pluto_scanner.ml.import_dataset --format sigmf `
+python -m sdr_scanner.ml.import_dataset --format sigmf `
   --src dataset.sigmf-meta --label WIFI
 ```
 
@@ -339,36 +341,36 @@ python -m pluto_scanner.ml.import_dataset --format sigmf `
 
 ```powershell
 # Один Pluto, 1.024 MS/s, 433.92 МГц
-python -m pluto_scanner --device usb:1.6.5 --center 433920000 --sample-rate 1024000
+python -m sdr_scanner --device usb:1.6.5 --center 433920000 --sample-rate 1024000
 
 # Два Pluto и симулятор
-python -m pluto_scanner --device usb:1.6.5 --device ip:192.168.2.1 --sim
+python -m sdr_scanner --device usb:1.6.5 --device ip:192.168.2.1 --sim
 
 # Быстрая проверка интерфейса без железа
-python -m pluto_scanner --sim --no-audio --smoke-test --screenshot sim_smoke.png
+python -m sdr_scanner --sim --no-audio --smoke-test --screenshot sim_smoke.png
 
 # Короткий свип на симуляторе: 433–436 МГц, шаг 600 кГц
-python -m pluto_scanner --sim --no-audio --scan `
+python -m sdr_scanner --sim --no-audio --scan `
   --scan-start 433000000 --scan-end 436000000 --scan-step 600000 `
   --quit-after-scan --screenshot-after-scan scan_sim.png
 
 # Реальный Pluto: полный паспортный диапазон
-python -m pluto_scanner --device usb:1.6.5 --no-audio --scan `
+python -m sdr_scanner --device usb:1.6.5 --no-audio --scan `
   --scan-start 325000000 --scan-end 3800000000 --scan-step 819200
 
 # Дрон-монитор на реальном Pluto+: 2.4 и 5.8 ГГц, 15 секунд
-python -m pluto_scanner --device usb:1.6.5 --no-audio --drone `
+python -m sdr_scanner --device usb:1.6.5 --no-audio --drone `
   --drone-bands 2.4,5.8 --drone-rate 20480000 --drone-seconds 15 `
   --quit-after-drone --screenshot-after-drone drone.png
 
 # Записать 10 секунд IQ и выйти
-python -m pluto_scanner --device usb:1.6.5 --no-audio --record 10 --quit-after-record
+python -m sdr_scanner --device usb:1.6.5 --no-audio --record 10 --quit-after-record
 
 # Воспроизвести запись без платы
-python -m pluto_scanner --play iq_recordings\iq_20261031_120000.cf32
+python -m sdr_scanner --play iq_recordings\iq_20261031_120000.cf32
 
 # Проверить, включён ли второй RX (2R2T)
-python -m pluto_scanner --rx-info
+python -m sdr_scanner --rx-info
 ```
 
 ## РАБОТА С ИНТЕРФЕЙСОМ
@@ -526,7 +528,7 @@ Wi-Fi специально не считается дроном по умолч�
 Симптомы `Broken pipe`, `No such device`, `No device found` или исчезновение из списка устройств почти всегда означают USB-кабель/порт/питание, а не ошибку DSP. Проверка:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "from pluto_scanner.devices.pluto import scan_pluto_uris; print(scan_pluto_uris())"
+.\.venv\Scripts\python.exe -c "from sdr_scanner.devices.pluto import scan_pluto_uris; print(scan_pluto_uris())"
 ```
 
 - проверьте каждую Pluto+ **по одной**;
@@ -699,7 +701,7 @@ IQ (Pluto / симулятор)
 
 ```text
 NEW/
-  pluto_scanner/
+  sdr_scanner/
     devices/       PlutoWorker, SimulatorWorker, общий QThread-интерфейс
     dsp/           spectrum, detector, tracker, classifier, demod, audio
     scanner/       peaks, recorder, compare, controller (свип диапазона)
@@ -722,9 +724,9 @@ NEW/
   presentation/    PPTX/PDF/HTML-презентация проекта
   installer/       шаблон Inno Setup
   build_windows.ps1
-  launch_pluto_scanner.py
-  launch_pluto_scanner.vbs
-  Pluto Scanner.lnk
+  launch_sdr_scanner.py
+  launch_sdr_scanner.vbs
+  SDR Scanner.lnk
   pyproject.toml
   requirements.txt
 ```

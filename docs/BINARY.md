@@ -119,7 +119,7 @@ ROC-AUC падает с **0.978** до **0.855**, а recall при 1% ложны
 & "C:\Program Files\7-Zip\7z.exe" x "Z:\datasets\DroneRF\*.rar" -o"Z:\datasets\DroneRF_extracted"
 
 # 2. Обучить
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.train_binary `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.train_binary `
     --dronerf-root "Z:\datasets\DroneRF_extracted" `
     --cache user_data\binary_dronerf.npz `
     --cross-check `
@@ -133,7 +133,7 @@ ROC-AUC падает с **0.978** до **0.855**, а recall при 1% ложны
 Без DroneRF команда тоже работает — на синтетике и своих записях:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.train_binary --out user_data\ml_drone_binary.json
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.train_binary --out user_data\ml_drone_binary.json
 ```
 
 ## 6. Как проверяется
@@ -369,12 +369,12 @@ AR 8%, Bebop 33%. Bebop летает по Wi-Fi, так что пометка д
 
 | Файл | Назначение |
 |---|---|
-| `pluto_scanner/ml/binary.py` | модель, пороги, метрики, калибровка |
-| `pluto_scanner/ml/binary_features.py` | 18 признаков и устойчивый пол |
-| `pluto_scanner/ml/dronerf.py` | адаптер DroneRF (CSV → комплексный IQ) |
-| `pluto_scanner/ml/cardrf.py` | адаптер CardRF (ZIP → полоса 4 МГц → окна 20 мс) |
+| `sdr_scanner/ml/binary.py` | модель, пороги, метрики, калибровка |
+| `sdr_scanner/ml/binary_features.py` | 18 признаков и устойчивый пол |
+| `sdr_scanner/ml/dronerf.py` | адаптер DroneRF (CSV → комплексный IQ) |
+| `sdr_scanner/ml/cardrf.py` | адаптер CardRF (ZIP → полоса 4 МГц → окна 20 мс) |
 | `tools/check_binary.py` | проверка модели на своих записях |
-| `pluto_scanner/ml/train_binary.py` | сбор данных, обучение, отчёт |
+| `sdr_scanner/ml/train_binary.py` | сбор данных, обучение, отчёт |
 | `assets/ml_drone_binary.json` | встроенная модель |
 | `user_data/ml_drone_binary.json` | пользовательская модель (приоритет) |
 | `tests/test_binary.py` | тесты |

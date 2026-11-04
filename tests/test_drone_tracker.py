@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for drone event tracking and JSON logging."""
 from __future__ import annotations
@@ -7,10 +7,10 @@ import json
 
 import numpy as np
 
-from pluto_scanner.drone.features import DroneObservation, FHSS, TELEMETRY
-from pluto_scanner.drone.recorder import DroneRecorder
-from pluto_scanner.drone.report import export_event_bundle
-from pluto_scanner.drone.tracker import DroneTracker
+from sdr_scanner.drone.features import DroneObservation, FHSS, TELEMETRY
+from sdr_scanner.drone.recorder import DroneRecorder
+from sdr_scanner.drone.report import export_event_bundle
+from sdr_scanner.drone.tracker import DroneTracker
 
 
 def _obs(freq: float, cls: str = FHSS, ts: float = 100.0,
@@ -140,7 +140,7 @@ def test_recorder_saves_iq_clip_and_exports_bundle(tmp_path):
     assert (bundle / "envelope.csv").exists()
     assert (bundle / "clip.cf32").exists()
     readme = (bundle / "README.md").read_text(encoding="utf-8")
-    assert "Pluto Scanner" in readme
+    assert "SDR Scanner" in readme
     data = json.loads((bundle / "event.json").read_text(encoding="utf-8"))
     assert data["clip_samples"] == 4096
     assert data["envelope_db"] == [-100.0, -85.0, -95.0]

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Generate the GitHub social preview image in the monochrome ``mono`` style."""
 from __future__ import annotations
@@ -34,7 +34,7 @@ def main() -> None:
     bm.label(d, (left, 72), "CONSOLE // 001", 13)
     bm.label(d, (left + 210, 72), "PASSIVE RX ONLY", 13)
 
-    bm.glitch_title(d, (left, 100), "PLUTO", 76)
+    bm.glitch_title(d, (left, 100), "SDR", 76)
     width = bm.glitch_title(d, (left, 178), "SCANNER", 76)
     bm.divider(d, left, 268, left + width)
 
@@ -45,7 +45,7 @@ def main() -> None:
     )
     bm.label(
         d, (left, 318),
-        "ADALM-PLUTO / PLUTO+   ·   WINDOWS   ·   325 MHz — 3.8 GHz",
+        "PLUTO+ / HACKRF ONE / IQ FILES   ·   WINDOWS   ·   RECEIVE ONLY",
         15,
     )
 
@@ -63,7 +63,7 @@ def main() -> None:
     bm.label(d, (440, 558), "BINARY DRONE / NOT-DRONE", 14)
     bm.label(d, (440, 566), "MONO THEMES  ·  USER JSON", 14)
 
-    bm.label(d, (W - 330, 558), "github.com/MaxBond7/pluto-scanner", 13)
+    bm.label(d, (W - 330, 558), "github.com/MaxBond7/sdr-scanner", 13)
     bm.label(d, (W - 130, 580), f"REV {app_version()}", 13)
 
     bm.dots(d, (W - 360, 100, W - 70, 300), step=8, seed=5)

@@ -77,7 +77,7 @@ DroneRF не импортируется через UI: у него свой фо
 После распаковки — 454 CSV, около 40 ГБ. Обучение:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.train_binary `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.train_binary `
     --dronerf-root "Z:\datasets\DroneRF_extracted" `
     --cache user_data\binary_dronerf.npz --cross-check `
     --out assets\ml_drone_binary.json --report docs\BINARY_REPORT.md
@@ -119,11 +119,11 @@ DroneRF не импортируется через UI: у него свой фо
 
 ```powershell
 # посмотреть состав
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.cardrf `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.cardrf `
   --source "Z:\datasets\CardRF\CARDRF.zip" --list
 
 # собрать кэш фрагментов (полоса 4.096 МГц — потолок USB2 у Pluto)
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.cardrf `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.cardrf `
   --source "Z:\datasets\CardRF\CARDRF.zip" `
   --rate 4.096e6 --chunk-cache "Z:\datasets\CardRF\cardrf_4096k.npz"
 ```
@@ -158,7 +158,7 @@ Drones»** — иногда тоже называют CardRF.
 ### Импорт `.mat` (CardRF и подобные)
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.import_dataset `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.import_dataset `
   --format mat --src "C:\datasets\CardRF\uav\sample.mat" `
   --sample-rate 20e6 --center 2437e6 --label TELEMETRY --max-seconds 0.25
 ```
@@ -170,7 +170,7 @@ Drones»** — иногда тоже называют CardRF.
 ### SigMF
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.import_dataset `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.import_dataset `
   --format sigmf --src dataset.sigmf-meta --label WIFI
 ```
 
@@ -181,7 +181,7 @@ Drones»** — иногда тоже называют CardRF.
 ### Raw float32 I/Q (DroneDetect и подобные)
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.import_dataset `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.import_dataset `
   --format dat --src AIR_00_00.dat `
   --sample-rate 60e6 --center 2437.5e6 --max-seconds 2 `
   --label VIDEO_DIGITAL
@@ -193,7 +193,7 @@ Drones»** — иногда тоже называют CardRF.
 ### Обучение
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.train --real-dir iq_recordings
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.train --real-dir iq_recordings
 ```
 
 Метки DroneDetect — это модели (`AIR`, `MP1`, `PHA`…), а не наши классы.

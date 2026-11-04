@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the local known-signal signature library."""
 from __future__ import annotations
 
 from types import SimpleNamespace
 
-from pluto_scanner.signatures import (
+from sdr_scanner.signatures import (
     SignatureStore,
     SignalSignature,
     match_event,

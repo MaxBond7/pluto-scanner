@@ -14,7 +14,7 @@ RX-канал. Второй антенный порт RX2 есть физиче�
 Команда:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner --rx-info
+.\.venv\Scripts\python.exe -m sdr_scanner --rx-info
 ```
 
 Результат на текущей плате:
@@ -104,7 +104,7 @@ RX-канал. Второй антенный порт RX2 есть физиче�
    И на компьютере:
 
    ```powershell
-   .\.venv\Scripts\python.exe -m pluto_scanner --rx-info
+   .\.venv\Scripts\python.exe -m sdr_scanner --rx-info
    ```
 
    Успех: `rx_channels: 2`, `dual_rx: true`, `mode: 2r2t`, в

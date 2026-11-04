@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from __future__ import annotations
 
 import numpy as np
 
-from pluto_scanner.dsp.demod import Demodulator
-from pluto_scanner.model import VFOConfig
+from sdr_scanner.dsp.demod import Demodulator
+from sdr_scanner.model import VFOConfig
 
 FS = 1.024e6
 N = 65_536

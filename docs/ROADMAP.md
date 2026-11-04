@@ -11,7 +11,7 @@
 - Локальная библиотека сигнатур и top-3 гипотезы.
 - Белый список известных сигналов и профили фона по устройству/полосе/усилению.
 - Иконка приложения и ярлыка.
-- Portable-сборка Windows one-folder: `dist\PlutoScanner\PlutoScanner.exe`.
+- Portable-сборка Windows one-folder: `dist\SDRScanner\SDRScanner.exe`.
 - Длинная запись IQ (`cf32` + JSON) и воспроизведение через обычный DSP-тракт.
 - Диагностика RX-каналов (`--rx-info`) и план перехода на 2R2T.
 - Сборка 0.5.0: одна команда, portable ZIP, установщик Inno Setup,

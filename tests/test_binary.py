@@ -1,12 +1,12 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the binary drone / background detector."""
 from __future__ import annotations
 
 import numpy as np
 
-from pluto_scanner.drone.features import DroneObservation
-from pluto_scanner.ml.binary import (
+from sdr_scanner.drone.features import DroneObservation
+from sdr_scanner.ml.binary import (
     BACKGROUND,
     DRONE,
     BinaryModel,
@@ -17,19 +17,19 @@ from pluto_scanner.ml.binary import (
     tpr_at_fpr,
     _stratified_group_split,
 )
-from pluto_scanner.ml.binary_features import (
+from sdr_scanner.ml.binary_features import (
     BINARY_FEATURE_NAMES,
     extract,
     from_observation,
     robust_baseline,
 )
-from pluto_scanner.ml.dronerf import (
+from sdr_scanner.ml.dronerf import (
     DroneRFRecording,
     read_window,
     scan_recordings,
     to_baseband,
 )
-from pluto_scanner.paths import DEFAULT_BINARY_MODEL
+from sdr_scanner.paths import DEFAULT_BINARY_MODEL
 
 
 def _observation(spectrum, envelope=None, *, class_key="NARROW", snr=20.0,
@@ -202,8 +202,8 @@ def test_read_window_from_single_line_csv(tmp_path):
 
 
 def test_train_on_synthetic_blocks_produces_usable_model():
-    from pluto_scanner.ml.dronerf import BinaryDataset
-    from pluto_scanner.ml.train_binary import train
+    from sdr_scanner.ml.dronerf import BinaryDataset
+    from sdr_scanner.ml.train_binary import train
 
     rng = np.random.default_rng(0)
     X = np.vstack([

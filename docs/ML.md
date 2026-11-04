@@ -78,11 +78,11 @@ Softmax-регрессия на NumPy:
 
 ```powershell
 # Только размеченные записи
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.train `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.train `
   --real-dir iq_recordings --no-synthetic --out user_data\ml_model.json
 
 # Реальные записи + синтетика для баланса
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.train `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.train `
   --real-dir iq_recordings --out user_data\ml_model.json
 ```
 
@@ -113,7 +113,7 @@ Softmax-регрессия на NumPy:
 Запуск:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pluto_scanner.ml.train `
+.\.venv\Scripts\python.exe -m sdr_scanner.ml.train `
   --per-class 60 --epochs 600 --out user_data\ml_model.json
 ```
 

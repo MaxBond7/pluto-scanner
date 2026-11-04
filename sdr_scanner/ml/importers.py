@@ -1,0 +1,373 @@
+# Copyright (C) 2026 SDR Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
+"""Import external IQ datasets into the app's cf32 recording format.
+
+Supported:
+- SigMF (``.sigmf-meta`` + ``.sigmf-data``), the open exchange format used by
+  many public RF datasets;
+- raw interleaved float32 ``.dat``/``.cf32`` files, e.g. DroneDetect;
+- label override for datasets whose labels model the source, not our six
+  classes.
+
+The dataset itself is never bundled or redistributed.  The user downloads it
+from the original source and imports it locally, keeping the licence intact.
+"""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+
+from ..recordings import (
+    RecordingInfo,
+    new_recording_info,
+    save_info,
+)
+
+KNOWN_LABELS = [
+    "FHSS", "TELEMETRY", "VIDEO_ANALOG", "VIDEO_DIGITAL", "WIFI", "NARROW",
+]
+
+
+@dataclass
+class ImportResult:
+    info: RecordingInfo
+    source: str
+    format: str
+
+
+def _normalise_label(value: str | None) -> str:
+    text = str(value or "").strip().upper()
+    aliases = {
+        "VIDEO": "VIDEO_DIGITAL",
+        "ANALOG_VIDEO": "VIDEO_ANALOG",
+        "DIGITAL_VIDEO": "VIDEO_DIGITAL",
+        "WI-FI": "WIFI",
+        "WIFI-LIKE": "WIFI",
+        "TELEMETRY/RC": "TELEMETRY",
+        "RC": "TELEMETRY",
+        "NARROWBAND": "NARROW",
+    }
+    text = aliases.get(text, text)
+    return text if text in KNOWN_LABELS else ""
+
+
+def _sigmf_paths(src: str | Path) -> tuple[Path, Path]:
+    path = Path(src)
+    if path.is_dir():
+        metas = sorted(path.glob("*.sigmf-meta"))
+        if not metas:
+            raise FileNotFoundError("в папке нет .sigmf-meta")
+        path = metas[0]
+    if path.suffix != ".sigmf-meta":
+        raise ValueError("ожидался файл .sigmf-meta или папка с ним")
+    data = Path(str(path)[:-len(".sigmf-meta")] + ".sigmf-data")
+    if not data.exists():
+        raise FileNotFoundError(f"нет файла данных: {data.name}")
+    return path, data
+
+
+def _sigmf_array(data: Path, datatype: str, start: int, count: int | None):
+    dt = datatype.lower()
+    if dt in ("cf32_le", "cf32_be"):
+        dtype = np.dtype("<c8" if dt.endswith("_le") else ">c8")
+        raw = np.memmap(data, dtype=dtype, mode="r")
+    elif dt in ("ci16_le", "ci16_be"):
+        dtype = np.dtype("<i2" if dt.endswith("_le") else ">i2")
+        raw = np.memmap(data, dtype=dtype, mode="r")
+        raw = raw[start * 2: (start + (count or raw.size // 2)) * 2]
+        iq = (raw[0::2].astype(np.float64)
+              + 1j * raw[1::2].astype(np.float64)) / 32768.0
+        return iq.astype(np.complex64)
+    elif dt in ("cf64_le", "cf64_be"):
+        dtype = np.dtype("<c16" if dt.endswith("_le") else ">c16")
+        raw = np.memmap(data, dtype=dtype, mode="r")
+    else:
+        raise ValueError(f"пока не поддержан SigMF datatype: {datatype}")
+    if count is None:
+        return np.array(raw[start:], dtype=np.complex64, copy=True)
+    return np.array(raw[start:start + count], dtype=np.complex64, copy=True)
+
+
+def import_sigmf(
+    src: str | Path,
+    out_dir: str | Path,
+    *,
+    label: str | None = None,
+    start_seconds: float = 0.0,
+    max_seconds: float = 10.0,
+    device_name: str = "SigMF import",
+) -> ImportResult:
+    meta_path, data_path = _sigmf_paths(src)
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    glob = meta.get("global") or {}
+    sample_rate = float(
+        glob.get("core:sample_rate")
+        or glob.get("sample_rate")
+        or 0.0
+    )
+    if sample_rate <= 0:
+        raise ValueError("в SigMF metadata нет sample_rate")
+    datatype = str(
+        glob.get("core:datatype") or glob.get("datatype") or "cf32_le"
+    )
+    captures = meta.get("captures") or []
+    center = float(
+        captures[0].get("core:frequency", 0.0) if captures else 0.0
+    )
+    if not label:
+        for annotation in meta.get("annotations") or []:
+            raw_label = (
+                annotation.get("core:label")
+                or annotation.get("label")
+                or ""
+            )
+            if _normalise_label(raw_label):
+                label = raw_label
+                break
+
+    start = max(0, int(float(start_seconds) * sample_rate))
+    count = max(1, int(float(max_seconds) * sample_rate))
+    iq = _sigmf_array(data_path, datatype, start, count)
+    if iq.size == 0:
+        raise ValueError("в SigMF файле нет отсчётов")
+    info = new_recording_info(
+        out_dir,
+        device_id="sigmf",
+        device_name=device_name,
+        device_kind="import",
+        sample_rate=sample_rate,
+        center_freq=center,
+        bandwidth_hz=sample_rate,
+    )
+    iq.tofile(info.cf32_path)
+    info.samples = int(iq.size)
+    info.complete = True
+    info.label = _normalise_label(label)
+    info.notes = f"SigMF: {meta_path.name}"
+    save_info(info)
+    return ImportResult(info, str(meta_path), "sigmf")
+
+
+def import_raw_iq(
+    src: str | Path,
+    out_dir: str | Path,
+    *,
+    sample_rate: float,
+    center_freq: float = 0.0,
+    label: str | None = None,
+    start_seconds: float = 0.0,
+    max_seconds: float = 10.0,
+    device_name: str = "Raw IQ import",
+) -> ImportResult:
+    """Import interleaved float32 I/Q (the common ``.dat``/``.cf32`` layout)."""
+    path = Path(src)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    raw = np.memmap(path, dtype="<f4", mode="r")
+    total = raw.size // 2
+    start = max(0, int(float(start_seconds) * sample_rate))
+    count = max(1, min(
+        total - start,
+        int(float(max_seconds) * sample_rate),
+    ))
+    if count <= 0:
+        raise ValueError("в файле нет отсчётов в выбранном интервале")
+    iq = np.array(
+        raw[start * 2: (start + count) * 2], dtype=np.float32, copy=True
+    ).view(np.complex64)
+    info = new_recording_info(
+        out_dir,
+        device_id="raw-import",
+        device_name=device_name,
+        device_kind="import",
+        sample_rate=float(sample_rate),
+        center_freq=float(center_freq),
+        bandwidth_hz=float(sample_rate),
+    )
+    iq.tofile(info.cf32_path)
+    info.samples = int(iq.size)
+    info.complete = True
+    info.label = _normalise_label(label)
+    info.notes = f"raw float32 I/Q: {path.name}"
+    save_info(info)
+    return ImportResult(info, str(path), "dat")
+
+def _iter_arrays(value, prefix: str = "", depth: int = 0):
+    """Yield ``(dotted_name, array)`` through MATLAB structs and struct arrays.
+
+    CardRF, for example, stores the samples as ``x.Channel_1.Data``: a struct
+    field, not a top-level variable.
+    """
+    if depth > 4:
+        return
+    if isinstance(value, np.ndarray):
+        if value.dtype.names:
+            for name in value.dtype.names:
+                child = value[name]
+                label = f"{prefix}.{name}" if prefix else name
+                yield from _iter_arrays(child, label, depth + 1)
+        elif value.size >= 256 and np.issubdtype(value.dtype, np.number):
+            yield prefix, value
+        return
+    if hasattr(value, "_fieldnames"):
+        for name in value._fieldnames:
+            try:
+                child = getattr(value, name)
+            except Exception:
+                continue
+            label = f"{prefix}.{name}" if prefix else name
+            yield from _iter_arrays(child, label, depth + 1)
+
+
+def _choose_candidate(
+    candidates: list[tuple[str, np.ndarray]], variable: str = "",
+) -> tuple[str, np.ndarray]:
+    """Pick the IQ array out of everything found in a file."""
+    if variable:
+        candidates = [
+            item for item in candidates
+            if item[0] == variable or item[0].endswith(f".{variable}")
+        ]
+        if not candidates:
+            raise ValueError(f"в .mat нет переменной {variable!r}")
+    if not candidates:
+        raise ValueError("в .mat не найден массив с отсчётами")
+
+    complex_items = [item for item in candidates if np.iscomplexobj(item[1])]
+    if complex_items:
+        return max(complex_items, key=lambda item: item[1].size)
+    pair_items = [
+        item for item in candidates
+        if item[1].ndim == 2 and 2 in item[1].shape
+    ]
+    if pair_items:
+        return max(pair_items, key=lambda item: item[1].size)
+    return max(candidates, key=lambda item: item[1].size)
+
+
+def _pick_mat_iq(payload: dict, variable: str = "") -> tuple[str, np.ndarray]:
+    """Find the IQ array inside a MATLAB file.
+
+    CardRF and similar datasets store one long complex vector, but some
+    exports use two rows/columns for I and Q.  Both layouts are accepted, and
+    struct fields are searched (``x.Channel_1.Data``).
+    """
+    candidates: list[tuple[str, np.ndarray]] = []
+    for key, value in payload.items():
+        if str(key).startswith("__"):
+            continue
+        candidates.extend(_iter_arrays(value, str(key)))
+    return _choose_candidate(candidates, variable)
+
+
+def _is_hdf5(path: Path) -> bool:
+    """True when the file carries the HDF5 signature (MATLAB v7.3)."""
+    try:
+        with path.open("rb") as handle:
+            head = handle.read(600)
+    except OSError:
+        return False
+    return b"\x89HDF\r\n\x1a\n" in head
+
+
+def _read_mat73(path: Path, variable: str = "") -> tuple[str, np.ndarray]:
+    """Read a MATLAB v7.3 file, which is really an HDF5 container.
+
+    ``scipy.io.loadmat`` refuses these files.  MATLAB stores every array as a
+    dataset, so the same "biggest numeric array" rule applies; the ``#refs#``
+    bookkeeping group is skipped.
+    """
+    try:
+        import h5py
+    except ImportError as exc:  # pragma: no cover - depends on the install
+        raise RuntimeError(
+            "для .mat версии 7.3 нужен h5py: pip install h5py"
+        ) from exc
+
+    candidates: list[tuple[str, np.ndarray]] = []
+    with h5py.File(path, "r") as handle:
+        def visit(name: str, item: object) -> None:
+            if not isinstance(item, h5py.Dataset):
+                return
+            if name.startswith("#") or not np.issubdtype(item.dtype, np.number):
+                return
+            if item.size < 256:
+                return
+            candidates.append((name.replace("/", "."), np.asarray(item[...])))
+
+        handle.visititems(visit)
+    return _choose_candidate(candidates, variable)
+
+
+def _mat_to_complex(array: np.ndarray) -> np.ndarray:
+    data = np.asarray(array)
+    if np.iscomplexobj(data):
+        return data.astype(np.complex64).ravel()
+    if data.ndim == 2 and 2 in data.shape:
+        if data.shape[0] == 2 and data.shape[1] != 2:
+            data = data.T
+        return (
+            data[:, 0].astype(np.float64)
+            + 1j * data[:, 1].astype(np.float64)
+        ).astype(np.complex64)
+    return data.astype(np.float64).ravel().astype(np.complex64)
+
+
+def import_mat(
+    src: str | Path,
+    out_dir: str | Path,
+    *,
+    sample_rate: float,
+    center_freq: float = 0.0,
+    label: str | None = None,
+    variable: str = "",
+    start_seconds: float = 0.0,
+    max_seconds: float = 10.0,
+    device_name: str = "MAT import",
+) -> ImportResult:
+    """Import a MATLAB ``.mat`` file with complex IQ (e.g. CardRF)."""
+    from scipy.io import loadmat
+
+    path = Path(src)
+    if not path.exists():
+        raise FileNotFoundError(path)
+    sample_rate = float(sample_rate)
+    if sample_rate <= 0:
+        raise ValueError("нужна частота дискретизации")
+    if _is_hdf5(path):
+        name, array = _read_mat73(path, variable)
+    else:
+        payload = loadmat(path, squeeze_me=True, struct_as_record=False)
+        name, array = _pick_mat_iq(payload, variable)
+    iq = _mat_to_complex(array)
+
+    # Raw ADC counts would trip the dBFS overload rule; scale to a known peak.
+    peak = float(np.max(np.abs(iq))) if iq.size else 0.0
+    if peak > 1.5:
+        iq = (iq * (0.5 / peak)).astype(np.complex64)
+
+    start = max(0, int(float(start_seconds) * sample_rate))
+    count = max(1, int(float(max_seconds) * sample_rate))
+    iq = iq[start:start + count]
+    if iq.size == 0:
+        raise ValueError("в .mat нет отсчётов в выбранном интервале")
+
+    info = new_recording_info(
+        out_dir,
+        device_id="mat-import",
+        device_name=device_name,
+        device_kind="import",
+        sample_rate=sample_rate,
+        center_freq=float(center_freq),
+        bandwidth_hz=sample_rate,
+    )
+    iq.tofile(info.cf32_path)
+    info.samples = int(iq.size)
+    info.complete = True
+    info.label = _normalise_label(label)
+    info.notes = f"MAT: {path.name} [{name}]"
+    save_info(info)
+    return ImportResult(info, str(path), "mat")

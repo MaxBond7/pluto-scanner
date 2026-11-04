@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the learned background map (persistent signals vs new ones)."""
 from __future__ import annotations
@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from pluto_scanner.drone.background import (
+from sdr_scanner.drone.background import (
     BACKGROUND_BINS,
     BackgroundMap,
     active_bins,
@@ -116,7 +116,7 @@ def test_map_is_per_band(tmp_path):
     assert len(model.profiles) == 1
 
 def test_tracker_keeps_the_strongest_background_share():
-    from pluto_scanner.drone.tracker import DroneTracker
+    from sdr_scanner.drone.tracker import DroneTracker
 
     def obs(background: float):
         return SimpleNamespace(

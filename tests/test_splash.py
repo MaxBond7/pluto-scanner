@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the boot splash widget (offscreen)."""
 from __future__ import annotations
@@ -10,8 +10,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from pluto_scanner.__main__ import _splash_disabled  # noqa: E402
-from pluto_scanner.ui.splash import BIRD_ART, RAMP, SplashScreen, _trim  # noqa: E402
+from sdr_scanner.__main__ import _splash_disabled  # noqa: E402
+from sdr_scanner.ui.splash import BIRD_ART, RAMP, SplashScreen, _trim  # noqa: E402
 
 
 def _app() -> QApplication:

@@ -1,6 +1,6 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
-"""Generate the diagrams used by the Pluto Scanner presentation.
+"""Generate the diagrams used by the SDR Scanner presentation.
 
 Everything is drawn locally with Pillow so the deck has no external image
 dependencies and can be rebuilt with one command.

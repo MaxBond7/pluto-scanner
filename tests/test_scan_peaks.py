@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for per-step peak detection used by the band scanner."""
 from __future__ import annotations
 
 import numpy as np
 
-from pluto_scanner.scanner.peaks import decimate_mean, find_peaks
+from sdr_scanner.scanner.peaks import decimate_mean, find_peaks
 
 
 def _spectrum(fs: float = 1.024e6, bins: int = 2048,

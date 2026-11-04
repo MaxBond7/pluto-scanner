@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the CardRF adapter (archive parsing and baseband conversion)."""
 from __future__ import annotations
@@ -6,7 +6,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pluto_scanner.ml.cardrf import (
+from sdr_scanner.ml.cardrf import (
     build_window,
     chunk_samples,
     parse_entry,

@@ -5,7 +5,7 @@
 ## How tested
 
 - [ ] `python -m pytest -q`
-- [ ] `python -m compileall -q pluto_scanner`
+- [ ] `python -m compileall -q sdr_scanner`
 - [ ] Simulator smoke test
 - [ ] Real Pluto+ (model/revision, sample rate)
 

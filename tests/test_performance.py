@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Correctness cross-checks and loose performance budgets.
 
@@ -13,11 +13,11 @@ import time
 
 import numpy as np
 
-from pluto_scanner.dsp.detector import Detector
-from pluto_scanner.dsp.spectrum import SpectrumAnalyzer
-from pluto_scanner.drone.bands import DroneBand
-from pluto_scanner.drone.features import analyze_iq
-from pluto_scanner.scanner.peaks import decimate_mean
+from sdr_scanner.dsp.detector import Detector
+from sdr_scanner.dsp.spectrum import SpectrumAnalyzer
+from sdr_scanner.drone.bands import DroneBand
+from sdr_scanner.drone.features import analyze_iq
+from sdr_scanner.scanner.peaks import decimate_mean
 
 
 def _median_ms(func, repeat: int = 7) -> float:
@@ -119,7 +119,7 @@ def test_startup_does_not_import_scipy():
     import sys
 
     code = (
-        "import sys, pluto_scanner.__main__; "
+        "import sys, sdr_scanner.__main__; "
         "print(int('scipy.signal' in sys.modules), "
         "int('scipy.ndimage' in sys.modules))"
     )
@@ -134,7 +134,7 @@ def test_startup_does_not_import_scipy():
 def test_arrayops_match_scipy():
     from scipy import ndimage
 
-    from pluto_scanner.dsp.arrayops import close_gaps, median_filter_1d, runs
+    from sdr_scanner.dsp.arrayops import close_gaps, median_filter_1d, runs
 
     rng = np.random.default_rng(7)
     values = rng.normal(0.0, 1.0, 97)
@@ -154,8 +154,8 @@ def test_contact_table_update_stays_fast():
     """200 contacts must refresh without rebuilding every cell."""
     from PySide6.QtWidgets import QApplication
 
-    from pluto_scanner.model import Contact, SignalType
-    from pluto_scanner.ui.contact_table import ContactTable
+    from sdr_scanner.model import Contact, SignalType
+    from sdr_scanner.ui.contact_table import ContactTable
 
     app = QApplication.instance() or QApplication([])  # noqa: F841
     now = time.time()

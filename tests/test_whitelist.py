@@ -1,13 +1,13 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for drone white-list and background-profile persistence."""
 from __future__ import annotations
 
 import time
 
-from pluto_scanner.drone.background import DroneBackgroundStore
-from pluto_scanner.drone.tracker import DroneEvent
-from pluto_scanner.drone.whitelist import DroneWhitelist
+from sdr_scanner.drone.background import DroneBackgroundStore
+from sdr_scanner.drone.tracker import DroneEvent
+from sdr_scanner.drone.whitelist import DroneWhitelist
 
 
 def _event(freq=2469.4e6, band="2.4", cls="FHSS", bw=2.8e6,

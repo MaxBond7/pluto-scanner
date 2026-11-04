@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the theme engine (built-in palettes and user JSON themes)."""
 from __future__ import annotations
 
 import json
 
-from pluto_scanner.ui.themes import (
+from sdr_scanner.ui.themes import (
     BUILTIN_THEMES,
     DEFAULT_THEME,
     MONO_COLORS,
@@ -155,7 +155,7 @@ def test_alarm_banner_text_stays_visible_in_every_theme():
     token, so the warning looked empty."""
     from PySide6.QtWidgets import QApplication, QLabel
 
-    from pluto_scanner.ui.themes import apply_theme, set_style
+    from sdr_scanner.ui.themes import apply_theme, set_style
 
     app = QApplication.instance() or QApplication([])
     try:
@@ -180,9 +180,9 @@ def test_contact_table_recolours_after_theme_change():
 
     from PySide6.QtWidgets import QApplication
 
-    from pluto_scanner.model import Contact, SignalType
-    from pluto_scanner.ui.contact_table import ContactTable
-    from pluto_scanner.ui.themes import apply_theme
+    from sdr_scanner.model import Contact, SignalType
+    from sdr_scanner.ui.contact_table import ContactTable
+    from sdr_scanner.ui.themes import apply_theme
 
     app = QApplication.instance() or QApplication([])
     try:

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Render UI screenshots for the README in the mono theme.
 
@@ -18,9 +18,9 @@ sys.path.insert(0, str(ROOT))
 from PySide6.QtCore import QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from pluto_scanner.__main__ import build_parser  # noqa: E402
-from pluto_scanner.ui.main_window import MainWindow  # noqa: E402
-from pluto_scanner.ui.themes import apply_theme, resolve_theme  # noqa: E402
+from sdr_scanner.__main__ import build_parser  # noqa: E402
+from sdr_scanner.ui.main_window import MainWindow  # noqa: E402
+from sdr_scanner.ui.themes import apply_theme, resolve_theme  # noqa: E402
 
 
 def main() -> int:

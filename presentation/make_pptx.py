@@ -1,6 +1,6 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
-"""Build the PowerPoint version of the Pluto Scanner presentation."""
+"""Build the PowerPoint version of the SDR Scanner presentation."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,7 +12,7 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "Pluto_Scanner.pptx"
+OUT = ROOT / "SDR_Scanner.pptx"
 
 # ------------------------------------------------------------------ palette
 BG = RGBColor(0x07, 0x0B, 0x16)
@@ -85,7 +85,7 @@ def footer(slide, number: int) -> None:
         Inches(0.55), Inches(7.16), Inches(7.5), Inches(0.2)
     )
     p = t.text_frame.paragraphs[0]
-    p.text = "PLUTO SCANNER  ·  КУРСОВОЙ ПРОЕКТ"
+    p.text = "SDR SCANNER  ·  КУРСОВОЙ ПРОЕКТ"
     p.font.size = Pt(8)
     p.font.name = FONT
     p.font.color.rgb = RGBColor(0x64, 0x74, 0x8B)
@@ -259,7 +259,7 @@ def build() -> Path:
     text(s, 0.85, 1.55, 6.4, 0.3,
          "SDR  ·  ПАССИВНЫЙ МОНИТОРИНГ  ·  WINDOWS",
          size=10, color=CYAN, bold=True)
-    text(s, 0.85, 2.0, 6.6, 1.0, "Pluto Scanner", size=52, color=CYAN, bold=True)
+    text(s, 0.85, 2.0, 6.6, 1.0, "SDR Scanner", size=52, color=CYAN, bold=True)
     text(s, 0.85, 3.05, 6.35, 1.2,
          "От спектроанализатора до монитора эфира: реальный Pluto+, "
          "поиск новых контактов, свип 325 МГц – 3.8 ГГц и дрон-монитор "
@@ -268,7 +268,7 @@ def build() -> Path:
     text(s, 0.85, 5.55, 6.4, 0.3,
          "PYTHON  ·  PYSIDE6  ·  PYQTGRAPH  ·  ADALM-PLUTO / PLUTO+",
          size=9, color=MUTED)
-    notes(s, "Титульный слайд. Pluto Scanner — desktop-приложение для "
+    notes(s, "Титульный слайд. SDR Scanner — desktop-приложение для "
              "исследования эфира на ADALM-PLUTO/Pluto+ и симуляторе.")
 
     # 2. problem -----------------------------------------------------------
@@ -296,7 +296,7 @@ def build() -> Path:
              "границы: Pluto не радар и не декодер.")
 
     # 3. overview with screenshot -----------------------------------------
-    s = new_slide("Что это сейчас", "Pluto Scanner сегодня", PINK)
+    s = new_slide("Что это сейчас", "SDR Scanner сегодня", PINK)
     bullets(s, 0.55, 1.55, 5.1, 3.8, [
         "Python + PySide6 + pyqtgraph",
         "Windows, ярлык без консоли",
@@ -477,7 +477,7 @@ def build() -> Path:
     text(s, 0.85, 1.95, 6.5, 1.0, "Рабочий инструмент,\nа не демо",
          size=38, color=TEXT, bold=True)
     text(s, 0.85, 3.55, 6.2, 1.7,
-         "Pluto Scanner закрывает путь: увидеть → измерить → сохранить → "
+         "SDR Scanner закрывает путь: увидеть → измерить → сохранить → "
          "сравнить. Отдельный быстрый режим смотрит дроновые полосы и "
          "честно показывает кандидатов.",
          size=15, color=TEXT)
@@ -488,8 +488,8 @@ def build() -> Path:
     notes(s, "Итог: рабочий инструмент, который честно показывает измерения "
              "и ограничения, и имеет понятный путь развития.")
 
-    prs.core_properties.title = "Pluto Scanner — презентация"
-    prs.core_properties.author = "Pluto Scanner"
+    prs.core_properties.title = "SDR Scanner — презентация"
+    prs.core_properties.author = "SDR Scanner"
     prs.core_properties.subject = "SDR, ADALM-PLUTO, сканер диапазона, дрон-монитор"
     prs.save(OUT)
     return OUT

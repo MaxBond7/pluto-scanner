@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Import the Cardinal RF (CardRF) dataset into the app's recording format.
 
@@ -32,8 +32,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from pluto_scanner.ml.importers import import_mat
-from pluto_scanner.paths import RECORDINGS_DIR
+from sdr_scanner.ml.importers import import_mat
+from sdr_scanner.paths import RECORDINGS_DIR
 
 LABEL_RULES: tuple[tuple[tuple[str, ...], str], ...] = (
     (("wifi", "wi-fi", "wlan", "802.11"), "WIFI"),

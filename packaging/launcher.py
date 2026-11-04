@@ -9,10 +9,10 @@ import traceback
 def _report_startup_error(exc: BaseException) -> None:
     text = traceback.format_exc()
     try:
-        from pluto_scanner.paths import DATA_HOME, ensure_data_home
+        from sdr_scanner.paths import DATA_HOME, ensure_data_home
 
         ensure_data_home()
-        (DATA_HOME / "pluto_scanner_error.log").write_text(
+        (DATA_HOME / "sdr_scanner_error.log").write_text(
             text, encoding="utf-8"
         )
     except Exception:
@@ -24,10 +24,10 @@ def _report_startup_error(exc: BaseException) -> None:
 
         ctypes.windll.user32.MessageBoxW(
             None,
-            "Pluto Scanner не смог запуститься.\n\n"
+            "SDR Scanner не смог запуститься.\n\n"
             f"{exc}\n\n"
-            "Подробности: pluto_scanner_error.log рядом с .exe",
-            "Pluto Scanner",
+            "Подробности: sdr_scanner_error.log рядом с .exe",
+            "SDR Scanner",
             0x10,
         )
     except Exception:
@@ -35,8 +35,8 @@ def _report_startup_error(exc: BaseException) -> None:
 
 
 def main() -> int:
-    from pluto_scanner import paths
-    from pluto_scanner.__main__ import main as app_main
+    from sdr_scanner import paths
+    from sdr_scanner.__main__ import main as app_main
 
     if getattr(sys, "frozen", False):
         paths.ensure_data_home()

@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Download the DroneRF dataset from Mendeley Data.
 
@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 API = "https://data.mendeley.com/api/datasets/f4c2b4n755/files"
-USER_AGENT = "pluto-scanner-dronerf-downloader"
+USER_AGENT = "sdr-scanner-dronerf-downloader"
 
 
 def list_files() -> list[dict]:

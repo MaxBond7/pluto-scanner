@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Measure behaviour of the Tampere drone recordings.
 
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
-from pluto_scanner.ml.behavior import analyze
+from sdr_scanner.ml.behavior import analyze
 
 HEADER = (
     f"{'file':38s} {'fs':>4s} {'duty':>5s} {'burst/s':>8s} "

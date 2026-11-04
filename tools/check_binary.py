@@ -1,4 +1,4 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Score a drone/not-drone model on the recordings you made yourself.
 
@@ -24,12 +24,12 @@ from pathlib import Path
 
 import numpy as np
 
-from pluto_scanner.drone.bands import DroneBand
-from pluto_scanner.drone.features import QUIET, OVERLOAD, analyze_iq
-from pluto_scanner.ml.binary import BinaryModel
-from pluto_scanner.ml.binary_features import from_observation
-from pluto_scanner.paths import DEFAULT_BINARY_MODEL, RECORDINGS_DIR
-from pluto_scanner.recordings import list_recordings
+from sdr_scanner.drone.bands import DroneBand
+from sdr_scanner.drone.features import QUIET, OVERLOAD, analyze_iq
+from sdr_scanner.ml.binary import BinaryModel
+from sdr_scanner.ml.binary_features import from_observation
+from sdr_scanner.paths import DEFAULT_BINARY_MODEL, RECORDINGS_DIR
+from sdr_scanner.recordings import list_recordings
 
 
 def score_recording(model: BinaryModel, info, *, block_s: float = 0.02) -> dict:

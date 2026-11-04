@@ -11,7 +11,7 @@
 
 Скрипт:
 
-1. сверяет версии `pyproject.toml`, `pluto_scanner/__init__.py` и сборки;
+1. сверяет версии `pyproject.toml`, `sdr_scanner/__init__.py` и сборки;
 2. запускает тесты;
 3. собирает one-folder через PyInstaller;
 4. добавляет `portable.flag`, лицензии, README и CHANGELOG;
@@ -33,23 +33,23 @@
 ## Артефакты
 
 ```text
-dist/PlutoScanner/                          распакованная portable-сборка
-dist/PlutoScanner-<version>-portable.zip    архив для передачи
-dist/PlutoScanner-Setup-<version>.exe       установщик (с -Installer)
+dist/SDRScanner/                          распакованная portable-сборка
+dist/SDRScanner-<version>-portable.zip    архив для передачи
+dist/SDRScanner-Setup-<version>.exe       установщик (с -Installer)
 dist/SHA256SUMS.txt                         SHA256 всех артефактов
 ```
 
 Внутри one-folder:
 
 ```text
-PlutoScanner.exe
+SDRScanner.exe
 portable.flag
 LICENSE.txt
 THIRD_PARTY_NOTICES.md
 README.md
 CHANGELOG.md
 _internal/
-  assets/pluto_scanner.ico
+  assets/sdr_scanner.ico
   libiio.dll, libiio1.dll, libusb-1.0.dll, ...
   PySide6, numpy, scipy, pyqtgraph, sounddevice, pyadi-iio
 ```
@@ -60,7 +60,7 @@ _internal/
 |---|---|---|
 | Исходники | `NEW/` | запуск через Python |
 | Portable | рядом с `.exe` | есть `portable.flag` или `user_data/` |
-| Установленная версия | `%LOCALAPPDATA%\PlutoScanner` | нет `portable.flag` |
+| Установленная версия | `%LOCALAPPDATA%\SDRScanner` | нет `portable.flag` |
 
 В папке данных:
 
@@ -69,21 +69,21 @@ user_data/       контакты, сигнатуры, белый список, 
 iq_recordings/   длинные записи IQ
 scan_logs/       свипы
 drone_logs/      события и клипы
-pluto_scanner.log
+sdr_scanner.log
 ```
 
-Переменная `PLUTO_SCANNER_DATA_DIR` переопределяет папку данных — удобно
+Переменная `SDR_SCANNER_DATA_DIR` переопределяет папку данных — удобно
 для тестов и нескольких профилей.
 
 ## Установщик
 
-Шаблон: `installer/pluto_scanner.iss`.
+Шаблон: `installer/sdr_scanner.iss`.
 
-- установка per-user в `%LOCALAPPDATA%\Programs\Pluto Scanner`;
+- установка per-user в `%LOCALAPPDATA%\Programs\SDR Scanner`;
 - ярлыки в меню «Пуск» и, по желанию, на рабочем столе;
 - пункт удаления;
 - `portable.flag` исключён из установки, поэтому данные идут в
-  `%LOCALAPPDATA%\PlutoScanner`;
+  `%LOCALAPPDATA%\SDRScanner`;
 - при удалении пользовательские данные не стираются.
 
 Inno Setup 6 можно поставить через:
@@ -108,7 +108,7 @@ portable-артефакты.
   смешивание с синтетикой;
 - portable ZIP: распаковка, запуск, запись и воспроизведение;
 - установщик: установка, запуск, удаление (проверено в 0.13.0);
-- установленная версия пишет данные в `%LOCALAPPDATA%\PlutoScanner`,
+- установленная версия пишет данные в `%LOCALAPPDATA%\SDRScanner`,
   установочная папка остаётся чистой;
 - при удалении пользовательские данные сохраняются;
 - portable-версия пишет данные рядом с `.exe` и не создаёт папку в
@@ -147,7 +147,7 @@ portable-артефакты.
 
 ## Бэкапы и хранение
 
-Физические копии лежат на `Z:\PlutoScanner_Backups\<дата>_v<версия>_<повод>`,
+Физические копии лежат на `Z:\SDRScanner_Backups\<дата>_v<версия>_<повод>`,
 например `2026-11-04_v0.20.2_menu_fix`.
 
 Правило: **на диске остаются три последние версии**, остальное удаляется.

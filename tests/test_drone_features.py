@@ -1,13 +1,13 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for drone-band feature extraction and classification."""
 from __future__ import annotations
 
 import numpy as np
 
-from pluto_scanner.dsp.spectrum import SpectrumAnalyzer
-from pluto_scanner.drone.bands import DroneBand
-from pluto_scanner.drone.features import (
+from sdr_scanner.dsp.spectrum import SpectrumAnalyzer
+from sdr_scanner.drone.bands import DroneBand
+from sdr_scanner.drone.features import (
     FHSS,
     OVERLOAD,
     QUIET,

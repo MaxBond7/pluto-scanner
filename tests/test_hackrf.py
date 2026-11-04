@@ -1,11 +1,11 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the HackRF backend that do not need the hardware."""
 from __future__ import annotations
 
-from pluto_scanner.devices import create_worker
-from pluto_scanner.devices import hackrf
-from pluto_scanner.model import DeviceConfig
+from sdr_scanner.devices import create_worker
+from sdr_scanner.devices import hackrf
+from sdr_scanner.model import DeviceConfig
 
 
 def test_limits_and_filter_snapping():

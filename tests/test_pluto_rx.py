@@ -1,9 +1,9 @@
-# Copyright (C) 2026 Pluto Scanner contributors
+# Copyright (C) 2026 SDR Scanner contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """Tests for the read-only Pluto RX capability probe."""
 from __future__ import annotations
 
-from pluto_scanner.devices.pluto import count_rx_channels
+from sdr_scanner.devices.pluto import count_rx_channels
 
 
 def test_one_complex_channel_is_1r1t():
