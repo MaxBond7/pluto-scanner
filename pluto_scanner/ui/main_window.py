@@ -1705,6 +1705,11 @@ class MainWindow(QMainWindow):
             and session.config.uri.startswith("usb:")
         )
         rate_note = ""
+        if usb_plutos >= 1 and sample_rate > 6.2e6:
+            rate_note += (
+                " · USB2: выше ~6 МГц отсчёты теряются, "
+                "для честного мониторинга 4.096–6.144 MS/s"
+            )
         if usb_plutos >= 2:
             if (not self.drone_panel.allow_high_usb()
                     and sample_rate > 10.24e6):
@@ -1860,9 +1865,15 @@ class MainWindow(QMainWindow):
         self.audio_btn.setEnabled(False)
         self.scan_panel.set_device_enabled(False)
         self.scan_panel.set_can_compare(False)
+        usb_rate = any(
+            session.config.kind == "pluto"
+            and session.config.uri.startswith("usb:")
+            for session in sessions
+        ) and sample_rate > 6.2e6
         set_style(self.status_label, "color:#f2f2f2;")
         self.status_label.setText(
             f"Запись фона: {len(bands)} полос, {seconds:.0f} с…"
+            + (" · USB2: выше ~6 МГц отсчёты теряются" if usb_rate else "")
         )
         if not manager.start(
             sessions,

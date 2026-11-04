@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-11-04
+
+- The drone monitor now defaults to **6.144 MS/s**, and the rate list includes
+  4.096 and 6.144 MS/s. A Pluto over USB 2.0 drops samples above ~6 MS/s
+  (measured: 74% real time at 8.19, 29% at 20.48), so the old default produced
+  recordings with gaps.
+- Selecting a higher rate shows a visible warning in the monitor parameters,
+  and the status line repeats it for both monitoring and background recording.
+  The rate is still not changed silently.
+- Analysed the first long field session (465 s, 425 events, 43 alarms): all
+  alarms were at 2.4 GHz Wi-Fi-like plateaus and narrow bursts, and the run was
+  recorded at 20.48 MS/s with dropped samples. Written up in
+  `docs/FIELD_TEST_2026-11-04.md`.
+- Tests for the safe default and the warning.
+
 ## [0.21.0] - 2026-11-04
 
 - Licence changed from MIT to the **GNU General Public License v3**

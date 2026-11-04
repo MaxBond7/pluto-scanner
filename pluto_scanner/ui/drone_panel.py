@@ -147,9 +147,18 @@ class DronePanel(QWidget):
         grid.setVerticalSpacing(5)
 
         self.rate_combo = QComboBox()
-        for rate in (10.24e6, 20.48e6, 30.72e6):
+        for rate in (4.096e6, 6.144e6, 10.24e6, 20.48e6, 30.72e6):
             self.rate_combo.addItem(f"{rate / 1e6:.2f} MS/s", rate)
-        self.rate_combo.setCurrentIndex(1)
+        # 4.096-6.144 MS/s is what a Pluto over USB 2.0 sustains without
+        # dropping samples; the higher rates are kept for Ethernet/network
+        # radios and are flagged below.
+        index = self.rate_combo.findData(6.144e6)
+        self.rate_combo.setCurrentIndex(index if index >= 0 else 0)
+        self.rate_combo.setToolTip(
+            "Полоса мониторинга. Pluto по USB 2.0 честно держит 4.096–6.144 MS/s; "
+            "выше начинаются потери отсчётов, и время в записи рвётся."
+        )
+        self.rate_combo.currentIndexChanged.connect(self._update_rate_warning)
 
         self.dwell_spin = QDoubleSpinBox()
         self.dwell_spin.setRange(10.0, 200.0)
@@ -258,6 +267,13 @@ class DronePanel(QWidget):
         bg_row.addStretch(1)
         grid.addLayout(bg_row, 6, 0, 1, 4)
         grid.addWidget(self.background_status, 7, 0, 1, 4)
+
+        self.rate_warning = QLabel("")
+        self.rate_warning.setWordWrap(True)
+        set_style(self.rate_warning, "color:#facc15; font-size:10px;")
+        self.rate_warning.setVisible(False)
+        grid.addWidget(self.rate_warning, 8, 0, 1, 4)
+        self._update_rate_warning()
         grid.setColumnStretch(1, 1)
         grid.setColumnStretch(3, 1)
         self.controls.addWidget(params, 3)
@@ -360,6 +376,20 @@ class DronePanel(QWidget):
 
     def sample_rate(self) -> float:
         return float(self.rate_combo.currentData())
+
+    def _update_rate_warning(self, *_args) -> None:
+        rate = self.sample_rate()
+        if rate > 6.2e6:
+            text = (
+                "USB 2.0: выше ~6 МГц отсчёты теряются и время в записи "
+                "рвётся. Для честного мониторинга выберите 4.096–6.144 MS/s "
+                "(или подключите Pluto по сети)."
+            )
+        else:
+            text = ""
+        if text != self.rate_warning.text():
+            self.rate_warning.setText(text)
+        self.rate_warning.setVisible(bool(text))
 
     def dwell_ms(self) -> float:
         return float(self.dwell_spin.value())
