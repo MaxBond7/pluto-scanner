@@ -144,3 +144,14 @@ def test_narrow_carrier_still_marks_its_bin():
     assert mask is not None
     assert any(mask)
     assert sum(mask) <= 2
+
+def test_reset_key_forgets_one_band(tmp_path):
+    model = BackgroundMap(tmp_path / "map.json")
+    wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
+    for _ in range(40):
+        model.learn(wifi)
+    assert model.reset_key(
+        device_id="dev", band_key="2.4", gain_db=40.0, sample_rate=20.48e6,
+    )
+    assert not model.profiles
+    assert model.observe(wifi) == 0.0

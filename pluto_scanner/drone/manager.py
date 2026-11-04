@@ -157,6 +157,19 @@ class DroneMonitorManager(QObject):
             self.error.emit("Не удалось построить частотные куски.")
             return False
 
+        if background_only and background_map is not None:
+            # A new recording replaces the old map for these bands instead of
+            # averaging into a frozen one.
+            band_keys = {chunk.band.key for chunk in chunks}
+            for session in targets:
+                for band_key in band_keys:
+                    background_map.reset_key(
+                        device_id=session.config.device_id,
+                        band_key=band_key,
+                        gain_db=float(session.config.gain),
+                        sample_rate=sample_rate,
+                    )
+
         assigned: list[list[MonitorChunk]] = [[] for _ in targets]
         for index, chunk in enumerate(chunks):
             assigned[index % len(targets)].append(chunk)

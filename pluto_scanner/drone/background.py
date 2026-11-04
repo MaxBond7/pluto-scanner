@@ -341,6 +341,23 @@ class BackgroundMap:
     def is_background(self, fraction: float) -> bool:
         return float(fraction) >= BACKGROUND_MARK
 
+    def reset_key(
+        self,
+        *,
+        device_id: str,
+        band_key: str,
+        gain_db: float,
+        sample_rate: float,
+    ) -> bool:
+        """Forget one band, so a new background recording replaces it."""
+        probe = SpectrumProfile(
+            device_id=str(device_id),
+            band_key=str(band_key),
+            gain_db=float(gain_db),
+            sample_rate=float(sample_rate),
+        )
+        return self.profiles.pop(probe.key, None) is not None
+
     def reset(self, device_id: str | None = None) -> int:
         if device_id is None:
             count = len(self.profiles)
