@@ -689,8 +689,8 @@ class DronePanel(QWidget):
         total = len(self._events)
         self.events_title.setText(f"СОБЫТИЯ · {visible}")
         self.events_title.setToolTip(
-            f"Показано {visible} из {total}. Скрытые остаются в журнале "
-            "и открываются по двойному клику из полного списка."
+            f"Показано {visible} из {total}. Снимите «Только важные», "
+            "чтобы увидеть все; скрытые всё равно остаются в журнале."
         )
 
     def _rebuild_events(self, *_args) -> None:
@@ -869,6 +869,9 @@ class DronePanel(QWidget):
             "alarms", summary.get("events_drone_like", 0)
         ))
         clips = int(summary.get("iq_clips", 0))
+        important = sum(
+            1 for event in self._events.values() if self._visible(event)
+        )
         failure = summary.get("failure")
         set_style(self.status, "color:#f87171; font-size:11px;"
             if failure else "color:#4ade80; font-size:11px;")
@@ -877,9 +880,9 @@ class DronePanel(QWidget):
             self.status.setText(f"Мониторинг остановлен: {failure}{suffix}")
         else:
             self.status.setText(
-                f"Мониторинг завершён: событий {total}, активных {active}, "
-                f"подтверждённых тревог {alarms}, IQ-фрагментов {clips}"
-                f"{suffix}"
+                f"Мониторинг завершён: событий {total} (важных {important}), "
+                f"активных {active}, подтверждённых тревог {alarms}, "
+                f"IQ-фрагментов {clips}{suffix}"
             )
         self.graph.mark_finished(path or None)
 
