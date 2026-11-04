@@ -193,21 +193,50 @@ def import_raw_iq(
     save_info(info)
     return ImportResult(info, str(path), "dat")
 
+def _iter_arrays(value, prefix: str = "", depth: int = 0):
+    """Yield ``(dotted_name, array)`` through MATLAB structs and struct arrays.
+
+    CardRF, for example, stores the samples as ``x.Channel_1.Data``: a struct
+    field, not a top-level variable.
+    """
+    if depth > 4:
+        return
+    if isinstance(value, np.ndarray):
+        if value.dtype.names:
+            for name in value.dtype.names:
+                child = value[name]
+                label = f"{prefix}.{name}" if prefix else name
+                yield from _iter_arrays(child, label, depth + 1)
+        elif value.size >= 256 and np.issubdtype(value.dtype, np.number):
+            yield prefix, value
+        return
+    if hasattr(value, "_fieldnames"):
+        for name in value._fieldnames:
+            try:
+                child = getattr(value, name)
+            except Exception:
+                continue
+            label = f"{prefix}.{name}" if prefix else name
+            yield from _iter_arrays(child, label, depth + 1)
+
+
 def _pick_mat_iq(payload: dict, variable: str = "") -> tuple[str, np.ndarray]:
     """Find the IQ array inside a MATLAB file.
 
     CardRF and similar datasets store one long complex vector, but some
-    exports use two rows/columns for I and Q.  Both layouts are accepted.
+    exports use two rows/columns for I and Q.  Both layouts are accepted, and
+    struct fields are searched (``x.Channel_1.Data``).
     """
     candidates: list[tuple[str, np.ndarray]] = []
     for key, value in payload.items():
         if str(key).startswith("__"):
             continue
-        if not isinstance(value, np.ndarray) or value.size < 256:
-            continue
-        candidates.append((str(key), value))
+        candidates.extend(_iter_arrays(value, str(key)))
     if variable:
-        candidates = [item for item in candidates if item[0] == variable]
+        candidates = [
+            item for item in candidates
+            if item[0] == variable or item[0].endswith(f".{variable}")
+        ]
         if not candidates:
             raise ValueError(f"в .mat нет переменной {variable!r}")
     if not candidates:

@@ -238,3 +238,20 @@ def test_import_mat_complex_vector_and_iq_pairs(tmp_path):
     data = np.fromfile(result2.info.cf32_path, dtype=np.complex64)
     assert data.size == iq.size
     assert np.allclose(np.abs(data), np.abs(iq), atol=0.01)
+
+def test_import_mat_reads_struct_fields(tmp_path):
+    from scipy.io import savemat
+
+    from pluto_scanner.ml.importers import import_mat
+
+    fs = 1.024e6
+    n = 4096
+    rng = np.random.default_rng(9)
+    iq = (rng.normal(size=n) + 1j * rng.normal(size=n)).astype(np.complex128)
+    src = tmp_path / "cardrf_like.mat"
+    savemat(src, {"x": {"Channel_1": {"Data": iq}}})
+    result = import_mat(
+        src, tmp_path / "out", sample_rate=fs, label="WIFI", max_seconds=1.0,
+    )
+    assert result.info.samples == n
+    assert "Channel_1.Data" in result.info.notes
