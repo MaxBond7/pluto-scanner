@@ -92,9 +92,6 @@ class DroneWindow(QMainWindow):
                 self.windowState() & ~Qt.WindowState.WindowMinimized
             )
         self.show()
-        self.setWindowState(
-            self.windowState() | Qt.WindowState.WindowActive
-        )
         self.raise_()
         self.activateWindow()
 

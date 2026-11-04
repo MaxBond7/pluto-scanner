@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.20.3] - 2026-11-04
+
+- The drone monitor window is now a standalone top-level window instead of an
+  owned child of the main window. On Windows an owned window has no taskbar
+  button and minimises into a small title-bar strip; now it minimises to the
+  taskbar and restores to its normal size.
+- Bringing it back no longer forces the active-state flag; minimised windows
+  are restored with the standard state mask.
+- The window is closed explicitly during shutdown.
+
 ## [0.20.2] - 2026-11-04
 
 - Fixed the theme menu: its items are now an exclusive action group, so only

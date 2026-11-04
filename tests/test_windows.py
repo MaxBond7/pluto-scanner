@@ -40,3 +40,10 @@ def test_show_and_raise_restores_a_minimised_window(tmp_path):
     app.processEvents()
     assert not window.isMinimized()
     window.close()
+
+def test_drone_window_is_standalone(tmp_path):
+    """An owned window has no taskbar button and collapses oddly on Windows."""
+    window = DroneWindow(QWidget(), settings_path=tmp_path / "s.json")
+    assert window.parent() is None
+    assert window.isWindow()
+    window.close()

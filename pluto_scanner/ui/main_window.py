@@ -345,8 +345,10 @@ class MainWindow(QMainWindow):
         self.splitter.setHandleWidth(6)
 
         # The monitor needs a graph, a wide table and a row of controls; it
-        # lives in its own window instead of a narrow tab.
-        self.drone_window = DroneWindow(self.drone_panel, self)
+        # lives in its own top-level window instead of a narrow tab.  It is
+        # deliberately *not* parented to the main window: an owned window on
+        # Windows has no taskbar button and minimises into a tiny title bar.
+        self.drone_window = DroneWindow(self.drone_panel)
         self._build_menu()
         self._refresh_background_status()
 
@@ -2220,6 +2222,12 @@ class MainWindow(QMainWindow):
         if self._shutting_down:
             return
         self._shutting_down = True
+        window = getattr(self, "drone_window", None)
+        if window is not None:
+            try:
+                window.close()
+            except Exception:
+                pass
         try:
             self._record_timer.stop()
             if self._recording or self.recorder.active:
