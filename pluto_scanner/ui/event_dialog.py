@@ -83,6 +83,17 @@ class DroneEventDialog(QDialog):
             if event.binary else "color:#64748b; font-size:11px;")
         root.addWidget(self.binary_label)
 
+        if event.background >= 0.6:
+            background_label = QLabel(
+                "Фон: сигнал был в эфире всё время обучения карты фона. "
+                "Скорее всего это местный Wi-Fi, Bluetooth или помеха — "
+                "тревога по нему не поднимается. Если он изменился или "
+                "усилился, посмотрите вручную."
+            )
+            background_label.setWordWrap(True)
+            set_style(background_label, "color:#94a3b8; font-size:11px;")
+            root.addWidget(background_label)
+
         if event.wideband:
             wide_label = QLabel(
                 "Широкополосный сигнал: занимает почти всю полосу захвата. "
@@ -106,6 +117,7 @@ class DroneEventDialog(QDialog):
                          f"{format_freq(event.freq_max_hz)}"),
             ("Ширина", format_bw(event.bw_hz)),
             ("Скважность", f"{event.max_duty * 100:.0f}%"),
+            ("Фон", f"{event.background * 100:.0f}%"),
             ("Макс. импульс", f"{event.max_burst_ms:.1f} мс"),
             ("Устройства", ", ".join(event.device_ids) or "—"),
             ("Время", time.strftime(

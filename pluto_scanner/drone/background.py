@@ -148,8 +148,8 @@ class DroneBackgroundStore:
 
 # --------------------------------------------------------------- spectrum map
 BACKGROUND_BINS = 32
-BACKGROUND_MIN_FRAMES = 40      # ~1 s before the map is trusted
-BACKGROUND_LEARN_FRAMES = 400   # learn the site for ~8 s, then freeze
+BACKGROUND_MIN_FRAMES = 20      # trust the map only after this many blocks
+BACKGROUND_LEARN_FRAMES = 120   # learn the site, then freeze the map
 BACKGROUND_MARK = 0.6           # share of persistent bins to call it "background"
 
 
@@ -298,12 +298,15 @@ class BackgroundMap:
         second of a session cannot mark everything as background.
         """
         mask = active_bins(getattr(obs, "spectrum_db", []))
-        if mask is None or not any(mask):
+        if mask is None:
             return 0.0
         profile = self._profile(obs, create=True)
         if profile is None:
             return 0.0
-        if profile.frames:
+        # Learn on every block, including quiet ones: a band where nothing
+        # ever happens must also finish its learning window, otherwise a
+        # drone that shows up an hour later would feed the map itself.
+        if profile.frames >= BACKGROUND_MIN_FRAMES:
             occupancy = profile.occupancy
             fraction = sum(
                 occupancy[index] for index, flag in enumerate(mask) if flag
@@ -320,7 +323,7 @@ class BackgroundMap:
             profile.updated = time.time()
             if profile.frames % 25 == 0 or profile.frames == self.learn_frames:
                 self.save()
-        if profile.frames < BACKGROUND_MIN_FRAMES:
+        if profile.frames < BACKGROUND_MIN_FRAMES or not any(mask):
             return 0.0
         return float(fraction)
 
