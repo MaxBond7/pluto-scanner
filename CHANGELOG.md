@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-05
+
+- **Deep look** (`drone/deep_look.py`): the event card has a **«Проверить
+  1 с»** button. It retunes the receiver to the event frequency, listens for
+  one second at 6.144 MS/s, measures duty, occupied bandwidth, burst rate,
+  hop rate and channel count, then restores the previous frequency and rate.
+- The verdict is cautious by design: a continuous wide link is called
+  drone-like, a bursty narrow one is called access-point/controller-like, and
+  everything in between is ambiguous. Below 15 MHz the result explicitly says
+  that hop rate and channel count are unreliable.
+- The button is disabled, with the reason in its tooltip, while the drone
+  monitor, IQ recording or scanning is running, because those modes own the
+  receiver.
+- Verified against the live Pluto: capture and settings restore work; the home
+  access point reads duty 0.20–0.47 and 140–211 bursts/s, matching the Tampere
+  bursty profile. Results added to `docs/TAMPERE.md`.
+- Tests cover the verdicts, the capture loop with a fake session and the
+  disabled/enabled button states.
+
 ## [0.23.0] - 2026-11-04
 
 - New `ml/behavior.py`: measures duty cycle, burst rate and regularity,

@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pyqtgraph as pg
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QFileDialog,
     QGridLayout,
@@ -22,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import format_bw, format_freq
+from ..drone.deep_look import DeepResult
 from ..drone.report import export_event_bundle
 from ..drone.tracker import DroneEvent
 from ..drone.features import CLASS_RU
@@ -35,11 +38,15 @@ class DroneEventDialog(QDialog):
 
     def __init__(self, event: DroneEvent, parent: QWidget | None = None,
                  store: SignatureStore | None = None,
-                 whitelist: DroneWhitelist | None = None) -> None:
+                 whitelist: DroneWhitelist | None = None,
+                 deep_look: Callable[[float], DeepResult] | None = None,
+                 deep_reason: str = "") -> None:
         super().__init__(parent)
         self.drone_event = event
         self.store = store or SignatureStore()
         self.whitelist = whitelist
+        self._deep_look = deep_look
+        self._deep_reason = deep_reason
         self.matches = match_event(event, self.store.all())
         self.setWindowTitle(f"Событие {event.event_id}")
         self.resize(980, 820)
@@ -139,6 +146,15 @@ class DroneEventDialog(QDialog):
             grid.addWidget(value_label, row // 2, (row % 2) * 2 + 1)
         root.addLayout(grid)
 
+        self.deep_label = QLabel("")
+        self.deep_label.setWordWrap(True)
+        self.deep_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        set_style(self.deep_label, "color:#8fa6c0; font-size:11px;")
+        self.deep_label.hide()
+        root.addWidget(self.deep_label)
+
         plots = QHBoxLayout()
         plots.setSpacing(8)
 
@@ -200,6 +216,20 @@ class DroneEventDialog(QDialog):
         root.addWidget(self.status)
 
         buttons = QHBoxLayout()
+        self.deep_btn = QPushButton("Проверить 1 с")
+        self.deep_btn.setEnabled(deep_look is not None)
+        if deep_look is None:
+            self.deep_btn.setToolTip(
+                "Недоступно: " + (deep_reason or "нет свободного приёмника")
+                + ". Остановите мешающий режим и откройте событие снова."
+            )
+        else:
+            self.deep_btn.setToolTip(
+                "Снять 1 секунду на частоте события и измерить скважность, "
+                "занятую полосу и перескоки. Приёмник на время проверки "
+                "перенастроится и потом вернётся обратно."
+            )
+        self.deep_btn.clicked.connect(self._run_deep_look)
         self.export_btn = QPushButton("Экспорт отчёта…")
         self.export_btn.clicked.connect(self._export)
         self.folder_btn = QPushButton("Папка IQ")
@@ -222,6 +252,7 @@ class DroneEventDialog(QDialog):
         self.ml_btn.clicked.connect(self._ask_ml_feedback)
         close_btn = QPushButton("Закрыть")
         close_btn.clicked.connect(self.accept)
+        buttons.addWidget(self.deep_btn)
         buttons.addWidget(self.export_btn)
         buttons.addWidget(self.folder_btn)
         buttons.addWidget(self.white_btn)
@@ -229,6 +260,44 @@ class DroneEventDialog(QDialog):
         buttons.addStretch(1)
         buttons.addWidget(close_btn)
         root.addLayout(buttons)
+
+    # ------------------------------------------------------------- deep look
+    def _run_deep_look(self) -> None:
+        if self._deep_look is None:
+            return
+        self.deep_btn.setEnabled(False)
+        self.deep_label.show()
+        set_style(self.deep_label, "color:#facc15; font-size:11px;")
+        self.deep_label.setText(
+            "Слушаю 1 секунду на частоте события — не выключайте приёмник…"
+        )
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        QApplication.processEvents()
+        result: DeepResult | None = None
+        error = ""
+        try:
+            result = self._deep_look(float(self.drone_event.freq_hz))
+        except Exception as exc:                     # pragma: no cover - UI guard
+            error = str(exc)
+        finally:
+            QApplication.restoreOverrideCursor()
+            self.deep_btn.setEnabled(True)
+
+        if result is None:
+            set_style(self.deep_label, "color:#f87171; font-size:11px;")
+            self.deep_label.setText(
+                f"Проверка не удалась: {error or 'приёмник не ответил'}"
+            )
+            return
+        if not result.ok:
+            set_style(self.deep_label, "color:#f87171; font-size:11px;")
+        elif (result.behavior is not None
+                and result.behavior.duty >= 0.70
+                and result.behavior.occupied >= 0.40):
+            set_style(self.deep_label, "color:#4ade80; font-size:11px;")
+        else:
+            set_style(self.deep_label, "color:#facc15; font-size:11px;")
+        self.deep_label.setText(result.text())
 
     # ------------------------------------------------------------------ helpers
     def _binary_text(self) -> str:

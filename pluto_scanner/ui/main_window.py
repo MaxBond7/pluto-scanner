@@ -55,6 +55,7 @@ from ..dsp.audio import AudioSink
 from ..devices import probe_hackrf, scan_pluto_uris
 from ..drone.background import BackgroundMap, DroneBackgroundStore
 from ..drone.bands import chunks_for_bands, selected_bands
+from ..drone.deep_look import DeepResult, look as deep_look_look
 from ..drone.manager import DroneMonitorManager
 from ..drone.whitelist import DroneWhitelist
 from ..engine import DeviceSession
@@ -2021,13 +2022,59 @@ class MainWindow(QMainWindow):
         event = self.drone_panel.find_event(event_id)
         if event is None:
             return
+        reason = self._deep_look_block_reason()
+        deep = None
+        if not reason:
+            deep = lambda hz: self._deep_look_event(hz)  # noqa: E731
         dialog = DroneEventDialog(
             event, self,
             store=self.signature_store,
             whitelist=self.drone_whitelist,
+            deep_look=deep,
+            deep_reason=reason,
         )
         dialog.feedback_requested.connect(self._save_ml_feedback)
         dialog.exec()
+
+    def _deep_look_block_reason(self) -> str:
+        """Why the deep look cannot run right now, or an empty string."""
+        if self._drone_active:
+            return "идёт мониторинг дронов"
+        if self._recording:
+            return "идёт запись IQ"
+        if self._scanning:
+            return "идёт сканирование"
+        session = self.sessions.get(self.selected_id) if self.selected_id else None
+        if session is None:
+            return "нет выбранного приёмника"
+        if session.config.kind == "iqfile":
+            return "выбрана запись IQ, а не приёмник"
+        if not session.worker.isRunning():
+            return "приёмник не запущен"
+        return ""
+
+    def _deep_look_event(self, center_hz: float) -> DeepResult:
+        session = self.sessions.get(self.selected_id) if self.selected_id else None
+        if session is None:
+            return DeepResult(
+                False, "нет выбранного приёмника", center_hz, 0.0, None, "",
+            )
+        self.status_label.setText(
+            f"Глубокий взгляд: {format_freq(center_hz)} — слушаю 1 секунду…"
+        )
+        set_style(self.status_label, "color:#67e8f9;")
+        result = deep_look_look(session, float(center_hz))
+        if result.ok:
+            self.status_label.setText(
+                f"Глубокий взгляд {format_freq(center_hz)}: {result.verdict}"
+            )
+            set_style(self.status_label, "color:#4ade80;")
+        else:
+            self.status_label.setText(
+                f"Глубокий взгляд не удался: {result.error}"
+            )
+            set_style(self.status_label, "color:#f87171;")
+        return result
 
     def _open_whitelist(self) -> None:
         dialog = WhitelistDialog(self.drone_whitelist, self)
