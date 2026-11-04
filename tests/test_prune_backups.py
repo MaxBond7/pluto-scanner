@@ -41,3 +41,15 @@ def test_plan_ignores_folders_without_a_version(tmp_path):
     (tmp_path / "notes").mkdir()
     kept, removed = plan(tmp_path, keep=3)
     assert kept == [] and removed == []
+
+def test_remove_tree_handles_read_only_files(tmp_path):
+    import stat
+    from tools.prune_backups import remove_tree
+
+    victim = tmp_path / "backup"
+    victim.mkdir()
+    locked = victim / "object.bin"
+    locked.write_bytes(b"x")
+    locked.chmod(stat.S_IREAD)
+    assert remove_tree(victim)
+    assert not victim.exists()

@@ -19,13 +19,34 @@ Examples::
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
+import stat
 import sys
 from pathlib import Path
 
 DEFAULT_ROOT = r"Z:\PlutoScanner_Backups"
 VERSION_RE = re.compile(r"_v(\d+)\.(\d+)\.(\d+)(?:_|$)")
+
+
+def _force_remove(function, path, _error) -> None:
+    """Retry a failed delete after clearing the read-only flag."""
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        function(path)
+    except Exception as exc:
+        print(f"  не удалось удалить {path}: {exc}")
+
+
+def remove_tree(path: Path) -> bool:
+    """Delete a folder, coping with read-only files left by Git."""
+    try:
+        shutil.rmtree(path, onerror=_force_remove)
+    except Exception as exc:
+        print(f"  ошибка при удалении {path.name}: {exc}")
+        return False
+    return not path.exists()
 
 
 def version_key(name: str) -> tuple[int, int, int] | None:
@@ -83,16 +104,24 @@ def main(argv: list[str] | None = None) -> int:
         print(f"нет папки {root}")
         return 2
     kept, doomed = plan(root, args.keep)
+    removed = 0
+    failed = 0
     for path in doomed:
         size_gb = folder_size(path) / (1024 ** 3)
         if args.dry_run:
             print(f"[dry] удалить {path.name} ({size_gb:.2f} ГБ)")
-        else:
-            shutil.rmtree(path)
+            continue
+        if remove_tree(path):
+            removed += 1
             print(f"удалено {path.name} ({size_gb:.2f} ГБ)")
+        else:
+            failed += 1
     print(f"оставлено {len(kept)} из {len(kept) + len(doomed)}")
     for path in kept:
         print(f"  {path.name}")
+    if failed:
+        print(f"не удалось удалить папок: {failed}")
+        return 1
     return 0
 
 
