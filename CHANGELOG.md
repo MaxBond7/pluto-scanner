@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-04
+
+- New `ml/behavior.py`: measures duty cycle, burst rate and regularity,
+  frequency-hop rate, channel count, occupied bandwidth and the analog-video
+  line-rate peak over 0.5–2 s of IQ. Works at any sample rate; hop rate and
+  channels need a wide block (~20 MHz).
+- `tools/analyze_tampere.py`: runs those measurements over the Tampere
+  recordings; tests build synthetic hopping, pulsed and line-sync signals.
+- Tampere dataset downloaded to `Z:\datasets\Tampere` (19 files, 8.56 GB,
+  CC BY 4.0) and measured. Results in `docs/TAMPERE.md`: DJI links are
+  continuous (duty 0.78–0.89, occupied 0.48–0.56, 700–1830 hops/s), while
+  Wi-Fi drones and controllers are bursty (duty 0.10–0.23). Hop rate is only
+  trustworthy at high duty; Mavic Mini is a low-duty exception.
+- No model retraining: 19 files with no negatives are too small a sample.
+
 ## [0.22.0] - 2026-11-04
 
 - **HackRF One backend** (`devices/hackrf.py`): receive-only, ctypes over

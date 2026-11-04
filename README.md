@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.22.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.23.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -117,8 +117,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.22.0-portable.zip        архив
-dist\PlutoScanner-Setup-0.22.0.exe           установщик
+dist\PlutoScanner-0.23.0-portable.zip        архив
+dist\PlutoScanner-Setup-0.23.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -187,6 +187,8 @@ IQ (Pluto / симулятор / запись)
 | [ML за 5 шагов](docs/ML_SIMPLE.md) | простая инструкция без терминала |
 | [DATASETS](docs/DATASETS.md) | внешние IQ-датасеты, лицензии и импорт |
 | [FIELD_TEST](docs/FIELD_TEST.md) | полевой тест: что взять и как записать |
+| [HACKRF](docs/HACKRF.md) | подключение HackRF One: драйвер, libhackrf, параметры |
+| [TAMPERE](docs/TAMPERE.md) | поведение реальных линков дронов: скважность, перескоки |
 | [PLUTO_2R2T](docs/PLUTO_2R2T.md) | второй RX, 2R2T, риски и восстановление |
 | [HARDWARE](docs/HARDWARE.md) | что есть, чего не хватает, ограничения |
 | [ROADMAP](docs/ROADMAP.md) | что сделано и что дальше |
