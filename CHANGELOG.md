@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-04
+
+- **HackRF One backend** (`devices/hackrf.py`): receive-only, ctypes over
+  `libhackrf`, 1 MHz – 6 GHz, 2–20 MS/s, 8-bit, 20 ms blocks. No pip package
+  needed: the app finds `hackrf.dll` next to the exe, in `_PATH`/System32, or
+  via `HACKRF_DLL`.
+- The device panel has a **«+ HackRF»** button and the menu has «Добавить
+  HackRF»; the app probes serials through `hackrf_device_list` and reports a
+  clear error when the library or driver is missing.
+- Gain mapping: LNA fixed at 16 dB, VGA from the slider, 14 dB amp above 70;
+  baseband filter snaps to the values libhackrf accepts.
+- `docs/HACKRF.md`: Windows driver (Zadig/WinUSB), libhackrf install, DLL
+  discovery, parameters and limits. Not tested on real hardware yet — the
+  board is not in the project.
+- `tools/download_tampere.py`: downloads the Tampere drone recordings
+  (Zenodo 4264467, CC BY 4.0, 8.56 GB) in parallel, with resume.
+- Tests for the HackRF limits, gain mapping, worker selection and the
+  missing-library error.
+
 ## [0.21.2] - 2026-11-04
 
 - Fixed why a recorded background still let alarms through. The map was kept

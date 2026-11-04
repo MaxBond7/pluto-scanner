@@ -40,6 +40,7 @@ _STATUS_COLOR = {
 class DevicePanel(QGroupBox):
     add_simulator = Signal()
     add_pluto = Signal(str)
+    add_hackrf = Signal()
     remove_device = Signal(str)
     device_selected = Signal(str)
     scan_pluto = Signal()
@@ -79,6 +80,14 @@ class DevicePanel(QGroupBox):
         uri_row.addWidget(self.scan_btn)
         uri_row.addWidget(self.add_pluto_btn)
         layout.addLayout(uri_row)
+
+        self.add_hackrf_btn = QPushButton("+ HackRF")
+        self.add_hackrf_btn.setToolTip(
+            "HackRF One: 20 MS/s, 1 МГц – 6 ГГц. Нужны драйвер WinUSB "
+            "и libhackrf — см. docs/HACKRF.md."
+        )
+        self.add_hackrf_btn.clicked.connect(lambda: self.add_hackrf.emit())
+        layout.addWidget(self.add_hackrf_btn)
 
         hint = QLabel(
             "Плата по USB/сети. Для второго Pluto добавьте ещё один URI."

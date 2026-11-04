@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.21.2-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.22.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -117,8 +117,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.21.2-portable.zip        архив
-dist\PlutoScanner-Setup-0.21.2.exe           установщик
+dist\PlutoScanner-0.22.0-portable.zip        архив
+dist\PlutoScanner-Setup-0.22.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -165,6 +165,8 @@ IQ (Pluto / симулятор / запись)
 - **Второй RX / 2R2T** зависит от прошивки; текущая плата отдаёт 1R1T.
   U-Boot-трюк проверен и опасен — см. [PLUTO_2R2T](docs/PLUTO_2R2T.md).
 - **KerberosSDR / пеленг** требует 4 антенны, кабели и калибровку.
+- **HackRF One** подготовлен в коде (20 МС/с, 1 МГц–6 ГГц, приём), но на
+  живой плате ещё не проверялся — см. [HACKRF](docs/HACKRF.md).
 - **ML-классификатор** — из коробки идёт синтетическая модель; для реальной
   точности обучите на размеченных записях. Без веба и телефона.
 

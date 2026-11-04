@@ -52,7 +52,7 @@ from ..config import (
     in_stock_pluto_range,
 )
 from ..dsp.audio import AudioSink
-from ..devices import scan_pluto_uris
+from ..devices import probe_hackrf, scan_pluto_uris
 from ..drone.background import BackgroundMap, DroneBackgroundStore
 from ..drone.bands import chunks_for_bands, selected_bands
 from ..drone.manager import DroneMonitorManager
@@ -443,6 +443,8 @@ class MainWindow(QMainWindow):
         action.triggered.connect(lambda: self._scan_pluto())
         action = device_menu.addAction("Добавить симулятор")
         action.triggered.connect(lambda: self._add_simulator())
+        action = device_menu.addAction("Добавить HackRF")
+        action.triggered.connect(self._add_hackrf)
 
         monitor_menu = bar.addMenu("Монитор")
         action = monitor_menu.addAction("Дрон-монитор…")
@@ -548,6 +550,7 @@ class MainWindow(QMainWindow):
     def _connect(self) -> None:
         self.device_panel.add_simulator.connect(self._add_simulator)
         self.device_panel.add_pluto.connect(self._add_pluto)
+        self.device_panel.add_hackrf.connect(self._add_hackrf)
         self.device_panel.scan_pluto.connect(self._scan_pluto)
         self.device_panel.remove_device.connect(self._remove_device)
         self.device_panel.device_selected.connect(self._select_device)
@@ -641,6 +644,27 @@ class MainWindow(QMainWindow):
         )
         self._add_session(config)
 
+    def _make_hackrf(self, serial: str = "") -> None:
+        serial = (serial or "").strip()
+        count = len([
+            session for session in self.sessions.values()
+            if session.config.kind == "hackrf"
+        ])
+        suffix = f" ({serial[-6:]})" if serial else ""
+        config = DeviceConfig(
+            device_id=self._next_id("hackrf"),
+            name=f"HackRF {count + 1}{suffix}",
+            kind="hackrf",
+            uri=serial,
+            center_freq=float(DEFAULT_CENTER_FREQ),
+            sample_rate=2.048e6,
+            bandwidth=2.0e6,
+            gain=32.0,
+            fft_size=int(DEFAULT_FFT_SIZE),
+            seed=1,
+        )
+        self._add_session(config)
+
     def _make_iqfile(self, path: str | Path) -> bool:
         info = load_info(path)
         if info is None or not info.path.exists():
@@ -695,6 +719,34 @@ class MainWindow(QMainWindow):
     def _add_pluto(self, uri: str) -> None:
         self._make_pluto(uri)
         self.status_label.setText(f"Подключаю Pluto {uri}...")
+
+    def _add_hackrf(self) -> None:
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            info = probe_hackrf()
+        finally:
+            QApplication.restoreOverrideCursor()
+        if not info.get("ok"):
+            set_style(self.status_label, "color:#f87171;")
+            self.status_label.setText(f"HackRF: {info.get('error')}")
+            return
+        serials = list(info.get("serials") or [])
+        if not serials:
+            set_style(self.status_label, "color:#facc15;")
+            self.status_label.setText(
+                "HackRF не найден. Подключите плату и установите драйвер "
+                "WinUSB + libhackrf (docs/HACKRF.md)."
+            )
+            return
+        serial = serials[0]
+        for session in self.sessions.values():
+            if (session.config.kind == "hackrf"
+                    and session.config.uri == serial):
+                self._select_device(session.config.device_id)
+                return
+        self._make_hackrf(serial)
+        set_style(self.status_label, "color:#4ade80;")
+        self.status_label.setText(f"HackRF {serial}: подключён")
 
     def _scan_pluto(self) -> None:
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)

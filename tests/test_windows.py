@@ -49,3 +49,7 @@ def test_drone_window_is_standalone(tmp_path):
     assert window.parent() is None
     assert window.isWindow()
     window.close()
+
+def test_main_window_module_imports():
+    """A stray edit once merged two lines and broke the whole UI import."""
+    import pluto_scanner.ui.main_window  # noqa: F401
