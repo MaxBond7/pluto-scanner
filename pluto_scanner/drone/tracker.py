@@ -42,6 +42,7 @@ class DroneEvent:
     ml: dict[str, Any] = field(default_factory=dict)
     binary: dict[str, Any] = field(default_factory=dict)
     wideband: bool = False
+    background: float = 0.0
 
     @property
     def duration_s(self) -> float:
@@ -84,6 +85,7 @@ class DroneEvent:
             "ml": dict(self.ml),
             "binary": dict(self.binary),
             "wideband": bool(self.wideband),
+            "background": round(float(self.background), 3),
         }
         if include_spectrum:
             payload["spectrum_freqs_hz"] = list(self.spectrum_freqs_hz)
@@ -161,6 +163,9 @@ class DroneTracker:
             ):
                 match.binary = dict(binary)
         match.wideband = match.wideband or bool(obs.extra.get("wideband"))
+        match.background = max(
+            match.background, float(obs.extra.get("background", 0.0) or 0.0)
+        )
         match.active = True
         if obs.device_id not in match.device_ids:
             match.device_ids.append(obs.device_id)

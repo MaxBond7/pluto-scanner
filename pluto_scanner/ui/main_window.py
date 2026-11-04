@@ -9,13 +9,20 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QCloseEvent, QDesktopServices, QFont, QIcon
+from PySide6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QDesktopServices,
+    QFont,
+    QIcon,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFileDialog,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -23,6 +30,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSlider,
     QSplitter,
     QTabWidget,
@@ -42,7 +50,7 @@ from ..config import (
 )
 from ..dsp.audio import AudioSink
 from ..devices import scan_pluto_uris
-from ..drone.background import DroneBackgroundStore
+from ..drone.background import BackgroundMap, DroneBackgroundStore
 from ..drone.bands import chunks_for_bands, selected_bands
 from ..drone.manager import DroneMonitorManager
 from ..drone.whitelist import DroneWhitelist
@@ -67,6 +75,7 @@ from ..store import ContactStore
 from .contact_table import ContactTable
 from .device_panel import DevicePanel
 from .drone_panel import DronePanel
+from .drone_window import DroneWindow
 from .event_dialog import DroneEventDialog
 from .import_dialog import DatasetImportDialog
 from .ml_panel import MLPanel
@@ -124,6 +133,9 @@ class MainWindow(QMainWindow):
         self.signature_store = SignatureStore()
         self.drone_whitelist = DroneWhitelist()
         self.drone_background = DroneBackgroundStore()
+        self.drone_background_map = BackgroundMap(
+            DATA_DIR / "background_map.json"
+        )
         self.recorder = IqRecorder(RECORDINGS_DIR)
         self._recording = False
         self._record_expected_s = 0.0
@@ -180,8 +192,6 @@ class MainWindow(QMainWindow):
 
         # ---------------- left
         left = QWidget()
-        left.setMinimumWidth(300)
-        left.setMaximumWidth(390)
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
         ll.setSpacing(6)
@@ -213,7 +223,19 @@ class MainWindow(QMainWindow):
         sl.addWidget(self.inject_btn)
         ll.addWidget(self.sim_group)
         ll.addStretch(1)
-        self.splitter.addWidget(left)
+
+        # The left column holds a lot of controls; scrolling keeps every one of
+        # them reachable on a small screen instead of squashing them together.
+        left_scroll = QScrollArea()
+        left_scroll.setWidget(left)
+        left_scroll.setWidgetResizable(True)
+        left_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        left_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        left_scroll.setMinimumWidth(310)
+        left_scroll.setMaximumWidth(400)
+        self.splitter.addWidget(left_scroll)
 
         # ---------------- centre
         centre = QWidget()
@@ -301,7 +323,7 @@ class MainWindow(QMainWindow):
         self.right_tabs = QTabWidget()
         self.right_tabs.addTab(self.contact_table, "Контакты")
         self.right_tabs.addTab(self.scan_panel, "Сканер")
-        self.right_tabs.addTab(self.drone_panel, "Дроны")
+        self.right_tabs.addTab(self._build_drone_launcher(), "Дроны")
         self.right_tabs.addTab(self.recording_panel, "Запись IQ")
         self.right_tabs.addTab(self.ml_panel, "ML")
         self.right_tabs.addTab(self.signature_panel, "Сигнатуры")
@@ -310,6 +332,12 @@ class MainWindow(QMainWindow):
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
         self.splitter.setStretchFactor(2, 0)
+        self.splitter.setHandleWidth(6)
+
+        # The monitor needs a graph, a wide table and a row of controls; it
+        # lives in its own window instead of a narrow tab.
+        self.drone_window = DroneWindow(self.drone_panel, self)
+        self._build_menu()
 
         # status bar
         self.status_label = QLabel("Готов")
@@ -347,6 +375,120 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.fps_label)
         self.statusBar().addPermanentWidget(self.audio_label)
 
+    def _build_drone_launcher(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
+        title = QLabel("ДРОН-МОНИТОР")
+        title.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
+        set_style(title, "color:#f472b6; letter-spacing:1px;")
+        layout.addWidget(title)
+        body = QLabel(
+            "Пассивный монитор полос 2.4/5.8 ГГц открывается в отдельном окне: "
+            "там есть место для графика, таблицы событий и настроек.\n\n"
+            "Окно можно держать на втором мониторе и закрывать — мониторинг "
+            "при этом продолжается, вернуться можно этой же кнопкой или "
+            "через меню «Монитор»."
+        )
+        body.setWordWrap(True)
+        set_style(body, "color:#8fa6c0;")
+        layout.addWidget(body)
+        button = QPushButton("Открыть дрон-монитор")
+        button.setMinimumHeight(36)
+        button.clicked.connect(self._show_drone_window)
+        layout.addWidget(button)
+        layout.addStretch(1)
+        return page
+
+    def _show_drone_window(self) -> None:
+        window = getattr(self, "drone_window", None)
+        if window is None:
+            return
+        window.show_and_raise()
+
+    def _build_menu(self) -> None:
+        bar = self.menuBar()
+
+        file_menu = bar.addMenu("Файл")
+        action = file_menu.addAction("Папка записей IQ")
+        action.triggered.connect(
+            lambda: QDesktopServices.openUrl(
+                QUrl.fromLocalFile(str(RECORDINGS_DIR))
+            )
+        )
+        action = file_menu.addAction("Импорт датасета…")
+        action.triggered.connect(lambda: self._import_dataset())
+        file_menu.addSeparator()
+        action = file_menu.addAction("Выход")
+        action.triggered.connect(lambda: self.close())
+
+        device_menu = bar.addMenu("Устройство")
+        action = device_menu.addAction("Найти Pluto")
+        action.triggered.connect(lambda: self._scan_pluto())
+        action = device_menu.addAction("Добавить симулятор")
+        action.triggered.connect(lambda: self._add_simulator())
+
+        monitor_menu = bar.addMenu("Монитор")
+        action = monitor_menu.addAction("Дрон-монитор…")
+        action.triggered.connect(self._show_drone_window)
+        monitor_menu.addSeparator()
+        action = monitor_menu.addAction("Сканер")
+        action.triggered.connect(
+            lambda: self.right_tabs.setCurrentWidget(self.scan_panel)
+        )
+        action = monitor_menu.addAction("Запись IQ")
+        action.triggered.connect(
+            lambda: self.right_tabs.setCurrentWidget(self.recording_panel)
+        )
+
+        view_menu = bar.addMenu("Вид")
+        theme_menu = view_menu.addMenu("Тема")
+        for index, (name, theme) in enumerate(
+            available_themes(theme_dir(DATA_DIR)).items()
+        ):
+            action = QAction(theme.title, theme_menu)
+            action.setCheckable(True)
+            action.setChecked(name == active_theme().name)
+            action.triggered.connect(
+                lambda checked=False, i=index: self.theme_combo.setCurrentIndex(i)
+            )
+            theme_menu.addAction(action)
+        view_menu.addSeparator()
+        action = view_menu.addAction("Папка тем")
+        action.triggered.connect(lambda: self._open_theme_folder())
+
+        help_menu = bar.addMenu("Справка")
+        action = help_menu.addAction("Документация")
+        action.triggered.connect(self._open_docs)
+        action = help_menu.addAction("Папка данных")
+        action.triggered.connect(
+            lambda: QDesktopServices.openUrl(
+                QUrl.fromLocalFile(str(DATA_DIR))
+            )
+        )
+        action = help_menu.addAction("О программе")
+        action.triggered.connect(self._open_about)
+
+    def _open_docs(self) -> None:
+        QDesktopServices.openUrl(
+            QUrl("https://github.com/MaxBond7/pluto-scanner/tree/main/docs")
+        )
+
+    def _open_about(self) -> None:
+        QMessageBox.about(
+            self,
+            "О программе",
+            f"{APP_NAME} {__version__}\n\n"
+            "Пассивный SDR-сканер и монитор дрон-полос.\n"
+            "Только приём: программа ничего не передаёт.\n\n"
+            "Модель обучения в поставку не входит — в приложении лежит "
+            "только маленький файл с весами.\n\n"
+            "Оценка «дрон / не дрон» — вероятность по обучающим данным, "
+            "а не гарантия. Определять модель дрона и дальность программа "
+            "не умеет.",
+        )
+
     def _on_theme_changed(self, index: int) -> None:
         name = self._theme_names.get(int(index)) or self.theme_combo.currentData()
         if not name:
@@ -357,6 +499,8 @@ class MainWindow(QMainWindow):
             return
         apply_theme(app, theme)
         retint(self)
+        if getattr(self, "drone_window", None) is not None:
+            retint(self.drone_window)
         for widget in (self.spectrum, self.waterfall,
                        self.scan_panel.graph, self.drone_panel.graph):
             retheme = getattr(widget, "retheme", None)
@@ -1564,7 +1708,7 @@ class MainWindow(QMainWindow):
         manager.reload_binary_model()
         self._pre_drone_frame = self._last_frame
         self._drone_audio_was_enabled = self.audio_enabled
-        self.right_tabs.setCurrentWidget(self.drone_panel)
+        self._show_drone_window()
         self.rx_group.setEnabled(False)
         self.band_group.setEnabled(False)
         self.vfo_panel.setEnabled(False)
@@ -1593,6 +1737,8 @@ class MainWindow(QMainWindow):
             record_iq=self.drone_panel.record_iq(),
             whitelist=self.drone_whitelist,
             background_store=self.drone_background,
+            background_map=self.drone_background_map,
+            skip_background=self.drone_panel.skip_background(),
             use_all_devices=True,
         ):
             self._drone_manager = None
@@ -1897,6 +2043,9 @@ class MainWindow(QMainWindow):
         return str(path.resolve())
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        window = getattr(self, "drone_window", None)
+        if window is not None:
+            window.close()
         self.shutdown()
         super().closeEvent(event)
 

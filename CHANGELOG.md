@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-04
+
+- The drone monitor moved into its own window (1320×900) with the controls in
+  one row, a full-width graph and a wide event table. The main window keeps a
+  short launcher tab, so the other panels got their space back.
+- The main window now has a menu bar: Файл, Устройство, Монитор, Вид (with a
+  theme submenu), Справка. The left control column scrolls instead of
+  squashing its widgets on a small screen.
+- Learned background map: the monitor records which parts of the band are
+  occupied during the first seconds, freezes that map, and marks such signals
+  as `фон` instead of raising a false alarm. New activity still alarms. The
+  rule is a checkbox in the monitor settings.
+- Tests for the map: persistent signal, new signal, freeze, per-band storage
+  and the tracker carrying the background share.
+
 ## [0.18.1] - 2026-11-04
 
 - Fixed the drone alarm banner: its background and its text were both taken

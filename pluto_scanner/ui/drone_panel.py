@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 from ..config import format_bw, format_freq
 from ..drone.bands import DRONE_BANDS, MonitorChunk, chunks_for_bands
 from ..drone.features import DroneObservation
+from ..drone.background import BACKGROUND_MARK
 from ..drone.tracker import DroneEvent
 from .drone_graph import DroneGraph
 from .themes import set_style, tcol
@@ -55,11 +56,16 @@ def _binary_short(event: DroneEvent) -> str:
     """Short text for the binary model column."""
     data = event.binary or {}
     if not data:
-        return "—"
-    if str(data.get("verdict") or "") == "unknown":
-        return "н/д"
-    text = f"{float(data.get('score') or 0.0) * 100:.0f}%"
-    return f"{text} Wi-Fi?" if event.wideband else text
+        text = "—"
+    elif str(data.get("verdict") or "") == "unknown":
+        text = "н/д"
+    else:
+        text = f"{float(data.get('score') or 0.0) * 100:.0f}%"
+        if event.wideband:
+            text += " Wi-Fi?"
+    if event.background >= BACKGROUND_MARK:
+        return "фон" if text in ("—", "н/д") else f"{text} · фон"
+    return text
 
 
 class DronePanel(QWidget):
@@ -109,7 +115,13 @@ class DronePanel(QWidget):
             check.toggled.connect(self._update_estimate)
             self.band_checks[band.key] = check
             bgrid.addWidget(check, index // 3, index % 3)
-        root.addWidget(bands_box)
+        # The monitor lives in its own window, so the controls sit in one row
+        # instead of a long column.
+        self.controls = QHBoxLayout()
+        self.controls.setSpacing(8)
+        left_col = QVBoxLayout()
+        left_col.setSpacing(4)
+        left_col.addWidget(bands_box)
 
         self.extended_check = QCheckBox(
             "Разрешить 5.8 ГГц (Pluto+ / расширенный диапазон)"
@@ -120,7 +132,9 @@ class DronePanel(QWidget):
             "Pluto+ и модифицированные версии могут работать до 6 ГГц. "
             "Если 5.8 ГГц не поддерживается, снимите этот флажок."
         )
-        root.addWidget(self.extended_check)
+        left_col.addWidget(self.extended_check)
+
+        self.controls.addLayout(left_col, 2)
 
         params = QGroupBox("Параметры монитора")
         grid = QGridLayout(params)
@@ -206,14 +220,26 @@ class DronePanel(QWidget):
             "сигнатур. Отключайте, если экономите место."
         )
         grid.addWidget(self.record_iq_check, 4, 0, 1, 4)
+
+        self.background_check = QCheckBox("?? ????????? ??????? ???????")
+        self.background_check.setChecked(True)
+        self.background_check.setToolTip(
+            "???????, ??????? ???? ? ????? ??? ????? ???????? ???? "
+            "(??????, ????? ???????, ??????), ???????? ? ??????? ? "
+            "???????? ?????, ?? ??????? ?? ?????????. ????? ?????????? "
+            "???????? ??? ??????."
+        )
+        grid.addWidget(self.background_check, 5, 0, 1, 4)
         grid.setColumnStretch(1, 1)
         grid.setColumnStretch(3, 1)
-        root.addWidget(params)
+        self.controls.addWidget(params, 3)
 
+        side = QVBoxLayout()
+        side.setSpacing(4)
         self.estimate = QLabel("")
         self.estimate.setWordWrap(True)
         set_style(self.estimate, "color:#8fa6c0; font-size:10px;")
-        root.addWidget(self.estimate)
+        side.addWidget(self.estimate)
 
         actions = QHBoxLayout()
         actions.setSpacing(6)
@@ -227,7 +253,7 @@ class DronePanel(QWidget):
         actions.addWidget(self.start_btn, 1)
         actions.addWidget(self.folder_btn)
         actions.addWidget(self.whitelist_btn)
-        root.addLayout(actions)
+        side.addLayout(actions)
 
         self.alarm = QLabel("")
         self.alarm.setWordWrap(True)
@@ -249,7 +275,10 @@ class DronePanel(QWidget):
         self.device_hint = QLabel("Устройства появятся после старта.")
         set_style(self.device_hint, "color:#64748b; font-size:10px;")
         self.device_layout.addWidget(self.device_hint)
-        root.addWidget(self.device_box)
+        side.addWidget(self.device_box)
+
+        self.controls.addLayout(side, 2)
+        root.addLayout(self.controls)
 
         self.graph = DroneGraph()
         self.graph.setMinimumHeight(200)
@@ -316,7 +345,12 @@ class DronePanel(QWidget):
     def alarm_confidence(self) -> float:
         return max(0.0, min(1.0, float(self.alarm_conf_spin.value()) / 100.0))
 
+    def skip_background(self) -> bool:
+        return bool(self.background_check.isChecked())
+
     def is_confirmed(self, event: DroneEvent) -> bool:
+        if self.skip_background() and event.background >= BACKGROUND_MARK:
+            return False
         return (
             bool(event.drone_like)
             and event.count >= self.alarm_hits()
@@ -381,7 +415,7 @@ class DronePanel(QWidget):
             self.rate_combo, self.dwell_spin, self.threshold_spin,
             self.use_all_check, self.extended_check, self.high_usb_check,
             self.alarm_hits_spin, self.alarm_conf_spin,
-            self.record_iq_check,
+            self.record_iq_check, self.background_check,
         ):
             widget.setEnabled(False)
         for check in self.band_checks.values():
@@ -420,6 +454,8 @@ class DronePanel(QWidget):
             color = QColor(tcol("#64748b"))
         elif event.class_key == "OVERLOAD":
             color = QColor(tcol("#facc15"))
+        elif event.background >= BACKGROUND_MARK:
+            color = QColor(tcol("#64748b"))
         elif self.is_confirmed(event):
             color = QColor(tcol("#f87171"))
         elif event.drone_like:
@@ -548,7 +584,7 @@ class DronePanel(QWidget):
             self.rate_combo, self.dwell_spin, self.threshold_spin,
             self.use_all_check, self.extended_check, self.high_usb_check,
             self.alarm_hits_spin, self.alarm_conf_spin,
-            self.record_iq_check,
+            self.record_iq_check, self.background_check,
         ):
             widget.setEnabled(True)
         for check in self.band_checks.values():

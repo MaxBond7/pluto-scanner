@@ -14,7 +14,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 
 from ..config import format_freq
 from ..dsp.spectrum import SpectrumAnalyzer
-from .background import DroneBackgroundStore
+from .background import BackgroundMap, DroneBackgroundStore
 from .bands import MonitorChunk
 from .features import DroneObservation, QUIET, analyze_iq
 
@@ -38,6 +38,7 @@ class DroneWatchController(QObject):
         threshold_db: float = 6.0,
         min_blocks: int = 2,
         background_store: DroneBackgroundStore | None = None,
+        background_map: BackgroundMap | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -58,6 +59,7 @@ class DroneWatchController(QObject):
         self._original: dict | None = None
         self._noise_floors: dict[str, float] = {}
         self._background_store = background_store
+        self._background_map = background_map
         self._bg_updates: dict[str, int] = {}
         self._bg_saved: dict[str, float] = {}
         self._analyzer = SpectrumAnalyzer(nfft=4096)
@@ -208,6 +210,12 @@ class DroneWatchController(QObject):
             self._analyzed_current = True
             return
         self._analyzed_current = True
+        if self._background_map is not None:
+            try:
+                obs.extra["gain_db"] = float(self.session.config.gain)
+                obs.extra["background"] = self._background_map.observe(obs)
+            except Exception:
+                log.debug("background map update failed", exc_info=True)
         self._update_baseline(obs)
         self.observation.emit(obs)
 

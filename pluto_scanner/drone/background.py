@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -145,3 +145,203 @@ class DroneBackgroundStore:
             profile.updated = time.time()
         self.save()
         return profile
+
+# --------------------------------------------------------------- spectrum map
+BACKGROUND_BINS = 32
+BACKGROUND_MIN_FRAMES = 40      # ~1 s before the map is trusted
+BACKGROUND_LEARN_FRAMES = 400   # learn the site for ~8 s, then freeze
+BACKGROUND_MARK = 0.6           # share of persistent bins to call it "background"
+
+
+@dataclass
+class SpectrumProfile:
+    """How often each part of the band was occupied while we listened.
+
+    ``occupancy`` is the share of learned frames where that bin was above the
+    floor.  A Wi-Fi access point gives 0.8-1.0, a passing drone a few
+    hundredths, so the map separates "lives here" from "appeared now".
+    """
+
+    device_id: str
+    band_key: str
+    gain_db: float
+    sample_rate: float
+    occupancy: list[float] = field(default_factory=list)
+    frames: int = 0
+    updated: float = 0.0
+
+    @property
+    def key(self) -> str:
+        return (
+            f"{self.device_id}|{self.band_key}|"
+            f"{self.gain_db:.1f}|{self.sample_rate / 1e6:.3f}"
+        )
+
+    @property
+    def ready(self) -> bool:
+        return self.frames >= BACKGROUND_MIN_FRAMES
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "device_id": self.device_id,
+            "band_key": self.band_key,
+            "gain_db": round(float(self.gain_db), 2),
+            "sample_rate": round(float(self.sample_rate), 1),
+            "occupancy": [round(float(v), 3) for v in self.occupancy],
+            "frames": int(self.frames),
+            "updated": round(float(self.updated), 3),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SpectrumProfile":
+        return cls(
+            device_id=str(data.get("device_id") or ""),
+            band_key=str(data.get("band_key") or ""),
+            gain_db=float(data.get("gain_db") or 0.0),
+            sample_rate=float(data.get("sample_rate") or 0.0),
+            occupancy=[float(v) for v in data.get("occupancy") or []],
+            frames=int(data.get("frames") or 0),
+            updated=float(data.get("updated") or 0.0),
+        )
+
+
+def active_bins(spectrum_db, bins: int = BACKGROUND_BINS) -> list[bool] | None:
+    """Mark the coarse bins that are above the block's own floor."""
+    import numpy as np
+
+    spec = np.asarray(spectrum_db, dtype=np.float64)
+    if spec.size < bins * 4 or not bool(np.isfinite(spec).all()):
+        return None
+    floor = float(np.percentile(spec, 25.0))
+    above = spec > floor + 6.0
+    edges = np.linspace(0, spec.size, bins + 1).astype(int)
+    return [
+        bool(above[start:end].mean() >= 0.5)
+        for start, end in zip(edges[:-1], edges[1:])
+    ]
+
+
+class BackgroundMap:
+    """Persistent map of the signals that are always there.
+
+    The map is learned during the first seconds of a session and then frozen:
+    a drone that appears later can never teach the program that drones are
+    background.  It is stored per device, band, gain and sample rate, because
+    a different antenna changes the picture completely.
+    """
+
+    def __init__(
+        self,
+        path: str | Path | None = None,
+        *,
+        learn_frames: int = BACKGROUND_LEARN_FRAMES,
+    ) -> None:
+        self.path = (
+            Path(path)
+            if path is not None
+            else DATA_DIR / "background_map.json"
+        )
+        self.learn_frames = max(10, int(learn_frames))
+        self.profiles: dict[str, SpectrumProfile] = {}
+        self.load()
+
+    def load(self) -> None:
+        self.profiles = {}
+        try:
+            if not self.path.exists():
+                return
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            for item in data.get("profiles", []):
+                profile = SpectrumProfile.from_dict(item)
+                if profile.occupancy:
+                    self.profiles[profile.key] = profile
+        except Exception:
+            self.profiles = {}
+
+    def save(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "profiles": [
+                        profile.to_dict()
+                        for profile in self.profiles.values()
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+    def _profile(self, obs, *, create: bool) -> SpectrumProfile | None:
+        probe = SpectrumProfile(
+            device_id=str(obs.device_id),
+            band_key=str(obs.band_key),
+            gain_db=float(
+                (getattr(obs, "extra", {}) or {}).get("gain_db", 0.0) or 0.0
+            ),
+            sample_rate=float(obs.sample_rate),
+        )
+        profile = self.profiles.get(probe.key)
+        if profile is None and create:
+            profile = probe
+            profile.occupancy = [0.0] * BACKGROUND_BINS
+            self.profiles[probe.key] = profile
+        return profile
+
+    def observe(self, obs) -> float:
+        """Return the persistent share of this block and learn while allowed.
+
+        The result is 0.0 until the map has seen enough frames, so the first
+        second of a session cannot mark everything as background.
+        """
+        mask = active_bins(getattr(obs, "spectrum_db", []))
+        if mask is None or not any(mask):
+            return 0.0
+        profile = self._profile(obs, create=True)
+        if profile is None:
+            return 0.0
+        if profile.frames:
+            occupancy = profile.occupancy
+            fraction = sum(
+                occupancy[index] for index, flag in enumerate(mask) if flag
+            ) / max(1, sum(1 for flag in mask if flag))
+        else:
+            fraction = 0.0
+        if profile.frames < self.learn_frames:
+            weight = 1.0 / (profile.frames + 1)
+            profile.occupancy = [
+                (old * profile.frames + (1.0 if flag else 0.0)) * weight
+                for old, flag in zip(profile.occupancy, mask)
+            ]
+            profile.frames += 1
+            profile.updated = time.time()
+            if profile.frames % 25 == 0 or profile.frames == self.learn_frames:
+                self.save()
+        if profile.frames < BACKGROUND_MIN_FRAMES:
+            return 0.0
+        return float(fraction)
+
+    def is_background(self, fraction: float) -> bool:
+        return float(fraction) >= BACKGROUND_MARK
+
+    def reset(self, device_id: str | None = None) -> int:
+        if device_id is None:
+            count = len(self.profiles)
+            self.profiles = {}
+        else:
+            keys = [
+                key for key, profile in self.profiles.items()
+                if profile.device_id == device_id
+            ]
+            count = len(keys)
+            for key in keys:
+                del self.profiles[key]
+        self.save()
+        return count
+
+    def ready(self, obs) -> bool:
+        profile = self._profile(obs, create=False)
+        return bool(profile is not None and profile.ready)

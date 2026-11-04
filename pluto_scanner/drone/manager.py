@@ -12,7 +12,7 @@ from ..ml.binary import BinaryModel
 from ..ml.model import SoftmaxModel
 from ..paths import DATA_DIR, DEFAULT_BINARY_MODEL, DEFAULT_ML_MODEL
 from ..scanner.recorder import ranges_overlap
-from .background import DroneBackgroundStore
+from .background import BACKGROUND_MARK, BackgroundMap, DroneBackgroundStore
 from .bands import DroneBand, MonitorChunk, chunks_for_bands
 from .controller import DroneWatchController
 from .features import DroneObservation
@@ -124,6 +124,8 @@ class DroneMonitorManager(QObject):
         max_clips: int = 100,
         whitelist: DroneWhitelist | None = None,
         background_store: DroneBackgroundStore | None = None,
+        background_map: BackgroundMap | None = None,
+        skip_background: bool = True,
         use_all_devices: bool = True,
         out_dir: str | Path = "drone_logs",
     ) -> bool:
@@ -183,6 +185,8 @@ class DroneMonitorManager(QObject):
         self._clip_count = 0
         self._whitelist = whitelist
         self._background_store = background_store
+        self._background_map = background_map
+        self._skip_background = bool(skip_background)
         self._finalized = False
         self._stopping = False
         self._starting = True
@@ -201,6 +205,7 @@ class DroneMonitorManager(QObject):
                 dwell_ms=dwell_ms,
                 threshold_db=threshold_db,
                 background_store=background_store,
+                background_map=background_map,
                 parent=self,
             )
             controller.observation.connect(self._on_observation)
@@ -318,6 +323,12 @@ class DroneMonitorManager(QObject):
         # model confidently calls "background" is exactly the Wi-Fi/voice case
         # this feature exists for.
         if (event.binary or {}).get("verdict") == "background":
+            self._alarm_suppressed += 1
+            return
+        # A signal that was already there while the map was being learned
+        # is the local Wi-Fi/Bluetooth furniture, not a new drone.  It is
+        # still shown in the table with a "background" mark.
+        if self._skip_background and event.background >= BACKGROUND_MARK:
             self._alarm_suppressed += 1
             return
         self._last_alarm[event.event_id] = now
