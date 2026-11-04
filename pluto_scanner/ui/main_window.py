@@ -345,6 +345,7 @@ class MainWindow(QMainWindow):
         # lives in its own window instead of a narrow tab.
         self.drone_window = DroneWindow(self.drone_panel, self)
         self._build_menu()
+        self._refresh_background_status()
 
         # status bar
         self.status_label = QLabel("Готов")
@@ -545,6 +546,10 @@ class MainWindow(QMainWindow):
         self.drone_panel.stop_requested.connect(self._stop_drone)
         self.drone_panel.event_activated.connect(self._open_drone_event)
         self.drone_panel.whitelist_requested.connect(self._open_whitelist)
+        self.drone_panel.background_requested.connect(self._start_background)
+        self.drone_panel.background_stop_requested.connect(
+            self._stop_background
+        )
         self.recording_panel.record_requested.connect(self._start_recording)
         self.recording_panel.stop_requested.connect(self._stop_recording)
         self.recording_panel.play_requested.connect(self._play_recording)
@@ -1728,10 +1733,13 @@ class MainWindow(QMainWindow):
         self.drone_panel.begin_monitor(
             devices, len(bands), len(chunks)
         )
+        bg_note = "" if self.drone_background_map.profiles else (
+            " · фон не записан: тревоги на все сигналы"
+        )
         set_style(self.status_label, "color:#f472b6;")
         self.status_label.setText(
             f"Дрон-монитор: {len(bands)} полос, {len(chunks)} кусков"
-            f"{rate_note}…"
+            f"{rate_note}{bg_note}…"
         )
         if not manager.start(
             sessions,
@@ -1752,6 +1760,129 @@ class MainWindow(QMainWindow):
             manager.deleteLater()
             self._end_drone_ui()
             self._fail_drone("Не удалось запустить дрон-монитор.")
+
+    # -------------------------------------------------------------- background
+    def _refresh_background_status(self) -> None:
+        profiles = self.drone_background_map.profiles
+        if not profiles:
+            self.drone_panel.set_background_status(
+                "Фон: не записан — тревоги будут на все сигналы"
+            )
+            return
+        bands = len({profile.band_key for profile in profiles.values()})
+        self.drone_panel.set_background_status(
+            f"Фон: записан ранее ({bands} полос(ы))"
+        )
+
+    def _start_background(self) -> None:
+        """Record the persistent signals only; no drone search, no alarms."""
+        if self._drone_active or self._recording:
+            return
+        if self._scanning:
+            self._stop_scan()
+        if not self.sessions:
+            self._fail_drone("??? ?????????. ???????? Pluto+ ??? ?????????.")
+            return
+        if self.drone_panel.use_all_devices():
+            sessions = list(self.sessions.values())
+        else:
+            session = self.sessions.get(self.selected_id) if self.selected_id else None
+            if session is None:
+                self._fail_drone("???????? ?????????? ??? ?????? ????.")
+                return
+            sessions = [session]
+        sessions = [
+            session for session in sessions
+            if session.config.kind != "iqfile" and session.worker.isRunning()
+        ]
+        if not sessions:
+            self._fail_drone(
+                "??? ?????? ???? ????? Pluto ??? ?????????; ?????? IQ ?? ????????."
+            )
+            return
+        bands = selected_bands(self.drone_panel.selected_band_keys())
+        if not bands:
+            self._fail_drone("???????? ???? ?? ???? ??????.")
+            return
+        if (any(band.requires_extended for band in bands)
+                and not self.drone_panel.extended_allowed()):
+            self._fail_drone(
+                "??? 5.8 ??? ???????? ?????????? 5.8 ??? (Pluto+)?."
+            )
+            return
+        sample_rate = self.drone_panel.sample_rate()
+        chunks = chunks_for_bands(bands, sample_rate)
+        seconds = self.drone_panel.background_seconds()
+
+        manager = DroneMonitorManager(self)
+        manager.background_progress.connect(self._on_background_progress)
+        manager.background_done.connect(self._on_background_done)
+        manager.status.connect(self._on_drone_status)
+        manager.device_status.connect(self.drone_panel.update_device_status)
+        manager.error.connect(self._on_drone_error)
+        self._drone_manager = manager
+        self._drone_active = True
+        self._pre_drone_frame = self._last_frame
+        self._show_drone_window()
+        self.drone_panel.begin_background()
+        self.rx_group.setEnabled(False)
+        self.band_group.setEnabled(False)
+        self.vfo_panel.setEnabled(False)
+        self.audio_btn.setEnabled(False)
+        self.scan_panel.set_device_enabled(False)
+        self.scan_panel.set_can_compare(False)
+        set_style(self.status_label, "color:#f2f2f2;")
+        self.status_label.setText(
+            f"?????? ????: {len(bands)} ?????, {seconds:.0f} ??"
+        )
+        if not manager.start(
+            sessions,
+            bands,
+            sample_rate=sample_rate,
+            dwell_ms=self.drone_panel.dwell_ms(),
+            threshold_db=self.drone_panel.threshold_db(),
+            background_map=self.drone_background_map,
+            skip_background=self.drone_panel.skip_background(),
+            background_only=True,
+            background_seconds=seconds,
+            record_iq=False,
+            use_all_devices=True,
+        ):
+            self._drone_manager = None
+            manager.deleteLater()
+            self.drone_panel.end_background(None)
+            self._end_drone_ui()
+            self._fail_drone("?? ??????? ????????? ?????? ????.")
+
+    def _stop_background(self) -> None:
+        manager = self._drone_manager
+        if manager is None:
+            return
+        self.drone_panel.set_background_status("???????????? ?????? ?????")
+        manager.stop()
+
+    def _on_background_progress(self, percent: int, text: str) -> None:
+        self.drone_panel.set_background_status(text)
+        self.status_label.setText(text)
+
+    def _on_background_done(self, summary: dict) -> None:
+        self.drone_panel.end_background(summary)
+        self._end_drone_ui()
+        manager, self._drone_manager = self._drone_manager, None
+        if manager is not None:
+            manager.deleteLater()
+        failure = str((summary or {}).get("failure") or "")
+        if failure:
+            set_style(self.status_label, "color:#f87171;")
+            self.status_label.setText(f"?????? ????: {failure}")
+            return
+        frames = int((summary or {}).get("frames", 0))
+        profiles = int((summary or {}).get("profiles", 0))
+        set_style(self.status_label, "color:#4ade80;")
+        self.status_label.setText(
+            f"??? ???????: {frames} ??????, ????? {profiles}. "
+            "?????? ????? ????????? ???????."
+        )
 
     def _fail_drone(self, message: str) -> None:
         self.drone_panel.fail(message)

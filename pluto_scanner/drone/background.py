@@ -215,10 +215,16 @@ def active_bins(spectrum_db, bins: int = BACKGROUND_BINS) -> list[bool] | None:
     floor = float(np.percentile(spec, 25.0))
     above = spec > floor + 6.0
     edges = np.linspace(0, spec.size, bins + 1).astype(int)
-    return [
-        bool(above[start:end].mean() >= 0.5)
-        for start, end in zip(edges[:-1], edges[1:])
-    ]
+    result: list[bool] = []
+    for start, end in zip(edges[:-1], edges[1:]):
+        span = max(1, end - start)
+        # A wide signal lifts most of the bin; a narrow carrier only a few
+        # points of it.  Both are permanent residents and both must count,
+        # otherwise a Bluetooth beacon or a baby monitor would be missed.
+        wide = float(above[start:end].mean()) >= 0.5
+        strong = float(np.max(spec[start:end]) - floor) >= 12.0
+        result.append(bool(wide or strong))
+    return result
 
 
 class BackgroundMap:
@@ -291,41 +297,46 @@ class BackgroundMap:
             self.profiles[probe.key] = profile
         return profile
 
-    def observe(self, obs) -> float:
-        """Return the persistent share of this block and learn while allowed.
+    def learn(self, obs) -> None:
+        """Add one block to the map (the dedicated background recording).
 
-        The result is 0.0 until the map has seen enough frames, so the first
-        second of a session cannot mark everything as background.
+        Learning is a separate action on purpose: if the live monitor taught
+        the map, a drone hovering nearby for a minute would slowly become
+        "background" itself.
         """
         mask = active_bins(getattr(obs, "spectrum_db", []))
         if mask is None:
-            return 0.0
+            return
         profile = self._profile(obs, create=True)
-        if profile is None:
+        if profile is None or profile.frames >= self.learn_frames:
+            return
+        weight = 1.0 / (profile.frames + 1)
+        profile.occupancy = [
+            (old * profile.frames + (1.0 if flag else 0.0)) * weight
+            for old, flag in zip(profile.occupancy, mask)
+        ]
+        profile.frames += 1
+        profile.updated = time.time()
+        if profile.frames % 25 == 0 or profile.frames == self.learn_frames:
+            self.save()
+
+    def observe(self, obs) -> float:
+        """Return the persistent share of this block (read-only).
+
+        The monitor never teaches the map; it only asks how much of the
+        current activity is already known.
+        """
+        mask = active_bins(getattr(obs, "spectrum_db", []))
+        if mask is None or not any(mask):
             return 0.0
-        # Learn on every block, including quiet ones: a band where nothing
-        # ever happens must also finish its learning window, otherwise a
-        # drone that shows up an hour later would feed the map itself.
-        if profile.frames >= BACKGROUND_MIN_FRAMES:
-            occupancy = profile.occupancy
-            fraction = sum(
-                occupancy[index] for index, flag in enumerate(mask) if flag
-            ) / max(1, sum(1 for flag in mask if flag))
-        else:
-            fraction = 0.0
-        if profile.frames < self.learn_frames:
-            weight = 1.0 / (profile.frames + 1)
-            profile.occupancy = [
-                (old * profile.frames + (1.0 if flag else 0.0)) * weight
-                for old, flag in zip(profile.occupancy, mask)
-            ]
-            profile.frames += 1
-            profile.updated = time.time()
-            if profile.frames % 25 == 0 or profile.frames == self.learn_frames:
-                self.save()
-        if profile.frames < BACKGROUND_MIN_FRAMES or not any(mask):
+        profile = self._profile(obs, create=False)
+        if profile is None or profile.frames < BACKGROUND_MIN_FRAMES:
             return 0.0
-        return float(fraction)
+        occupancy = profile.occupancy
+        return float(
+            sum(occupancy[index] for index, flag in enumerate(mask) if flag)
+            / max(1, sum(1 for flag in mask if flag))
+        )
 
     def is_background(self, fraction: float) -> bool:
         return float(fraction) >= BACKGROUND_MARK

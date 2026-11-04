@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-04
+
+- Background learning is now a separate action: a **«Записать фон»** button in
+  the monitor window records the persistent signals for 20–600 seconds and
+  freezes the map. The drone monitor only reads that map and never teaches it,
+  so a drone hovering nearby cannot become "background" itself.
+- The monitor reports whether a map exists; without one it says honestly that
+  every signal will alarm.
+- Narrow persistent carriers (Bluetooth, cameras) now count as background too,
+  not just wide Wi-Fi plateaus.
+- Smoke-tested end to end on the simulator: recorded background → 12 events →
+  all marked `фон`, no alarms.
+
 ## [0.19.0] - 2026-11-04
 
 - The drone monitor moved into its own window (1320×900) with the controls in

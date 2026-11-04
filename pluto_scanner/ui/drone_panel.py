@@ -73,6 +73,8 @@ class DronePanel(QWidget):
     stop_requested = Signal()
     event_activated = Signal(str)
     whitelist_requested = Signal()
+    background_requested = Signal()
+    background_stop_requested = Signal()
 
     HEADERS = [
         "Время", "Полоса", "Класс", "Частота", "Ширина",
@@ -86,6 +88,7 @@ class DronePanel(QWidget):
         self._events: dict[str, DroneEvent] = {}
         self._device_labels: dict[str, QLabel] = {}
         self._device_names: dict[str, str] = {}
+        self._background_running = False
 
         root = QVBoxLayout(self)
         root.setContentsMargins(6, 6, 6, 6)
@@ -230,6 +233,28 @@ class DronePanel(QWidget):
             "???????? ??? ??????."
         )
         grid.addWidget(self.background_check, 5, 0, 1, 4)
+
+        bg_row = QHBoxLayout()
+        bg_row.setSpacing(6)
+        self.background_btn = QPushButton("???????? ???")
+        self.background_btn.setToolTip(
+            "????????? ????? ??????: ??????? ??????? ????????? ??????, "
+            "?? ?? ???? ??????, ? ?????????? ?????????? ???????. "
+            "????? ??? ?????????? ??? ?????."
+        )
+        self.background_btn.clicked.connect(self._toggle_background)
+        bg_row.addWidget(self.background_btn)
+        self.background_seconds_spin = QDoubleSpinBox()
+        self.background_seconds_spin.setRange(20.0, 600.0)
+        self.background_seconds_spin.setDecimals(0)
+        self.background_seconds_spin.setSuffix(" ?")
+        self.background_seconds_spin.setValue(60.0)
+        bg_row.addWidget(self.background_seconds_spin)
+        self.background_status = QLabel("???: ?? ???????")
+        self.background_status.setWordWrap(True)
+        set_style(self.background_status, "color:#64748b; font-size:10px;")
+        bg_row.addWidget(self.background_status, 1)
+        grid.addLayout(bg_row, 6, 0, 1, 4)
         grid.setColumnStretch(1, 1)
         grid.setColumnStretch(3, 1)
         self.controls.addWidget(params, 3)
@@ -345,6 +370,57 @@ class DronePanel(QWidget):
     def alarm_confidence(self) -> float:
         return max(0.0, min(1.0, float(self.alarm_conf_spin.value()) / 100.0))
 
+    def background_seconds(self) -> float:
+        return float(self.background_seconds_spin.value())
+
+    def _toggle_background(self) -> None:
+        if self._background_running:
+            self.background_stop_requested.emit()
+        else:
+            self.background_requested.emit()
+
+    def begin_background(self) -> None:
+        self._background_running = True
+        self.background_btn.setText("?????????? ??????")
+        self.background_btn.setEnabled(True)
+        self.background_seconds_spin.setEnabled(False)
+        for widget in (
+            self.rate_combo, self.dwell_spin, self.threshold_spin,
+            self.use_all_check, self.extended_check, self.high_usb_check,
+            self.alarm_hits_spin, self.alarm_conf_spin,
+            self.record_iq_check, self.background_check,
+        ):
+            widget.setEnabled(False)
+        for check in self.band_checks.values():
+            check.setEnabled(False)
+        self.start_btn.setEnabled(False)
+        self.set_background_status("?????? ?????")
+
+    def end_background(self, summary: dict | None = None) -> None:
+        self._background_running = False
+        self.background_btn.setText("???????? ???")
+        self.background_btn.setEnabled(True)
+        self.background_seconds_spin.setEnabled(True)
+        for widget in (
+            self.rate_combo, self.dwell_spin, self.threshold_spin,
+            self.use_all_check, self.extended_check, self.high_usb_check,
+            self.alarm_hits_spin, self.alarm_conf_spin,
+            self.record_iq_check, self.background_check,
+            self.background_btn, self.background_seconds_spin,
+        ):
+            widget.setEnabled(True)
+        for check in self.band_checks.values():
+            check.setEnabled(True)
+        self.start_btn.setEnabled(True)
+        frames = int((summary or {}).get("frames", 0))
+        profiles = int((summary or {}).get("profiles", 0))
+        self.set_background_status(
+            f"??? ???????: {frames} ??????, ????? {profiles}"
+        )
+
+    def set_background_status(self, text: str) -> None:
+        self.background_status.setText(str(text))
+
     def skip_background(self) -> bool:
         return bool(self.background_check.isChecked())
 
@@ -416,6 +492,7 @@ class DronePanel(QWidget):
             self.use_all_check, self.extended_check, self.high_usb_check,
             self.alarm_hits_spin, self.alarm_conf_spin,
             self.record_iq_check, self.background_check,
+            self.background_btn, self.background_seconds_spin,
         ):
             widget.setEnabled(False)
         for check in self.band_checks.values():

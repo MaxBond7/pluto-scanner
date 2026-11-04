@@ -46,7 +46,7 @@ def test_persistent_signal_becomes_background(tmp_path):
     model = BackgroundMap(tmp_path / "map.json")
     wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
     for _ in range(120):
-        model.observe(wifi)
+        model.learn(wifi)
     fraction = model.observe(wifi)
     assert fraction > 0.9
     assert model.is_background(fraction)
@@ -56,7 +56,7 @@ def test_new_signal_stays_new(tmp_path):
     model = BackgroundMap(tmp_path / "map.json")
     wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
     for _ in range(120):
-        model.observe(wifi)
+        model.learn(wifi)
     # A narrow burst in a quiet part of the band must not be called background.
     fresh = _observation(_spectrum({(0.70, 0.75): 18.0}))
     fraction = model.observe(fresh)
@@ -68,10 +68,10 @@ def test_map_freezes_after_learning(tmp_path):
     model = BackgroundMap(tmp_path / "map.json", learn_frames=60)
     wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
     for _ in range(80):
-        model.observe(wifi)
+        model.learn(wifi)
     post = _observation(_spectrum({(0.70, 0.75): 18.0}))
     for _ in range(20):
-        model.observe(post)
+        model.learn(post)
     profile = next(iter(model.profiles.values()))
     assert profile.frames == 60
     assert max(profile.occupancy) > 0.9
@@ -81,7 +81,8 @@ def test_map_is_not_trusted_before_min_frames(tmp_path):
     model = BackgroundMap(tmp_path / "map.json")
     wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
     for _ in range(10):
-        assert model.observe(wifi) == 0.0
+        model.learn(wifi)
+    assert model.observe(wifi) == 0.0
 
 
 def test_map_roundtrip(tmp_path):
@@ -89,7 +90,7 @@ def test_map_roundtrip(tmp_path):
     model = BackgroundMap(path)
     wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
     for _ in range(60):
-        model.observe(wifi)
+        model.learn(wifi)
     model.save()
     again = BackgroundMap(path)
     assert len(again.profiles) == 1
@@ -103,10 +104,10 @@ def test_map_is_per_band(tmp_path):
     model = BackgroundMap(tmp_path / "map.json")
     wifi = _observation(_spectrum({(0.30, 0.45): 20.0}), band="2.4")
     for _ in range(60):
-        model.observe(wifi)
+        model.learn(wifi)
     other_band = _observation(_spectrum({(0.30, 0.45): 20.0}), band="5.8")
     assert model.observe(other_band) == 0.0
-    assert len(model.profiles) == 2
+    assert len(model.profiles) == 1
 
 def test_tracker_keeps_the_strongest_background_share():
     from pluto_scanner.drone.tracker import DroneTracker
@@ -128,3 +129,18 @@ def test_tracker_keeps_the_strongest_background_share():
     tracker.update(obs(0.9))
     tracker.update(obs(0.4))
     assert event.background == 0.9
+
+def test_monitor_query_never_teaches_the_map(tmp_path):
+    model = BackgroundMap(tmp_path / "map.json")
+    wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
+    for _ in range(200):
+        assert model.observe(wifi) == 0.0
+    assert not model.profiles
+
+def test_narrow_carrier_still_marks_its_bin():
+    spec = np.full(256, -80.0)
+    spec[100] = -60.0
+    mask = active_bins(spec)
+    assert mask is not None
+    assert any(mask)
+    assert sum(mask) <= 2

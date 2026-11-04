@@ -15,7 +15,7 @@ from ..scanner.recorder import ranges_overlap
 from .background import BACKGROUND_MARK, BackgroundMap, DroneBackgroundStore
 from .bands import DroneBand, MonitorChunk, chunks_for_bands
 from .controller import DroneWatchController
-from .features import DroneObservation
+from .features import OVERLOAD, QUIET, DroneObservation
 from .recorder import DroneRecorder, make_drone_id
 from .tracker import DroneEvent, DroneTracker
 from .whitelist import DroneWhitelist
@@ -31,6 +31,8 @@ class DroneMonitorManager(QObject):
     status = Signal(str)                  # aggregate status
     device_status = Signal(str, str)      # device_id, text
     finished = Signal(object, str)        # summary, summary path
+    background_progress = Signal(int, str)  # percent, status text
+    background_done = Signal(object)      # summary dict
     error = Signal(str)
 
     def __init__(self, parent: QObject | None = None) -> None:
@@ -57,6 +59,11 @@ class DroneMonitorManager(QObject):
         self._clip_count = 0
         self._whitelist: DroneWhitelist | None = None
         self._background_store: DroneBackgroundStore | None = None
+        self._background_map: BackgroundMap | None = None
+        self._skip_background = True
+        self._background_only = False
+        self._background_seconds = 60.0
+        self._background_frames = 0
         self._ml_model: SoftmaxModel | None = (
             SoftmaxModel.load(DATA_DIR / "ml_model.json")
             or SoftmaxModel.load(DEFAULT_ML_MODEL)
@@ -126,6 +133,8 @@ class DroneMonitorManager(QObject):
         background_store: DroneBackgroundStore | None = None,
         background_map: BackgroundMap | None = None,
         skip_background: bool = True,
+        background_only: bool = False,
+        background_seconds: float = 60.0,
         use_all_devices: bool = True,
         out_dir: str | Path = "drone_logs",
     ) -> bool:
@@ -153,7 +162,7 @@ class DroneMonitorManager(QObject):
             assigned[index % len(targets)].append(chunk)
 
         drone_id = make_drone_id()
-        self._recorder = DroneRecorder(
+        self._recorder = None if background_only else DroneRecorder(
             Path(out_dir) / f"drone_{drone_id}",
             drone_id=drone_id,
             sample_rate=sample_rate,
@@ -187,6 +196,9 @@ class DroneMonitorManager(QObject):
         self._background_store = background_store
         self._background_map = background_map
         self._skip_background = bool(skip_background)
+        self._background_only = bool(background_only)
+        self._background_seconds = max(5.0, float(background_seconds))
+        self._background_frames = 0
         self._finalized = False
         self._stopping = False
         self._starting = True
@@ -236,6 +248,24 @@ class DroneMonitorManager(QObject):
     # ------------------------------------------------------------------- data
     def _on_observation(self, obs: DroneObservation) -> None:
         if not self._running:
+            return
+        if self._background_only:
+            # Quiet blocks are learned too: otherwise every bin that is
+            # ever active would look permanent, and a bursty Wi-Fi would
+            # turn the whole band into "background".
+            if (self._background_map is not None
+                    and obs.class_key != OVERLOAD):
+                self._background_map.learn(obs)
+                self._background_frames += 1
+            elapsed = time.monotonic() - self._started
+            percent = int(min(
+                100.0, 100.0 * elapsed / self._background_seconds
+            ))
+            self.background_progress.emit(
+                percent,
+                f"?????? ????: {percent}% ? "
+                f"{self._background_frames} ??????",
+            )
             return
         if self._ml_model is not None and obs.class_key not in (
             "QUIET", "OVERLOAD"
@@ -345,6 +375,10 @@ class DroneMonitorManager(QObject):
         )
 
     def _expire_events(self) -> None:
+        if (self._background_only and self._running
+                and time.monotonic() - self._started >= self._background_seconds):
+            self.stop()
+            return
         changed = self._tracker.expire()
         for event in changed:
             if self._recorder is not None:
@@ -406,6 +440,17 @@ class DroneMonitorManager(QObject):
         if self._finalized:
             return
         self._finalized = True
+        if self._background_only:
+            if self._background_map is not None:
+                self._background_map.save()
+            self.background_done.emit({
+                "frames": int(self._background_frames),
+                "duration_s": round(time.monotonic() - self._started, 2),
+                "profiles": len(self._background_map.profiles)
+                if self._background_map is not None else 0,
+                "failure": self._failure_message or "",
+            })
+            return
         for event in self._tracker.events():
             event.active = False
         summary = self._tracker.summary()
