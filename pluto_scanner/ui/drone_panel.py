@@ -224,23 +224,23 @@ class DronePanel(QWidget):
         )
         grid.addWidget(self.record_iq_check, 4, 0, 1, 4)
 
-        self.background_check = QCheckBox("?? ????????? ??????? ???????")
+        self.background_check = QCheckBox("Не тревожить фоновые сигналы")
         self.background_check.setChecked(True)
         self.background_check.setToolTip(
-            "???????, ??????? ???? ? ????? ??? ????? ???????? ???? "
-            "(??????, ????? ???????, ??????), ???????? ? ??????? ? "
-            "???????? ?????, ?? ??????? ?? ?????????. ????? ?????????? "
-            "???????? ??? ??????."
+            "Сигналы, которые были в эфире всё время обучения фона "
+            "(роутер, точка доступа, помеха), остаются в таблице с "
+            "пометкой «фон», но тревогу не поднимают. Новая активность "
+            "тревожит как обычно."
         )
         grid.addWidget(self.background_check, 5, 0, 1, 4)
 
         bg_row = QHBoxLayout()
         bg_row.setSpacing(6)
-        self.background_btn = QPushButton("???????? ???")
+        self.background_btn = QPushButton("Записать фон")
         self.background_btn.setToolTip(
-            "????????? ????? ??????: ??????? ??????? ????????? ??????, "
-            "?? ?? ???? ??????, ? ?????????? ?????????? ???????. "
-            "????? ??? ?????????? ??? ?????."
+            "Отдельный сеанс записи: монитор слушает выбранные полосы, "
+            "но не ищет дронов, а запоминает постоянные сигналы. "
+            "Потом они помечаются как «фон»."
         )
         self.background_btn.clicked.connect(self._toggle_background)
         bg_row.addWidget(self.background_btn)
@@ -250,11 +250,12 @@ class DronePanel(QWidget):
         self.background_seconds_spin.setSuffix(" ?")
         self.background_seconds_spin.setValue(60.0)
         bg_row.addWidget(self.background_seconds_spin)
-        self.background_status = QLabel("???: ?? ???????")
+        self.background_status = QLabel("Фон: не записан")
         self.background_status.setWordWrap(True)
         set_style(self.background_status, "color:#64748b; font-size:10px;")
-        bg_row.addWidget(self.background_status, 1)
+        bg_row.addStretch(1)
         grid.addLayout(bg_row, 6, 0, 1, 4)
+        grid.addWidget(self.background_status, 7, 0, 1, 4)
         grid.setColumnStretch(1, 1)
         grid.setColumnStretch(3, 1)
         self.controls.addWidget(params, 3)
@@ -381,7 +382,7 @@ class DronePanel(QWidget):
 
     def begin_background(self) -> None:
         self._background_running = True
-        self.background_btn.setText("?????????? ??????")
+        self.background_btn.setText("Остановить запись")
         self.background_btn.setEnabled(True)
         self.background_seconds_spin.setEnabled(False)
         for widget in (
@@ -394,11 +395,11 @@ class DronePanel(QWidget):
         for check in self.band_checks.values():
             check.setEnabled(False)
         self.start_btn.setEnabled(False)
-        self.set_background_status("?????? ?????")
+        self.set_background_status("Запись фона…")
 
     def end_background(self, summary: dict | None = None) -> None:
         self._background_running = False
-        self.background_btn.setText("???????? ???")
+        self.background_btn.setText("Записать фон")
         self.background_btn.setEnabled(True)
         self.background_seconds_spin.setEnabled(True)
         for widget in (
@@ -415,7 +416,7 @@ class DronePanel(QWidget):
         frames = int((summary or {}).get("frames", 0))
         profiles = int((summary or {}).get("profiles", 0))
         self.set_background_status(
-            f"??? ???????: {frames} ??????, ????? {profiles}"
+            f"Фон записан: {frames} блоков, полос {profiles}"
         )
 
     def set_background_status(self, text: str) -> None:

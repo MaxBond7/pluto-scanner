@@ -1781,14 +1781,14 @@ class MainWindow(QMainWindow):
         if self._scanning:
             self._stop_scan()
         if not self.sessions:
-            self._fail_drone("??? ?????????. ???????? Pluto+ ??? ?????????.")
+            self._fail_drone("Нет устройств. Добавьте Pluto+ или симулятор.")
             return
         if self.drone_panel.use_all_devices():
             sessions = list(self.sessions.values())
         else:
             session = self.sessions.get(self.selected_id) if self.selected_id else None
             if session is None:
-                self._fail_drone("???????? ?????????? ??? ?????? ????.")
+                self._fail_drone("Выберите устройство для записи фона.")
                 return
             sessions = [session]
         sessions = [
@@ -1797,17 +1797,17 @@ class MainWindow(QMainWindow):
         ]
         if not sessions:
             self._fail_drone(
-                "??? ?????? ???? ????? Pluto ??? ?????????; ?????? IQ ?? ????????."
+                "Для записи фона нужен Pluto или симулятор; запись IQ не подходит."
             )
             return
         bands = selected_bands(self.drone_panel.selected_band_keys())
         if not bands:
-            self._fail_drone("???????? ???? ?? ???? ??????.")
+            self._fail_drone("Выберите хотя бы одну полосу.")
             return
         if (any(band.requires_extended for band in bands)
                 and not self.drone_panel.extended_allowed()):
             self._fail_drone(
-                "??? 5.8 ??? ???????? ?????????? 5.8 ??? (Pluto+)?."
+                "Для 5.8 ГГц включите «Разрешить 5.8 ГГц (Pluto+)»."
             )
             return
         sample_rate = self.drone_panel.sample_rate()
@@ -1833,7 +1833,7 @@ class MainWindow(QMainWindow):
         self.scan_panel.set_can_compare(False)
         set_style(self.status_label, "color:#f2f2f2;")
         self.status_label.setText(
-            f"?????? ????: {len(bands)} ?????, {seconds:.0f} ??"
+            f"Запись фона: {len(bands)} полос, {seconds:.0f} с…"
         )
         if not manager.start(
             sessions,
@@ -1852,13 +1852,13 @@ class MainWindow(QMainWindow):
             manager.deleteLater()
             self.drone_panel.end_background(None)
             self._end_drone_ui()
-            self._fail_drone("?? ??????? ????????? ?????? ????.")
+            self._fail_drone("Не удалось запустить запись фона.")
 
     def _stop_background(self) -> None:
         manager = self._drone_manager
         if manager is None:
             return
-        self.drone_panel.set_background_status("???????????? ?????? ?????")
+        self.drone_panel.set_background_status("Останавливаю запись фона…")
         manager.stop()
 
     def _on_background_progress(self, percent: int, text: str) -> None:
@@ -1874,14 +1874,14 @@ class MainWindow(QMainWindow):
         failure = str((summary or {}).get("failure") or "")
         if failure:
             set_style(self.status_label, "color:#f87171;")
-            self.status_label.setText(f"?????? ????: {failure}")
+            self.status_label.setText(f"Запись фона: {failure}")
             return
         frames = int((summary or {}).get("frames", 0))
         profiles = int((summary or {}).get("profiles", 0))
         set_style(self.status_label, "color:#4ade80;")
         self.status_label.setText(
-            f"??? ???????: {frames} ??????, ????? {profiles}. "
-            "?????? ????? ????????? ???????."
+            f"Фон записан: {frames} блоков, полос {profiles}. "
+            "Теперь можно запускать монитор."
         )
 
     def _fail_drone(self, message: str) -> None:

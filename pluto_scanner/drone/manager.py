@@ -263,8 +263,8 @@ class DroneMonitorManager(QObject):
             ))
             self.background_progress.emit(
                 percent,
-                f"?????? ????: {percent}% ? "
-                f"{self._background_frames} ??????",
+                f"Запись фона: {percent}% · "
+                f"{self._background_frames} блоков",
             )
             return
         if self._ml_model is not None and obs.class_key not in (
