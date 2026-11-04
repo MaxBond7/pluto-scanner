@@ -39,7 +39,7 @@ from collections import Counter, OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Iterable
 
 import numpy as np
 
@@ -47,7 +47,6 @@ from ..drone.bands import DroneBand
 from ..drone.features import OVERLOAD, QUIET, analyze_iq
 
 CARDRF_RAW_RATE = 20.0e9
-CARDRF_NOMINAL_CENTER_HZ = 2.4e9
 CARDRF_BASEBAND_RATE = 20.0e6
 CARDRF_SEARCH_HZ = (2.39e9, 2.49e9)
 CARDRF_CAPTURE_S = 250e-6       # one file = 5,000,000 samples at 20 GSa/s
@@ -60,6 +59,7 @@ def chunk_samples(rate: float = CARDRF_BASEBAND_RATE) -> int:
 
 def window_samples(rate: float = CARDRF_BASEBAND_RATE) -> int:
     return int(round(float(rate) * CARDRF_BLOCK_S))
+
 
 # Wi-Fi and Bluetooth are the negatives the binary model was missing.
 _LABELS: dict[str, int] = {

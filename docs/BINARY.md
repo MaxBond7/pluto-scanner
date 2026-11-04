@@ -332,6 +332,8 @@ AR 8%, Bebop 33%. Bebop летает по Wi-Fi, так что пометка д
 | `pluto_scanner/ml/binary.py` | модель, пороги, метрики, калибровка |
 | `pluto_scanner/ml/binary_features.py` | 18 признаков и устойчивый пол |
 | `pluto_scanner/ml/dronerf.py` | адаптер DroneRF (CSV → комплексный IQ) |
+| `pluto_scanner/ml/cardrf.py` | адаптер CardRF (ZIP → полоса 4 МГц → окна 20 мс) |
+| `tools/check_binary.py` | проверка модели на своих записях |
 | `pluto_scanner/ml/train_binary.py` | сбор данных, обучение, отчёт |
 | `assets/ml_drone_binary.json` | встроенная модель |
 | `user_data/ml_drone_binary.json` | пользовательская модель (приоритет) |
