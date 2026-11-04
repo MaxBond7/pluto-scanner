@@ -415,9 +415,19 @@ class DronePanel(QWidget):
         self.start_btn.setEnabled(True)
         frames = int((summary or {}).get("frames", 0))
         profiles = int((summary or {}).get("profiles", 0))
-        self.set_background_status(
-            f"Фон записан: {frames} блоков, полос {profiles}"
-        )
+        ready = int((summary or {}).get("ready_profiles", 0))
+        failure = str((summary or {}).get("failure") or "")
+        if failure:
+            self.set_background_status(f"Фон не записан: {failure}")
+        elif ready == 0:
+            self.set_background_status(
+                f"Фон не записан: мало данных ({frames} блоков). "
+                "Запишите дольше и без движения рядом."
+            )
+        else:
+            self.set_background_status(
+                f"Фон записан: {frames} блоков, полос готово {ready}"
+            )
 
     def set_background_status(self, text: str) -> None:
         self.background_status.setText(str(text))

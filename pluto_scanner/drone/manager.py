@@ -461,6 +461,10 @@ class DroneMonitorManager(QObject):
                 "duration_s": round(time.monotonic() - self._started, 2),
                 "profiles": len(self._background_map.profiles)
                 if self._background_map is not None else 0,
+                "ready_profiles": sum(
+                    1 for profile in self._background_map.profiles.values()
+                    if profile.ready
+                ) if self._background_map is not None else 0,
                 "failure": self._failure_message or "",
             })
             return

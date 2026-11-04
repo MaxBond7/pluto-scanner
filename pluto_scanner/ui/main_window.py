@@ -1878,10 +1878,18 @@ class MainWindow(QMainWindow):
             return
         frames = int((summary or {}).get("frames", 0))
         profiles = int((summary or {}).get("profiles", 0))
+        ready = int((summary or {}).get("ready_profiles", 0))
+        if ready == 0:
+            set_style(self.status_label, "color:#facc15;")
+            self.status_label.setText(
+                f"Фон не записан: мало данных ({frames} блоков). "
+                "Попробуйте записать дольше."
+            )
+            return
         set_style(self.status_label, "color:#4ade80;")
         self.status_label.setText(
-            f"Фон записан: {frames} блоков, полос {profiles}. "
-            "Теперь можно запускать монитор."
+            f"Фон записан: {frames} блоков, полос готово {ready} "
+            f"из {profiles}. Теперь можно запускать монитор."
         )
 
     def _fail_drone(self, message: str) -> None:
