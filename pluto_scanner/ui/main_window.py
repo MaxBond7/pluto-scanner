@@ -11,6 +11,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
+    QActionGroup,
     QCloseEvent,
     QDesktopServices,
     QFont,
@@ -454,16 +455,21 @@ class MainWindow(QMainWindow):
 
         view_menu = bar.addMenu("Вид")
         theme_menu = view_menu.addMenu("Тема")
+        self._theme_group = QActionGroup(self)
+        self._theme_group.setExclusive(True)
+        self._theme_actions: dict[str, QAction] = {}
         for index, (name, theme) in enumerate(
             available_themes(theme_dir(DATA_DIR)).items()
         ):
             action = QAction(theme.title, theme_menu)
             action.setCheckable(True)
+            action.setActionGroup(self._theme_group)
             action.setChecked(name == active_theme().name)
             action.triggered.connect(
                 lambda checked=False, i=index: self.theme_combo.setCurrentIndex(i)
             )
             theme_menu.addAction(action)
+            self._theme_actions[name] = action
         view_menu.addSeparator()
         action = view_menu.addAction("Папка тем")
         action.triggered.connect(lambda: self._open_theme_folder())
@@ -512,11 +518,15 @@ class MainWindow(QMainWindow):
         if (getattr(self, "drone_window", None) is not None
                 and self.drone_window.isVisible()):
             retint(self.drone_window)
+        self.contact_table.refresh_theme()
+        self.drone_panel.refresh_events()
         for widget in (self.spectrum, self.waterfall,
                        self.scan_panel.graph, self.drone_panel.graph):
             retheme = getattr(widget, "retheme", None)
             if callable(retheme):
                 retheme()
+        for name, action in getattr(self, "_theme_actions", {}).items():
+            action.setChecked(name == theme.name)
         settings = load_settings(DATA_DIR / "settings.json")
         settings["theme"] = theme.name
         save_settings(DATA_DIR / "settings.json", settings)

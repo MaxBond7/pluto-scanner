@@ -438,14 +438,39 @@ QStatusBar {
     border-top: 1px solid $border;
     color: $fg_dim;
 }
+QMenuBar {
+    background-color: $panel;
+    color: $fg;
+    border-bottom: 1px solid $border;
+}
+QMenuBar::item {
+    background: transparent;
+    padding: 4px 10px;
+}
+QMenuBar::item:selected {
+    background-color: $hover;
+    color: $fg;
+}
+QMenuBar::item:pressed {
+    background-color: $input;
+    color: $fg;
+}
 QMenu {
     background-color: $panel;
     color: $fg;
     border: 1px solid $border;
 }
+QMenu::item {
+    padding: 5px 22px 5px 22px;
+}
 QMenu::item:selected {
-    background-color: $selection_bg;
-    color: $selection_fg;
+    background-color: $hover;
+    color: $fg;
+}
+QMenu::separator {
+    height: 1px;
+    background: $border;
+    margin: 4px 10px;
 }
 QTabWidget::pane {
     border: 1px solid $border;

@@ -171,3 +171,34 @@ def test_alarm_banner_text_stays_visible_in_every_theme():
             assert background in sheet and foreground in sheet, name
     finally:
         apply_theme(app, BUILTIN_THEMES[DEFAULT_THEME])
+
+def test_contact_table_recolours_after_theme_change():
+    """Rows cache their tokens; a theme switch must repaint them anyway."""
+    import time as _time
+
+    from PySide6.QtWidgets import QApplication
+
+    from pluto_scanner.model import Contact, SignalType
+    from pluto_scanner.ui.contact_table import ContactTable
+    from pluto_scanner.ui.themes import apply_theme
+
+    app = QApplication.instance() or QApplication([])
+    try:
+        apply_theme(app, BUILTIN_THEMES["classic"])
+        table = ContactTable()
+        now = _time.time()
+        contact = Contact(
+            contact_id="c1", device_id="dev", freq_hz=433.92e6, bw_hz=12e3,
+            type=SignalType.FM, confidence=0.9, first_seen=now - 5,
+            last_seen=now, hits=3, misses=0, max_snr_db=20.0, last_snr_db=18.0,
+        )
+        table.update_contacts([contact], {})
+        before = table.table.item(0, 1).foreground().color().name()
+
+        apply_theme(app, BUILTIN_THEMES["mono"])
+        table.refresh_theme()
+        after = table.table.item(0, 1).foreground().color().name()
+        assert before != after
+        table.deleteLater()
+    finally:
+        apply_theme(app, BUILTIN_THEMES[DEFAULT_THEME])

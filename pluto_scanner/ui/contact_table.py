@@ -204,6 +204,16 @@ class ContactTable(QWidget):
     def set_device_names(self, names: dict[str, str]) -> None:
         self._device_names = dict(names)
 
+    def refresh_theme(self) -> None:
+        """Recolour every row after a theme switch.
+
+        The per-row signature caches only the *tokens*, so without this the
+        rows would keep the previous theme's colours until their text changed.
+        """
+        self._row_sig = [None] * len(self._row_sig)
+        if self._contacts:
+            self.update_contacts(self._contacts, self._device_names)
+
     def selected_contact_id(self) -> str | None:
         row = self.table.currentRow()
         if row < 0:

@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.20.2] - 2026-11-04
+
+- Fixed the theme menu: its items are now an exclusive action group, so only
+  the active theme is checked instead of every theme the user has tried. The
+  checks also follow changes made from the status-bar list.
+- Menus got their own style: a calm hover instead of the theme accent filling
+  the whole row, consistent padding and separators.
+- Switching the theme now recolours the contact table and the drone event
+  table immediately. The rows cache their colour tokens for speed, so without
+  this they kept the previous theme's colours until their text changed.
+- Debugged the UI end to end on the simulator: theme menu, tabs, monitor
+  window (minimise/restore/close), background recording, drone monitoring, IQ
+  recording, scanning, all dialogs and panels — no exceptions.
+
 ## [0.20.1] - 2026-11-04
 
 - Interface performance: the contact table reuses its rows, caches theme
