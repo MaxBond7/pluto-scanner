@@ -642,7 +642,8 @@ class DronePanel(QWidget):
                 )
         if is_new:
             self.table.scrollToBottom()
-        if event.drone_like and is_new:
+        if (event.drone_like and is_new
+                and event.background < BACKGROUND_MARK):
             self.show_alarm(event)
 
     def show_alarm(self, event: DroneEvent) -> None:

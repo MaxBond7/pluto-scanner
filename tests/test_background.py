@@ -14,11 +14,15 @@ from pluto_scanner.drone.background import (
 )
 
 
-def _observation(spec: np.ndarray, *, device: str = "dev", band: str = "2.4"):
+def _observation(
+    spec: np.ndarray, *, device: str = "dev", band: str = "2.4",
+    center: float = 2437e6,
+):
     return SimpleNamespace(
         device_id=device,
         band_key=band,
         sample_rate=20.48e6,
+        center_hz=center,
         spectrum_db=spec.tolist(),
         extra={"gain_db": 40.0},
     )
@@ -154,6 +158,50 @@ def test_reset_key_forgets_one_band(tmp_path):
         model.learn(wifi)
     assert model.reset_key(
         device_id="dev", band_key="2.4", gain_db=40.0, sample_rate=20.48e6,
+        center_hz=2437e6,
     )
     assert not model.profiles
     assert model.observe(wifi) == 0.0
+
+def test_map_is_independent_of_the_sample_rate(tmp_path):
+    model = BackgroundMap(tmp_path / "map.json")
+    wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
+    for _ in range(60):
+        model.learn(wifi)
+    other_rate = _observation(_spectrum({(0.30, 0.45): 20.0}))
+    other_rate.sample_rate = 6.144e6
+    assert model.observe(other_rate) > 0.9
+
+
+def test_band_report_counts_busy_bins(tmp_path):
+    model = BackgroundMap(tmp_path / "map.json")
+    wifi = _observation(_spectrum({(0.30, 0.45): 20.0}))
+    for _ in range(60):
+        model.learn(wifi)
+    report = model.band_report()
+    assert report["2.4"]["active"] >= 1
+    assert report["2.4"]["frames"] == 60
+
+def test_chunks_of_one_band_do_not_mix(tmp_path):
+    model = BackgroundMap(tmp_path / "map.json")
+    first = _observation(_spectrum({(0.30, 0.45): 20.0}), center=2410e6)
+    second = _observation(_spectrum({(0.30, 0.45): 20.0}), center=2450e6)
+    for _ in range(40):
+        model.learn(first)
+        model.learn(second)
+    assert model.observe(first) > 0.9
+    assert model.observe(second) > 0.9
+    # A chunk that was never learned has no profile at all.
+    middle = _observation(_spectrum({(0.30, 0.45): 20.0}), center=2430e6)
+    assert model.observe(middle) == 0.0
+
+
+def test_sparse_beacon_still_counts_as_known(tmp_path):
+    """A beaconing AP is active in ~15% of blocks but is always there."""
+    model = BackgroundMap(tmp_path / "map.json")
+    busy = _spectrum({(0.30, 0.45): 20.0})
+    quiet = _spectrum({})
+    for index in range(60):
+        model.learn(_observation(busy if index % 7 == 0 else quiet))
+    fraction = model.observe(_observation(busy))
+    assert fraction > 0.9

@@ -160,16 +160,16 @@ class DroneMonitorManager(QObject):
             return False
 
         if background_only and background_map is not None:
-            # A new recording replaces the old map for these bands instead of
+            # A new recording replaces the old map for these chunks instead of
             # averaging into a frozen one.
-            band_keys = {chunk.band.key for chunk in chunks}
             for session in targets:
-                for band_key in band_keys:
+                for chunk in chunks:
                     background_map.reset_key(
                         device_id=session.config.device_id,
-                        band_key=band_key,
+                        band_key=chunk.band.key,
                         gain_db=float(session.config.gain),
                         sample_rate=sample_rate,
+                        center_hz=chunk.center_hz,
                     )
 
         assigned: list[list[MonitorChunk]] = [[] for _ in targets]

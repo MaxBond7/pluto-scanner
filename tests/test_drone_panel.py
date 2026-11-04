@@ -31,3 +31,26 @@ def test_high_rate_shows_the_usb_warning():
     panel.rate_combo.setCurrentIndex(safe)
     assert panel.rate_warning.text() == ""
     panel.deleteLater()
+
+def _event(background: float):
+    from pluto_scanner.drone.tracker import DroneEvent
+
+    return DroneEvent(
+        event_id="e1", band_key="2.4", band_name="2.4 ГГц",
+        class_key="FHSS", class_ru="FHSS", freq_hz=2437e6,
+        freq_min_hz=2436e6, freq_max_hz=2438e6, bw_hz=1e6,
+        first_seen=1.0, last_seen=2.0, count=4, confidence=0.9,
+        drone_like=True, background=background,
+        binary={"score": 0.99, "verdict": "drone"},
+    )
+
+
+def test_background_event_does_not_pop_the_banner():
+    _app()
+    panel = DronePanel()
+    panel.add_event(_event(0.9), True)
+    assert panel.alarm.text() == ""
+
+    panel.add_event(_event(0.1), True)
+    assert panel.alarm.text() != ""
+    panel.deleteLater()

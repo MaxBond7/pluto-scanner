@@ -1767,9 +1767,16 @@ class MainWindow(QMainWindow):
         self.drone_panel.begin_monitor(
             devices, len(bands), len(chunks)
         )
-        bg_note = "" if self.drone_background_map.profiles else (
-            " · фон не записан: тревоги на все сигналы"
-        )
+        bg_note = ""
+        report = self.drone_background_map.band_report()
+        empty = [
+            band.key for band in bands
+            if report.get(band.key, {}).get("active", 0) == 0
+        ]
+        if empty:
+            bg_note = " · фон пуст для: " + ", ".join(empty)
+        elif not report:
+            bg_note = " · фон не записан: тревоги на все сигналы"
         set_style(self.status_label, "color:#f472b6;")
         self.status_label.setText(
             f"Дрон-монитор: {len(bands)} полос, {len(chunks)} кусков"
@@ -1797,16 +1804,21 @@ class MainWindow(QMainWindow):
 
     # -------------------------------------------------------------- background
     def _refresh_background_status(self) -> None:
-        profiles = self.drone_background_map.profiles
-        if not profiles:
+        report = self.drone_background_map.band_report()
+        if not report:
             self.drone_panel.set_background_status(
                 "Фон: не записан — тревоги будут на все сигналы"
             )
             return
-        bands = len({profile.band_key for profile in profiles.values()})
-        self.drone_panel.set_background_status(
-            f"Фон: записан ранее ({bands} полос(ы))"
-        )
+        parts = [
+            f"{key} — {row['active']}"
+            for key, row in sorted(report.items())
+        ]
+        empty = [key for key, row in report.items() if row["active"] == 0]
+        text = "Фон, занятых участков: " + " · ".join(parts)
+        if empty:
+            text += " · пусто: " + ", ".join(sorted(empty))
+        self.drone_panel.set_background_status(text)
 
     def _start_background(self) -> None:
         """Record the persistent signals only; no drone search, no alarms."""
@@ -1926,6 +1938,7 @@ class MainWindow(QMainWindow):
                 "Попробуйте записать дольше."
             )
             return
+        self._refresh_background_status()
         set_style(self.status_label, "color:#4ade80;")
         self.status_label.setText(
             f"Фон записан: {frames} блоков, полос готово {ready} "

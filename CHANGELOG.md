@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-11-04
+
+- Fixed why a recorded background still let alarms through. The map was kept
+  per *band*, but a band is swept as a dozen 20 MHz chunks with different
+  centres; their relative spectra were averaged into one vector and became
+  meaningless (occupancy 0.02–0.19 everywhere). The map is now keyed by the
+  chunk's absolute centre, so chunks no longer mix.
+- The map is keyed by the chunk's absolute centre, so chunks of one band no
+  longer mix. Changing the sample rate or the band layout rebuilds the chunks,
+  so the map must be recorded again — the parameters now show an empty map
+  instead of silently doing nothing.
+- A bin is "known" if it was active in at least 12% of the background frames,
+  and an event is background when more than half of its active bins are known.
+  This catches beaconing access points (a few percent duty) instead of
+  requiring a signal to be present in 60% of the time.
+- The monitor parameters show how many known bins the map has per band and
+  which bands are empty, so an empty map is visible instead of silent.
+- The alarm banner no longer pops for events already marked as background
+  (the alarm itself was already suppressed, the banner was not).
+- Old version-1 maps are discarded on load: they mixed chunks and cannot be
+  repaired. Recording the background once more is required.
+
 ## [0.21.1] - 2026-11-04
 
 - The drone monitor now defaults to **6.144 MS/s**, and the rate list includes

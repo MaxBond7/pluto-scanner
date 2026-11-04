@@ -152,36 +152,51 @@ class DroneBackgroundStore:
 BACKGROUND_BINS = 32
 BACKGROUND_MIN_FRAMES = 20      # trust the map only after this many blocks
 BACKGROUND_LEARN_FRAMES = 120   # learn the site, then freeze the map
-BACKGROUND_MARK = 0.6           # share of persistent bins to call it "background"
+BACKGROUND_MARK = 0.6           # share of known bins to call it "background"
+BACKGROUND_BIN_ACTIVE = 0.12    # a bin seen in 12% of frames has an emitter
+BACKGROUND_VERSION = 2
 
 
 @dataclass
 class SpectrumProfile:
-    """How often each part of the band was occupied while we listened.
+    """How often each part of one monitored chunk was occupied.
 
-    ``occupancy`` is the share of learned frames where that bin was above the
-    floor.  A Wi-Fi access point gives 0.8-1.0, a passing drone a few
-    hundredths, so the map separates "lives here" from "appeared now".
+    A band such as 2.4 GHz is swept as a dozen 20 MHz chunks with different
+    centres.  Their spectra must not be averaged together — the bin index is
+    relative to the chunk — so the map is kept **per chunk centre**.
+
+    ``occupancy`` is the share of learned frames where a bin was above the
+    floor.  A busy access point gives 0.2-1.0, a rare burst a few hundredths;
+    the query asks how much of the current activity lands on bins that were
+    seen during the background recording.
     """
 
     device_id: str
     band_key: str
     gain_db: float
     sample_rate: float
+    center_hz: float = 0.0
     occupancy: list[float] = field(default_factory=list)
     frames: int = 0
     updated: float = 0.0
 
     @property
     def key(self) -> str:
+        # Absolute chunk centre, independent of the sample rate and of how
+        # many chunks the current rate produces.
+        center = round(float(self.center_hz) / 0.5e6)
         return (
-            f"{self.device_id}|{self.band_key}|"
-            f"{self.gain_db:.1f}|{self.sample_rate / 1e6:.3f}"
+            f"{self.device_id}|{self.band_key}|{center}|{self.gain_db:.1f}"
         )
 
     @property
     def ready(self) -> bool:
         return self.frames >= BACKGROUND_MIN_FRAMES
+
+    def known_bins(self) -> list[bool]:
+        return [
+            value >= BACKGROUND_BIN_ACTIVE for value in self.occupancy
+        ]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -189,6 +204,7 @@ class SpectrumProfile:
             "band_key": self.band_key,
             "gain_db": round(float(self.gain_db), 2),
             "sample_rate": round(float(self.sample_rate), 1),
+            "center_hz": round(float(self.center_hz), 1),
             "occupancy": [round(float(v), 3) for v in self.occupancy],
             "frames": int(self.frames),
             "updated": round(float(self.updated), 3),
@@ -201,6 +217,7 @@ class SpectrumProfile:
             band_key=str(data.get("band_key") or ""),
             gain_db=float(data.get("gain_db") or 0.0),
             sample_rate=float(data.get("sample_rate") or 0.0),
+            center_hz=float(data.get("center_hz") or 0.0),
             occupancy=[float(v) for v in data.get("occupancy") or []],
             frames=int(data.get("frames") or 0),
             updated=float(data.get("updated") or 0.0),
@@ -259,6 +276,10 @@ class BackgroundMap:
             if not self.path.exists():
                 return
             data = json.loads(self.path.read_text(encoding="utf-8"))
+            if int(data.get("version") or 1) < BACKGROUND_VERSION:
+                # Version 1 averaged a whole band's chunks into one vector,
+                # which mixed unrelated frequencies.  It cannot be reused.
+                return
             for item in data.get("profiles", []):
                 profile = SpectrumProfile.from_dict(item)
                 if profile.occupancy:
@@ -271,7 +292,7 @@ class BackgroundMap:
         self.path.write_text(
             json.dumps(
                 {
-                    "version": 1,
+                    "version": BACKGROUND_VERSION,
                     "profiles": [
                         profile.to_dict()
                         for profile in self.profiles.values()
@@ -291,6 +312,7 @@ class BackgroundMap:
                 (getattr(obs, "extra", {}) or {}).get("gain_db", 0.0) or 0.0
             ),
             sample_rate=float(obs.sample_rate),
+            center_hz=float(getattr(obs, "center_hz", 0.0) or 0.0),
         )
         profile = self.profiles.get(probe.key)
         if profile is None and create:
@@ -323,10 +345,12 @@ class BackgroundMap:
             self.save()
 
     def observe(self, obs) -> float:
-        """Return the persistent share of this block (read-only).
+        """Return the known share of this block (read-only).
 
-        The monitor never teaches the map; it only asks how much of the
-        current activity is already known.
+        The monitor never teaches the map.  A bin counts as known when the
+        background recording saw it in at least 12% of frames — enough for a
+        beaconing access point, too much for one stray burst.  The result is
+        the share of *this* block's active bins that are known.
         """
         mask = active_bins(getattr(obs, "spectrum_db", []))
         if mask is None or not any(mask):
@@ -334,14 +358,27 @@ class BackgroundMap:
         profile = self._profile(obs, create=False)
         if profile is None or profile.frames < BACKGROUND_MIN_FRAMES:
             return 0.0
-        occupancy = profile.occupancy
-        return float(
-            sum(occupancy[index] for index, flag in enumerate(mask) if flag)
-            / max(1, sum(1 for flag in mask if flag))
-        )
+        known = profile.known_bins()
+        active = [index for index, flag in enumerate(mask) if flag]
+        hits = sum(1 for index in active if known[index])
+        return float(hits) / max(1, len(active))
 
     def is_background(self, fraction: float) -> bool:
         return float(fraction) >= BACKGROUND_MARK
+
+    def band_report(self, device_id: str | None = None) -> dict[str, dict[str, int]]:
+        """What the map actually contains, per band: frames and busy bins."""
+        report: dict[str, dict[str, int]] = {}
+        for profile in self.profiles.values():
+            if device_id and profile.device_id != device_id:
+                continue
+            active = sum(profile.known_bins())
+            row = report.setdefault(
+                profile.band_key, {"frames": 0, "active": 0}
+            )
+            row["frames"] = max(row["frames"], int(profile.frames))
+            row["active"] += active
+        return report
 
     def reset_key(
         self,
@@ -349,14 +386,16 @@ class BackgroundMap:
         device_id: str,
         band_key: str,
         gain_db: float,
-        sample_rate: float,
+        sample_rate: float = 0.0,
+        center_hz: float = 0.0,
     ) -> bool:
-        """Forget one band, so a new background recording replaces it."""
+        """Forget one chunk, so a new background recording replaces it."""
         probe = SpectrumProfile(
             device_id=str(device_id),
             band_key=str(band_key),
             gain_db=float(gain_db),
             sample_rate=float(sample_rate),
+            center_hz=float(center_hz),
         )
         return self.profiles.pop(probe.key, None) is not None
 
