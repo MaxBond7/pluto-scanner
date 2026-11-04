@@ -163,12 +163,21 @@
     .counter { left: 8px; bottom: 10px; }
   }
   @media print {
-    html, body { overflow: visible; background: #fff; }
-    .deck { position: static; display: block; }
+    @page { size: 960pt 540pt; margin: 0; }
+    html, body { overflow: visible; background: #fff; margin: 0; }
+    .deck { position: static; display: block; margin: 0; }
     .stage { width: 1280px; height: 720px; transform: none !important; }
     .slide {
       display: flex !important; position: relative; page-break-after: always;
       break-after: page; margin: 0; border-radius: 0;
+      width: 1280px; height: 720px;
+    }
+    .slide, .slide.active {
+      animation: none !important; opacity: 1 !important;
+    }
+    .hero h1 {
+      color: #67e8f9 !important; background: none !important;
+      -webkit-text-fill-color: #67e8f9;
     }
     .nav, .counter, .progress { display: none !important; }
   }
@@ -184,9 +193,9 @@
       <div class="hero">
         <div class="kicker">SDR · пассивный мониторинг · Windows</div>
         <h1>SDR Scanner</h1>
-        <div class="subtitle">От спектроанализатора до монитора эфира: реальный Pluto+, поиск новых контактов, свип 325 МГц – 3.8 ГГц и дрон-монитор 433 МГц – 5.8 ГГц.</div>
+        <div class="subtitle">От спектроанализатора до монитора эфира: Pluto+, HackRF One, IQ-файлы и симулятор — поиск новых контактов, свип и дрон-монитор 433 МГц – 5.8 ГГц.</div>
         <div class="rule" style="width:560px"></div>
-        <div class="meta">Python · PySide6 · pyqtgraph · ADALM-PLUTO / Pluto+</div>
+        <div class="meta">Python · PySide6 · pyqtgraph · PLUTO+ / HACKRF / IQ FILES</div>
       </div>
     </section>
 
@@ -211,7 +220,7 @@
         <div>
           <div class="card">
             <h3>Что приняли сразу</h3>
-            <p class="pink"><b>Pluto — это приёмник, не радар и не декодер протоколов.</b></p>
+            <p class="pink"><b>SDR — это приёмник, не радар и не декодер протоколов.</b></p>
             <p>Он может показать радиосигнал, но не может сам по себе назвать модель дрона, направление и дальность.</p>
             <p class="muted small">Поэтому приложение показывает измерения и гипотезы, а не «магический вердикт».</p>
           </div>
@@ -230,7 +239,7 @@
           <ul>
             <li>Python + PySide6 + pyqtgraph</li>
             <li>Windows, ярлык без консоли</li>
-            <li>ADALM-PLUTO / Pluto+</li>
+            <li>Pluto+ / HackRF One / IQ-файлы</li>
             <li>Симулятор для тестов</li>
           </ul>
         </div>

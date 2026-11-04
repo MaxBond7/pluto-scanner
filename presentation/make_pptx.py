@@ -261,15 +261,15 @@ def build() -> Path:
          size=10, color=CYAN, bold=True)
     text(s, 0.85, 2.0, 6.6, 1.0, "SDR Scanner", size=52, color=CYAN, bold=True)
     text(s, 0.85, 3.05, 6.35, 1.2,
-         "От спектроанализатора до монитора эфира: реальный Pluto+, "
-         "поиск новых контактов, свип 325 МГц – 3.8 ГГц и дрон-монитор "
+         "От спектроанализатора до монитора эфира: Pluto+, HackRF One, "
+         "IQ-файлы и симулятор — поиск новых контактов, свип и дрон-монитор "
          "433 МГц – 5.8 ГГц.",
          size=17, color=TEXT)
     text(s, 0.85, 5.55, 6.4, 0.3,
-         "PYTHON  ·  PYSIDE6  ·  PYQTGRAPH  ·  ADALM-PLUTO / PLUTO+",
+         "PYTHON  ·  PYSIDE6  ·  PYQTGRAPH  ·  PLUTO+ / HACKRF / IQ FILES",
          size=9, color=MUTED)
     notes(s, "Титульный слайд. SDR Scanner — desktop-приложение для "
-             "исследования эфира на ADALM-PLUTO/Pluto+ и симуляторе.")
+             "исследования эфира на Pluto+, HackRF One, IQ-файлах и симуляторе.")
 
     # 2. problem -----------------------------------------------------------
     s = new_slide("Зачем это всё", "Есть SDR. Нет удобного рабочего места")
@@ -300,7 +300,7 @@ def build() -> Path:
     bullets(s, 0.55, 1.55, 5.1, 3.8, [
         "Python + PySide6 + pyqtgraph",
         "Windows, ярлык без консоли",
-        "ADALM-PLUTO / Pluto+ и симулятор",
+        "Pluto+ / HackRF One / IQ-файлы / симулятор",
         "Один или два SDR",
         "Три вкладки: Контакты, Сканер диапазона, Дрон-монитор",
         "JSON, IQ-фрагменты и карточка события",
@@ -490,7 +490,7 @@ def build() -> Path:
 
     prs.core_properties.title = "SDR Scanner — презентация"
     prs.core_properties.author = "SDR Scanner"
-    prs.core_properties.subject = "SDR, ADALM-PLUTO, сканер диапазона, дрон-монитор"
+    prs.core_properties.subject = "SDR, Pluto+, HackRF, сканер диапазона, дрон-монитор"
     prs.save(OUT)
     return OUT
 
