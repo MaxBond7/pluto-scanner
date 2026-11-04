@@ -22,6 +22,21 @@ from ..model import Contact
 from .themes import set_style, tcol
 
 
+_COLOR_CACHE: dict[str, QColor] = {}
+
+
+def _qcolor(token: str) -> QColor:
+    """Resolve a theme token to a QColor once, not once per table cell."""
+    value = tcol(token)
+    color = _COLOR_CACHE.get(value)
+    if color is None:
+        if len(_COLOR_CACHE) > 256:
+            _COLOR_CACHE.clear()
+        color = QColor(value)
+        _COLOR_CACHE[value] = color
+    return color
+
+
 class ContactTable(QWidget):
     contact_activated = Signal(str)
     mark_known = Signal(str)
@@ -34,6 +49,8 @@ class ContactTable(QWidget):
         super().__init__(parent)
         self._contacts: list[Contact] = []
         self._device_names: dict[str, str] = {}
+        self._row_ids: list[str] = []
+        self._row_sig: list[tuple | None] = []
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
@@ -87,71 +104,102 @@ class ContactTable(QWidget):
 
     def update_contacts(self, contacts: list[Contact],
                         device_names: dict[str, str]) -> None:
-        self._contacts = sorted(
+        ordered = sorted(
             contacts,
             key=lambda c: (c.known, -c.last_seen),
         )
         self._device_names = dict(device_names)
+        ids = [c.contact_id for c in ordered]
         selected = self.selected_contact_id()
         self.table.blockSignals(True)
-        self.table.setRowCount(len(self._contacts))
-        for row, c in enumerate(self._contacts):
-            is_new = c.is_new()
-            badge = "NEW" if is_new else ("KNOWN" if c.known else ("●" if c.active else "○"))
-            badge_item = QTableWidgetItem(badge)
-            badge_item.setData(Qt.ItemDataRole.UserRole, c.contact_id)
-            if is_new:
-                badge_item.setForeground(QColor(tcol("#4ade80")))
-            elif c.known:
-                badge_item.setForeground(QColor(tcol("#94a3b8")))
-            elif c.active:
-                badge_item.setForeground(QColor(tcol("#f59e0b")))
-            else:
-                badge_item.setForeground(QColor(tcol("#64748b")))
-
-            freq_item = QTableWidgetItem(format_freq(c.freq_hz))
-            freq_item.setForeground(QColor(tcol("#e2e8f0")))
-            bw_item = QTableWidgetItem(format_bw(c.bw_hz))
-            snr_item = QTableWidgetItem(f"{c.last_snr_db:.1f} dB")
-            type_item = QTableWidgetItem(c.type.ru)
-            type_item.setForeground(QColor(tcol("#67e8f9" if not c.known else "#94a3b8")))
-            conf_item = QTableWidgetItem(f"{c.confidence * 100:.0f}%")
-            dev_item = QTableWidgetItem(
-                self._device_names.get(c.device_id, c.device_id)
-            )
-            hits_item = QTableWidgetItem(str(c.hits))
-            hits_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            last_item = QTableWidgetItem(
-                time.strftime("%H:%M:%S", time.localtime(c.last_seen))
-            )
-            if not c.active:
-                for item in (freq_item, bw_item, snr_item, type_item,
-                             conf_item, dev_item, hits_item, last_item):
-                    item.setForeground(QColor(tcol("#64748b")))
-
-            alt = ", ".join(
-                f"{t.value} {p * 100:.0f}%" for t, p in c.alternatives
-            )
-            tooltip = (
-                f"ID: {c.contact_id}\n"
-                f"{format_freq(c.freq_hz)}  {format_bw(c.bw_hz)}\n"
-                f"Тип: {c.type.ru}  уверенность {c.confidence * 100:.0f}%\n"
-                f"Гипотезы: {alt}\n"
-                f"SNR макс: {c.max_snr_db:.1f} dB\n"
-                f"Хитов: {c.hits}  пропусков: {c.misses}"
-            )
-            for col, item in enumerate((
-                badge_item, freq_item, bw_item, snr_item, type_item,
-                conf_item, dev_item, hits_item, last_item,
-            )):
-                item.setToolTip(tooltip)
-                self.table.setItem(row, col, item)
-
-        self.title.setText(f"КОНТАКТЫ  ·  {len(self._contacts)}")
-        self.table.blockSignals(False)
+        try:
+            # Rows are reused: rebuilding 9 items per contact every 400 ms
+            # costs more than comparing the strings and touching only what
+            # actually changed.
+            if ids != self._row_ids:
+                self.table.setRowCount(len(ordered))
+                for row in range(len(ordered)):
+                    for column in range(len(self.HEADERS)):
+                        if self.table.item(row, column) is None:
+                            self.table.setItem(row, column, QTableWidgetItem(""))
+                self._row_ids = ids
+                self._row_sig = [None] * len(ordered)
+            self._contacts = ordered
+            for row, contact in enumerate(ordered):
+                self._fill_row(row, contact)
+            self.title.setText(f"КОНТАКТЫ  ·  {len(ordered)}")
+        finally:
+            self.table.blockSignals(False)
         if selected:
             self.select_contact(selected)
         self._update_buttons()
+
+    def _fill_row(self, row: int, contact: Contact) -> None:
+        is_new = contact.is_new()
+        if is_new:
+            badge = "NEW"
+        elif contact.known:
+            badge = "KNOWN"
+        else:
+            badge = "●" if contact.active else "○"
+        if is_new:
+            badge_color = "#4ade80"
+        elif contact.known:
+            badge_color = "#94a3b8"
+        elif contact.active:
+            badge_color = "#f59e0b"
+        else:
+            badge_color = "#64748b"
+        muted = not contact.active
+        text_color = "#64748b" if muted else "#e2e8f0"
+        type_color = "#94a3b8" if (muted or contact.known) else "#67e8f9"
+        values = (
+            badge,
+            format_freq(contact.freq_hz),
+            format_bw(contact.bw_hz),
+            f"{contact.last_snr_db:.1f} dB",
+            contact.type.ru,
+            f"{contact.confidence * 100:.0f}%",
+            self._device_names.get(contact.device_id, contact.device_id),
+            str(contact.hits),
+            time.strftime("%H:%M:%S", time.localtime(contact.last_seen)),
+        )
+        colors = (
+            badge_color, text_color, text_color, text_color, type_color,
+            text_color, text_color, text_color, text_color,
+        )
+        alt = ", ".join(
+            f"{t.value} {p * 100:.0f}%" for t, p in contact.alternatives
+        )
+        tooltip = (
+            f"ID: {contact.contact_id}\n"
+            f"{format_freq(contact.freq_hz)}  {format_bw(contact.bw_hz)}\n"
+            f"Тип: {contact.type.ru}  уверенность {contact.confidence * 100:.0f}%\n"
+            f"Гипотезы: {alt}\n"
+            f"SNR макс: {contact.max_snr_db:.1f} dB\n"
+            f"Хитов: {contact.hits}  пропусков: {contact.misses}"
+        )
+        signature = (values, colors, tooltip)
+        if row < len(self._row_sig):
+            if self._row_sig[row] == signature:
+                return
+            self._row_sig[row] = signature
+        for column, (text, token) in enumerate(zip(values, colors)):
+            item = self.table.item(row, column)
+            if item is None:
+                item = QTableWidgetItem("")
+                self.table.setItem(row, column, item)
+            if item.text() != text:
+                item.setText(text)
+            color = _qcolor(token)
+            if item.foreground().color() != color:
+                item.setForeground(color)
+            if item.toolTip() != tooltip:
+                item.setToolTip(tooltip)
+            if column == 0:
+                item.setData(Qt.ItemDataRole.UserRole, contact.contact_id)
+            if column == 7:
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def set_device_names(self, names: dict[str, str]) -> None:
         self._device_names = dict(names)

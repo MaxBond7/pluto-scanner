@@ -152,6 +152,8 @@ class MainWindow(QMainWindow):
         self.contacts_by_device: dict[str, dict[str, Contact]] = {}
         self._last_frame: SpectrumFrame | None = None
         self._cal_state = ""
+        self._cal_text = ""
+        self._hud_at = 0.0
         self._last_status = ""
         self._shutting_down = False
         self._scan_controller: ScanController | None = None
@@ -507,7 +509,8 @@ class MainWindow(QMainWindow):
             return
         apply_theme(app, theme)
         retint(self)
-        if getattr(self, "drone_window", None) is not None:
+        if (getattr(self, "drone_window", None) is not None
+                and self.drone_window.isVisible()):
             retint(self.drone_window)
         for widget in (self.spectrum, self.waterfall,
                        self.scan_panel.graph, self.drone_panel.graph):
@@ -1061,27 +1064,35 @@ class MainWindow(QMainWindow):
         session = self.sessions.get(device_id)
         if session is None:
             return
+        if self.isMinimized() or not self.isVisible():
+            # Nothing is on screen: keep the frame for the UI state, but do
+            # not spend time redrawing a hidden waterfall.
+            return
         vfo_abs = frame.center_freq + session.vfo.offset_hz
         self.spectrum.update_frame(frame, vfo_abs)
         self.waterfall.update_frame(frame)
         if frame.calibrated:
-            if self._cal_state != "ready":
-                self._cal_state = "ready"
-                self.cal_label.setText("Фон: готов")
-                set_style(self.cal_label, "color:#4ade80; padding:0 8px;")
+            cal_text = "Фон: готов"
+            cal_color = "#4ade80"
+            self._cal_state = "ready"
         else:
+            cal_text = f"Калибровка: {frame.calibration_progress * 100:.0f}%"
+            cal_color = "#facc15"
             self._cal_state = "cal"
-            self.cal_label.setText(
-                f"Калибровка: {frame.calibration_progress * 100:.0f}%"
+        if cal_text != self._cal_text:
+            self._cal_text = cal_text
+            self.cal_label.setText(cal_text)
+            set_style(self.cal_label, f"color:{cal_color}; padding:0 8px;")
+        now = time.monotonic()
+        if now - self._hud_at >= 0.25:
+            self._hud_at = now
+            self.fps_label.setText(
+                f"{frame.fps:.1f} FPS · {frame.span_hz / 1e6:.3f} МГц"
             )
-            set_style(self.cal_label, "color:#facc15; padding:0 8px;")
-        self.fps_label.setText(
-            f"{frame.fps:.1f} FPS · {frame.span_hz / 1e6:.3f} МГц"
-        )
-        new_count = sum(1 for c in frame.contacts if c.is_new())
-        self.status_hint.setText(
-            f"Контактов: {len(frame.contacts)} · новых: {new_count}"
-        )
+            new_count = sum(1 for c in frame.contacts if c.is_new())
+            self.status_hint.setText(
+                f"Контактов: {len(frame.contacts)} · новых: {new_count}"
+            )
         self._on_contacts(device_id, frame.contacts)
 
     def _on_contacts(self, device_id: str, contacts: list[Contact]) -> None:

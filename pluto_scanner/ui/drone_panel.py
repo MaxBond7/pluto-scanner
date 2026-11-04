@@ -565,39 +565,45 @@ class DronePanel(QWidget):
                 for device_id in event.device_ids
             ),
         ]
+        tips = []
+        if event.whitelisted:
+            tips.append(
+                f"В белом списке: {event.whitelist_name or 'да'}"
+            )
+        if event.ml:
+            tips.append(
+                "ML: "
+                f"{event.ml.get('label', '?')} "
+                f"{float(event.ml.get('confidence', 0.0)) * 100:.0f}%"
+            )
+        if event.binary:
+            tips.append(
+                "Бинарная модель: "
+                f"{_binary_short(event)} "
+                f"(порог тревоги "
+                f"{float(event.binary.get('threshold_alarm', 0.9)) * 100:.0f}%)"
+            )
+        if event.wideband:
+            tips.append(
+                "Широкополосный сигнал: занимает почти всю полосу. "
+                "Так же выглядит занятый Wi-Fi — проверьте вручную."
+            )
+        tooltip = "\n".join(tips)
         for column, text in enumerate(values):
             item = self.table.item(row, column)
             if item is None:
                 item = QTableWidgetItem()
                 self.table.setItem(row, column, item)
-            item.setText(text)
-            item.setData(Qt.ItemDataRole.UserRole, event.event_id)
-            item.setForeground(color)
-            tips = []
-            if event.whitelisted:
-                tips.append(
-                    f"В белом списке: {event.whitelist_name or 'да'}"
-                )
-            if event.ml:
-                tips.append(
-                    "ML: "
-                    f"{event.ml.get('label', '?')} "
-                    f"{float(event.ml.get('confidence', 0.0)) * 100:.0f}%"
-                )
-            if event.binary:
-                tips.append(
-                    "Бинарная модель: "
-                    f"{_binary_short(event)} "
-                    f"(порог тревоги "
-                    f"{float(event.binary.get('threshold_alarm', 0.9)) * 100:.0f}%)"
-                )
-            if event.wideband:
-                tips.append(
-                    "Широкополосный сигнал: занимает почти всю полосу. "
-                    "Так же выглядит занятый Wi-Fi — проверьте вручную."
-                )
-            if tips:
-                item.setToolTip("\n".join(tips))
+            # The monitor refreshes live rows twice a second; touching every
+            # cell would force a full repaint even when nothing changed.
+            if item.text() != text:
+                item.setText(text)
+            if item.data(Qt.ItemDataRole.UserRole) != event.event_id:
+                item.setData(Qt.ItemDataRole.UserRole, event.event_id)
+            if item.foreground().color() != color:
+                item.setForeground(color)
+            if tooltip and item.toolTip() != tooltip:
+                item.setToolTip(tooltip)
             if column in (5, 6, 7, 8, 9):
                 item.setTextAlignment(
                     Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
@@ -621,8 +627,10 @@ class DronePanel(QWidget):
         self._alarm_timer.start(10000)
 
     def update_status(self, text: str) -> None:
-        set_style(self.status, "color:#22d3ee; font-size:11px;")
-        self.status.setText(text)
+        # Called for every chunk; re-applying a stylesheet here forces Qt to
+        # repolish the label each time. The colour is set once in begin_monitor.
+        if self.status.text() != text:
+            self.status.setText(text)
 
     def finish_monitor(self, summary: dict, path: str) -> None:
         self._monitoring = False

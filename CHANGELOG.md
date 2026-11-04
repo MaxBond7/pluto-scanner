@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-11-04
+
+- Interface performance: the contact table reuses its rows, caches theme
+  colours and skips rows that did not change — 200 contacts now cost 2.1 ms
+  per refresh instead of 8.5 ms. The drone table touches only the cells whose
+  text/colour/tooltip changed.
+- A spectrum frame no longer redraws anything while the window is minimised or
+  hidden; the calibration label and the FPS/contact counters update only when
+  needed (4 Hz for the counters).
+- The monitor status line no longer re-applies a stylesheet on every chunk.
+- The drone window remembers its size and position, opens centred the first
+  time, and the launcher now brings it back from the taskbar instead of
+  leaving it minimised. A hidden window is not repainted during a theme switch;
+  it picks the new colours when shown.
+- `docs/PERFORMANCE.md` records the new numbers and `tests/test_performance.py`
+  guards the contact-table budget.
+
 ## [0.20.0] - 2026-11-04
 
 - Background learning is now a separate action: a **«Записать фон»** button in

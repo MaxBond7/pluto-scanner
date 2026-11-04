@@ -147,3 +147,31 @@ def test_arrayops_match_scipy():
     filled = close_gaps(mask, 2)
     assert filled[3:5].all()
     assert not filled[10:].any()
+
+def test_contact_table_update_stays_fast():
+    """200 contacts must refresh without rebuilding every cell."""
+    from PySide6.QtWidgets import QApplication
+
+    from pluto_scanner.model import Contact, SignalType
+    from pluto_scanner.ui.contact_table import ContactTable
+
+    app = QApplication.instance() or QApplication([])  # noqa: F841
+    now = time.time()
+    types = list(SignalType)
+    contacts = [
+        Contact(
+            contact_id=f"c-{i}", device_id="dev", freq_hz=2.4e9 + i * 1e6,
+            bw_hz=200e3, type=types[i % len(types)], confidence=0.8,
+            first_seen=now - 120, last_seen=now - i, hits=5, misses=0,
+            max_snr_db=20.0, last_snr_db=18.0, known=(i % 4 == 0),
+            alternatives=[(types[0], 0.4)],
+        )
+        for i in range(200)
+    ]
+    table = ContactTable()
+    names = {"dev": "Устройство"}
+    table.update_contacts(contacts, names)
+    assert _median_ms(
+        lambda: table.update_contacts(contacts, names), repeat=5,
+    ) < 6.0
+    table.deleteLater()
