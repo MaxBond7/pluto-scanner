@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Long IQ recording tab: record the selected radio and replay recordings."""
 from __future__ import annotations
 

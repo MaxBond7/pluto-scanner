@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Optional audio output.
 
 sounddevice is imported lazily so the scanner still runs on machines without

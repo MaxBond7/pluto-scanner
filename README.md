@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.20.3-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.21.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
-  <img src="https://img.shields.io/badge/LICENSE-MIT-000000?style=flat-square&labelColor=ffffff" alt="license">
+  <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
 </p>
 
 <p align="center">[ <a href="#возможности">ВОЗМОЖНОСТИ</a> ] &nbsp;·&nbsp; [ <a href="#скриншоты">СКРИНШОТЫ</a> ] &nbsp;·&nbsp; [ <a href="#как-это-работает">СХЕМА</a> ] &nbsp;·&nbsp; [ <a href="#быстрый-старт">БЫСТРЫЙ СТАРТ</a> ] &nbsp;·&nbsp; [ <a href="#архитектура">АРХИТЕКТУРА</a> ] &nbsp;·&nbsp; [ <a href="#документация">ДОКУМЕНТАЦИЯ</a> ] &nbsp;·&nbsp; [ <a href="#честные-ограничения">ОГРАНИЧЕНИЯ</a> ]</p>
@@ -117,8 +117,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\PlutoScanner\PlutoScanner.exe          portable one-folder
-dist\PlutoScanner-0.20.3-portable.zip        архив
-dist\PlutoScanner-Setup-0.20.3.exe           установщик
+dist\PlutoScanner-0.21.0-portable.zip        архив
+dist\PlutoScanner-Setup-0.21.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -193,9 +193,10 @@ IQ (Pluto / симулятор / запись)
 
 ## СТАТУС И ЛИЦЕНЗИЯ
 
-- Версия: **0.16.0**
+- Версия: **0.21.0**
 - Тесты: `pytest`, симулятор и реальные Pluto+
-- Лицензия: **MIT** — см. [LICENSE](LICENSE); сторонние компоненты —
+- Лицензия: **GNU GPL v3 (GPL-3.0-only)** — полный текст в
+  [LICENSE](LICENSE). Сторонние компоненты сохраняют свои лицензии —
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Репозиторий открыт: <https://github.com/MaxBond7/pluto-scanner>
 - Локальные данные (`user_data/`, `iq_recordings/`, логи, клипы) в Git не попадают

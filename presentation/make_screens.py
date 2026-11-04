@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Render UI screenshots for the README in the mono theme.
 
     python presentation/make_screens.py

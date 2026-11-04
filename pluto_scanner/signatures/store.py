@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """SQLite-backed local library of known signal signatures."""
 from __future__ import annotations
 

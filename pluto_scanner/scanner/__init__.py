@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Full-range sweep: peak detection, JSON recorder, controller and compare."""
 from .compare import (
     background_compatible,

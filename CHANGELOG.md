@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-04
+
+- Licence changed from MIT to the **GNU General Public License v3**
+  (`GPL-3.0-only`), using the standard 35 KB GPL text as the `LICENSE` file
+  (the same form other GPL-3.0 projects publish).
+- Updated every place that named the old licence: `pyproject.toml` metadata and
+  classifier, README badge and status section, CONTRIBUTING, third-party
+  notices, model card, GitHub docs, antivirus appeal text, the Windows version
+  resource and the About box.
+- Every Python source file now carries an SPDX header
+  (`GPL-3.0-only`), so the licence is visible per file, not only at the root.
+- The About box now states the licence, the source repository and the absence
+  of warranty, as GPL section 5(d) expects for an interactive interface.
+- Versions up to 0.20.3 were published under MIT; their terms are unchanged
+  for those releases.
+
 ## [0.20.3] - 2026-11-04
 
 - The drone monitor window is now a standalone top-level window instead of an

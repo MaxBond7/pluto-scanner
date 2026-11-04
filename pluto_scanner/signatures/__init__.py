@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Known-signal signature library for Pluto Scanner."""
 from .matcher import CLASS_SOURCES, SignatureMatch, match_event
 from .models import SignalSignature

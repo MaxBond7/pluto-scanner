@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Aggregate per-block observations into human-readable events."""
 from __future__ import annotations
 

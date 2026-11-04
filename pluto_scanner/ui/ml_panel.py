@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Offline ML model panel: train on synthetic IQ, inspect classes."""
 from __future__ import annotations
 

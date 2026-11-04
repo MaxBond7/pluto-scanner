@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Generate the Pluto Scanner icon (ICO + PNG) in the monochrome style.
 
 Black square, white spectrum bars, no colour, sharp geometry — the same

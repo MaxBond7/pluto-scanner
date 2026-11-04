@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Software VFO controls.
 
 Wobble is implemented here as a 30 Hz animation of the VFO offset.  The LO

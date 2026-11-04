@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Peak detection for a single scan step.
 
 The live detector in :mod:`pluto_scanner.dsp.detector` is designed for a

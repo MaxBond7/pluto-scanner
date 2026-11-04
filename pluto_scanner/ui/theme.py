@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Compatibility shim: the theme engine now lives in :mod:`pluto_scanner.ui.themes`."""
 from __future__ import annotations
 

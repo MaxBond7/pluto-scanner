@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Persistent per-band noise-floor profiles for the drone monitor.
 
 The first blocks of a band are used to learn its noise floor.  Profiles are

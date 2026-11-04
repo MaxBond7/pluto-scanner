@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Small 1-D array helpers that replace ``scipy.ndimage`` at startup.
 
 Importing ``scipy.ndimage`` costs about 235 ms and ``scipy.signal`` about

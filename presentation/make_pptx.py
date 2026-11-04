@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Build the PowerPoint version of the Pluto Scanner presentation."""
 from __future__ import annotations
 

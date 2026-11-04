@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Windowed spectrum estimation in dBFS.
 
 The simulator and the Pluto both deliver complex baseband.  A full-scale

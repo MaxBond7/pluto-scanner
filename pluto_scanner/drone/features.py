@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Feature extraction and heuristic classification for drone-band activity.
 
 This module works on raw IQ blocks.  It deliberately does **not** claim to

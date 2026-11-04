@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Domain-gap report: synthetic vs augmented vs real recordings."""
 from __future__ import annotations
 

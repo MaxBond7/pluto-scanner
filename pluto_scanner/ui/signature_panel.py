@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Read-only view of the local known-signal signature library."""
 from __future__ import annotations
 

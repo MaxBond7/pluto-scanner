@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Main window: devices, spectrum, waterfall, contacts, software VFO."""
 from __future__ import annotations
 
@@ -504,7 +506,11 @@ class MainWindow(QMainWindow):
             "только маленький файл с весами.\n\n"
             "Оценка «дрон / не дрон» — вероятность по обучающим данным, "
             "а не гарантия. Определять модель дрона и дальность программа "
-            "не умеет.",
+            "не умеет.\n\n"
+            "Лицензия: GNU GPL v3 (GPL-3.0-only).\n"
+            "Исходный код: https://github.com/MaxBond7/pluto-scanner\n"
+            "Программа распространяется без гарантий; полный текст "
+            "лицензии — в файле LICENSE.",
         )
 
     def _on_theme_changed(self, index: int) -> None:

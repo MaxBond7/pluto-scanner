@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Dedicated window for the drone monitor.
 
 The monitor needs a graph, a wide table and a row of controls.  Cramming that

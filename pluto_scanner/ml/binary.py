@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Binary ``drone`` / ``background`` detector.
 
 The six-class model answers *what kind* of activity was seen.  This module

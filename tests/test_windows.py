@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Window behaviour: geometry memory and restoring from the taskbar."""
 from __future__ import annotations
 

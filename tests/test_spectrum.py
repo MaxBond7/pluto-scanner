@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Unit tests for the DSP core.  Run with ``python -m pytest``."""
 from __future__ import annotations
 

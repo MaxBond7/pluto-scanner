@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Adapter for the DroneRF dataset (Al-Sa'd et al., 2019, CC BY 4.0).
 
 The dataset ships one recording per CSV file: a single line of 10,000,000

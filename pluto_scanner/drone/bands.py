@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Drone-band definitions and fast sweep chunking.
 
 The drone monitor is deliberately *not* a full-range scan.  It watches a

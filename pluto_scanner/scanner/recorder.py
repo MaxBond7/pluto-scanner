@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Persist a band sweep: per-step JSON files plus one background bundle.
 
 Layout::

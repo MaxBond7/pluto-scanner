@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Coordinate one fast monitor per SDR and aggregate drone events."""
 from __future__ import annotations
 

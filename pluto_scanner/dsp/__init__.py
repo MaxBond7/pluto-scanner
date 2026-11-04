@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """DSP package."""
 from .audio import AudioSink
 from .classifier import SignalClassifier

@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Generate the ASCII bird used by the splash screen.
 
     python tools/make_ascii_bird.py

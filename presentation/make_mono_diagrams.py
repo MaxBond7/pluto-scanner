@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Generate the monochrome diagrams used on the GitHub page.
 
     python presentation/make_mono_diagrams.py

@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Built-in catalog of common signal families.
 
 The entries describe *typical* bands and spectral behaviour, not confirmed

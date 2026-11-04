@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Generate the GitHub social preview image in the monochrome ``mono`` style."""
 from __future__ import annotations
 

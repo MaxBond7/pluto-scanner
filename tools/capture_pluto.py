@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Record IQ from a real Pluto/Pluto+ into the app's own recording format.
 
 The GUI already records, but a headless capture is handy for building

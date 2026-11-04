@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Download the DroneRF dataset from Mendeley Data.
 
 DroneRF (Al-Sa'd et al., 2019) is published under CC BY 4.0 through the

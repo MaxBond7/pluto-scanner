@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Drawing helpers for the black-and-white ``mono`` brand assets.
 
 Everything here is deliberately plain: 1 px white lines, a faint grid, a

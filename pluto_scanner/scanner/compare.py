@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Compare a fresh sweep with a saved background sweep.
 
 Two complementary tests are used:

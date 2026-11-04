@@ -1,8 +1,8 @@
 # Contributing
 
 Thanks for considering a contribution. The project is open source under the
-MIT license, and the codebase and data model are designed to stay
-reproducible and community-friendly.
+GNU General Public License v3 (GPL-3.0-only), and the codebase and data model
+are designed to stay reproducible and community-friendly.
 
 ## Development setup
 

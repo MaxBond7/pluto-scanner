@@ -69,7 +69,7 @@ Add-MpPreference -ExclusionPath "C:\путь\к\PlutoScanner"
 Текст заявки:
 
 ```text
-Pluto Scanner is an open-source (MIT) passive SDR receiver for the ADALM-PLUTO.
+Pluto Scanner is an open-source (GPL-3.0) passive SDR receiver for the ADALM-PLUTO.
 The binary is built with PyInstaller from https://github.com/MaxBond7/pluto-scanner
 and is not code-signed yet. It contains no packer, no persistence, no telemetry
 and no network calls; it only reads USB SDR samples and displays a spectrum.

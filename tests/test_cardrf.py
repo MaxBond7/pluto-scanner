@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Tests for the CardRF adapter (archive parsing and baseband conversion)."""
 from __future__ import annotations
 

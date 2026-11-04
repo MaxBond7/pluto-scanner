@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Entry point for ``python -m pluto_scanner`` and the console script."""
 from __future__ import annotations
 

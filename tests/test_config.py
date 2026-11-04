@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 from __future__ import annotations
 
 from pluto_scanner.config import (BANDS, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE,

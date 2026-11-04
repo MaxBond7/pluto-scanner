@@ -5,7 +5,7 @@
 ## 1. Текущий статус
 
 - visibility: **Public**;
-- лицензия: **MIT**;
+- лицензия: **GPL-3.0-only** (GNU GPL v3, файл `LICENSE`);
 - основная ветка: `main`;
 - версии: теги `v0.1.0` … `v0.13.0`;
 - GitHub Actions: тесты на Windows;
@@ -69,7 +69,7 @@ git push origin v0.13.0
 ## 5. Оформление страницы
 
 - [x] README с баннером, скриншотами, возможностями и быстрым стартом.
-- [x] Лицензия MIT, CONTRIBUTING, SECURITY, CITATION.
+- [x] Лицензия GPL-3.0, CONTRIBUTING, SECURITY, CITATION.
 - [x] GitHub Actions для тестов.
 - [x] Topics и описание репозитория.
 - [x] GitHub Release `v0.13.0` с ZIP, Setup и `SHA256SUMS.txt`.

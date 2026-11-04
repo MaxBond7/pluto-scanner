@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Theme engine: built-in palettes, user JSON themes, Qt stylesheet builder.
 
 A theme is a plain JSON file with a dozen colours, a font and a corner radius,

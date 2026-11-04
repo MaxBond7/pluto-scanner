@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Offline ML for the drone monitor.
 
 The classifier is a small softmax regression over measured IQ features.  It

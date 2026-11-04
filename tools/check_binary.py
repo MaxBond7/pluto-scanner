@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Score a drone/not-drone model on the recordings you made yourself.
 
 This is the honest check that matters most: the training archives come from

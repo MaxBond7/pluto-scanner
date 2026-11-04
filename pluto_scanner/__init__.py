@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Pluto Scanner - a desktop new-contact scanner for ADALM-PLUTO.
 
 The application is split into three layers:
@@ -6,4 +8,4 @@ The application is split into three layers:
     ui       - PySide6/pyqtgraph front end
 """
 
-__version__ = "0.20.3"
+__version__ = "0.21.0"

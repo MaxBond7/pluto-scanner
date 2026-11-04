@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Tests for per-step peak detection used by the band scanner."""
 from __future__ import annotations
 

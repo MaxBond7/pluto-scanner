@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Correctness cross-checks and loose performance budgets.
 
 The budgets are intentionally generous (3-5x the measured value on a normal

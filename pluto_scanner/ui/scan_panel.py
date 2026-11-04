@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Band-scan controls, live graph and detection table.
 
 The panel owns no scanning logic: it emits :attr:`start_requested` and

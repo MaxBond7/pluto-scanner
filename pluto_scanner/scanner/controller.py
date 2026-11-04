@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Qt state machine for a real full-range sweep.
 
 The scanner does not move the LO from a background thread: it retunes through

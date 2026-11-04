@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Per-device DSP session: IQ -> spectrum -> detections -> contacts -> audio."""
 from __future__ import annotations
 

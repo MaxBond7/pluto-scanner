@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Adapter for the Cardinal RF (CardRF) dataset (Medaiyese et al., 2020).
 
 CardRF is a set of 10,100 MATLAB files recorded outdoors at 2.4 GHz with an

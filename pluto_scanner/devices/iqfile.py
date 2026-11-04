@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Playback of a recorded cf32 IQ file through the normal DSP pipeline."""
 from __future__ import annotations
 

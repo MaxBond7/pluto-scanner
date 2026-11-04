@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Render the boot splash to a PNG for the documentation.
 
     python tools/make_splash_shot.py presentation/splash.png

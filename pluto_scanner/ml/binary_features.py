@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Features for the binary drone / background model.
 
 The six-class model reuses the heuristic's measurements (occupied bandwidth,

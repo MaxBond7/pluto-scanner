@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Live spectrum plot for the drone monitor's current chunk."""
 from __future__ import annotations
 

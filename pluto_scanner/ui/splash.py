@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Boot splash with an animated ASCII bird.
 
 The splash is created **before** the heavy imports (pyqtgraph, the UI panels,

@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Persistent white list for known drone-band signals.
 
 A white-list entry suppresses *alarms* for a signal family that the operator

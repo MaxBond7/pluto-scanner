@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Stable contact tracking.
 
 The detector sees a signal every frame.  The tracker is what turns that into

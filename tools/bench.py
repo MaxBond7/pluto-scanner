@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Micro-benchmarks for the hot paths of Pluto Scanner.
 
     python tools/bench.py

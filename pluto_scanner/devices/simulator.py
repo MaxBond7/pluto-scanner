@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Synthetic, continuous-time-ish IQ source.
 
 This is not just a fake spectrum: it produces complex IQ at the requested

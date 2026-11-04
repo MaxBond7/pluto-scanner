@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Keep only the newest backup folders and delete the older ones.
 
 The project rule is simple: on the backup disk there are three recent

@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Import the Cardinal RF (CardRF) dataset into the app's recording format.
 
 CardRF ships one ``.mat`` file per recording (5,000,000 complex samples) and

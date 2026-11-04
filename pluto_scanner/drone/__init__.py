@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Passive drone-band monitor built on the existing Pluto/simulator sessions."""
 from __future__ import annotations
 

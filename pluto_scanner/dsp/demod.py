@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Software VFO + real demodulation.
 
 The local oscillator is never moved by the VFO.  The selected channel is

@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Synthetic IQ generator for the drone ML baseline.
 
 The generator creates the six classes the monitor can actually measure:

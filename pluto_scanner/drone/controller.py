@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Fast per-device band monitor used by the drone detector.
 
 Each controller owns one device.  It retunes across a list of wide chunks,

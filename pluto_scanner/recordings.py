@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Pluto Scanner contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Long IQ recordings: cf32 storage, metadata and safe background writing.
 
 A recording is a pair of files in ``iq_recordings/``:

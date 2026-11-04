@@ -74,7 +74,7 @@ VSVersionInfo(
             StringStruct(u'FileDescription', u'Pluto Scanner - SDR spectrum and drone-band monitor'),
             StringStruct(u'FileVersion', u'$version'),
             StringStruct(u'InternalName', u'PlutoScanner'),
-            StringStruct(u'LegalCopyright', u'MIT License'),
+            StringStruct(u'LegalCopyright', u'GPL-3.0-only'),
             StringStruct(u'OriginalFilename', u'PlutoScanner.exe'),
             StringStruct(u'ProductName', u'Pluto Scanner'),
             StringStruct(u'ProductVersion', u'$version')
