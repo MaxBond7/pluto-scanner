@@ -3,6 +3,7 @@
 """Tests for the deep-look capture and its cautious verdicts."""
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -136,11 +137,29 @@ def test_look_reports_a_steady_carrier(monkeypatch):
     monkeypatch.setattr(deep_look, "SETTLE_MS", 0)
     session = FakeSession()
     result = look(
-        session, 2437e6, seconds=0.03, sample_rate=1.0e6,
+        session, 2437e6, seconds=0.03, windows=3, sample_rate=1.0e6,
     )
     assert result.ok is True
     assert result.behavior is not None
     assert result.behavior.duty > 0.9
+    assert len(result.windows) == 3
+    assert "стабильно" in result.stability
+    assert "почему" in result.text()
+
+
+def test_save_capture_writes_a_normal_recording(tmp_path, monkeypatch):
+    _app()
+    monkeypatch.setattr(deep_look, "SETTLE_MS", 0)
+    session = FakeSession()
+    result = look(
+        session, 2437e6, seconds=0.03, windows=1, sample_rate=1.0e6,
+    )
+    info = deep_look.save_capture(result, tmp_path, label="FHSS")
+    assert info is not None
+    assert Path(result.path).exists()
+    assert info.samples == result.data.size
+    assert info.label == "FHSS"
+    assert info.meta.exists()
 
 
 def _event() -> DroneEvent:
@@ -156,19 +175,19 @@ def _event() -> DroneEvent:
 def test_dialog_disables_deep_look_when_a_mode_blocks_it():
     _app()
     dialog = DroneEventDialog(
-        _event(), deep_look=None, deep_reason="идёт мониторинг дронов",
+        _event(), deep_look=None, deep_reason="идёт запись IQ",
     )
     assert dialog.deep_btn.isEnabled() is False
-    assert "мониторинг" in dialog.deep_btn.toolTip()
+    assert "запись" in dialog.deep_btn.toolTip()
     dialog.deleteLater()
 
 
 def test_dialog_shows_the_deep_look_result():
     _app()
-    calls: list[float] = []
+    calls: list[tuple[float, float, int]] = []
 
-    def fake(hz: float) -> DeepResult:
-        calls.append(hz)
+    def fake(hz: float, seconds: float, windows: int) -> DeepResult:
+        calls.append((hz, seconds, windows))
         return DeepResult(
             True, "", hz, 6.144e6, _behavior(duty=0.9), "похоже на дрон",
         )
@@ -176,7 +195,8 @@ def test_dialog_shows_the_deep_look_result():
     dialog = DroneEventDialog(_event(), deep_look=fake)
     assert dialog.deep_btn.isEnabled() is True
     dialog._run_deep_look()
-    assert calls == [2437e6]
+    assert calls and calls[0][0] == 2437e6
+    assert calls[0][1] >= 0.2 and calls[0][2] >= 1
     assert "похоже на дрон" in dialog.deep_label.text()
     assert "скважность 0.90" in dialog.deep_label.text()
     dialog.deleteLater()

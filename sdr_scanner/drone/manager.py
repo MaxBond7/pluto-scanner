@@ -91,6 +91,40 @@ class DroneMonitorManager(QObject):
     def summary(self) -> dict[str, Any]:
         return self._tracker.summary()
 
+    # ------------------------------------------------------------ deep look
+    def pause_for_deep_look(self, device_ids=()):
+        """Free one receiver for a deep look and keep the monitor state.
+
+        Returns the paused controller, or ``None`` when monitoring is not
+        running.  The caller must pass it back to ``resume_after_deep_look``.
+        """
+        if not self._running:
+            return None
+        wanted = set(device_ids or ())
+        candidates = [
+            controller for controller in self._controllers
+            if controller.running and not controller.paused
+        ]
+        preferred = [
+            controller for controller in candidates
+            if controller.device_id in wanted
+        ]
+        ordered = preferred + [
+            controller for controller in candidates
+            if controller not in preferred
+        ]
+        for controller in ordered:
+            if controller.pause():
+                return controller
+        return None
+
+    def resume_after_deep_look(self, controller) -> None:
+        if controller is not None:
+            try:
+                controller.resume()
+            except Exception:
+                log.exception("drone controller resume failed")
+
     # --------------------------------------------------------------------- ML
     def set_ml_model(self, model: SoftmaxModel | None) -> None:
         self._ml_model = model

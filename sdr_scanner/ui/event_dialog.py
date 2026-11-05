@@ -13,24 +13,33 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QDoubleSpinBox,
     QFileDialog,
     QGridLayout,
     QHBoxLayout,
     QInputDialog,
     QLabel,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 
 from ..config import format_bw, format_freq
-from ..drone.deep_look import DeepResult
+from ..drone.deep_look import (
+    DEFAULT_WINDOW_S,
+    DEFAULT_WINDOWS,
+    DeepResult,
+    save_capture,
+)
 from ..drone.report import export_event_bundle
 from ..drone.tracker import DroneEvent
 from ..drone.features import CLASS_RU
+from ..paths import DATA_DIR, RECORDINGS_DIR
+from ..recordings import set_label
 from ..signatures import SignatureStore, match_event
 from ..drone.whitelist import DroneWhitelist
-from .themes import set_style, tcol
+from .themes import load_settings, save_settings, set_style, tcol
 
 
 class DroneEventDialog(QDialog):
@@ -39,7 +48,7 @@ class DroneEventDialog(QDialog):
     def __init__(self, event: DroneEvent, parent: QWidget | None = None,
                  store: SignatureStore | None = None,
                  whitelist: DroneWhitelist | None = None,
-                 deep_look: Callable[[float], DeepResult] | None = None,
+                 deep_look: Callable[[float, float, int], DeepResult] | None = None,
                  deep_reason: str = "") -> None:
         super().__init__(parent)
         self.drone_event = event
@@ -47,6 +56,15 @@ class DroneEventDialog(QDialog):
         self.whitelist = whitelist
         self._deep_look = deep_look
         self._deep_reason = deep_reason
+        self._deep_result: DeepResult | None = None
+        self._deep_recording = None
+        settings = load_settings(DATA_DIR / "settings.json")
+        self._deep_seconds = float(
+            settings.get("deep_look_seconds") or DEFAULT_WINDOW_S
+        )
+        self._deep_windows = int(
+            settings.get("deep_look_windows") or DEFAULT_WINDOWS
+        )
         self.matches = match_event(event, self.store.all())
         self.setWindowTitle(f"Событие {event.event_id}")
         self.resize(980, 820)
@@ -155,6 +173,31 @@ class DroneEventDialog(QDialog):
         self.deep_label.hide()
         root.addWidget(self.deep_label)
 
+        deep_row = QHBoxLayout()
+        deep_row.setSpacing(6)
+        deep_row.addWidget(QLabel("Окно"))
+        self.window_spin = QDoubleSpinBox()
+        self.window_spin.setRange(0.2, 2.0)
+        self.window_spin.setSingleStep(0.1)
+        self.window_spin.setDecimals(1)
+        self.window_spin.setSuffix(" с")
+        self.window_spin.setValue(max(0.2, min(2.0, self._deep_seconds)))
+        self.window_spin.setToolTip(
+            "Длительность одного окна. Несколько окон подряд показывают, "
+            "насколько поведение сигнала стабильно."
+        )
+        deep_row.addWidget(self.window_spin)
+        deep_row.addWidget(QLabel("Окон"))
+        self.windows_spin = QSpinBox()
+        self.windows_spin.setRange(1, 6)
+        self.windows_spin.setValue(max(1, min(6, self._deep_windows)))
+        deep_row.addWidget(self.windows_spin)
+        deep_row.addStretch(1)
+        if deep_look is None:
+            self.window_spin.setEnabled(False)
+            self.windows_spin.setEnabled(False)
+        root.addLayout(deep_row)
+
         plots = QHBoxLayout()
         plots.setSpacing(8)
 
@@ -216,7 +259,7 @@ class DroneEventDialog(QDialog):
         root.addWidget(self.status)
 
         buttons = QHBoxLayout()
-        self.deep_btn = QPushButton("Проверить 1 с")
+        self.deep_btn = QPushButton("Глубокий взгляд")
         self.deep_btn.setEnabled(deep_look is not None)
         if deep_look is None:
             self.deep_btn.setToolTip(
@@ -225,11 +268,24 @@ class DroneEventDialog(QDialog):
             )
         else:
             self.deep_btn.setToolTip(
-                "Снять 1 секунду на частоте события и измерить скважность, "
-                "занятую полосу и перескоки. Приёмник на время проверки "
-                "перенастроится и потом вернётся обратно."
+                "Снять несколько окон на частоте события и измерить "
+                "скважность, занятую полосу и перескоки. Мониторинг на это "
+                "время приостановится, приёмник потом вернётся на место."
             )
         self.deep_btn.clicked.connect(self._run_deep_look)
+        self.save_iq_btn = QPushButton("Сохранить IQ")
+        self.save_iq_btn.setEnabled(False)
+        self.save_iq_btn.setToolTip(
+            "Сохранит снятые окна как обычную IQ-запись: её можно открыть "
+            "в панели записей и разметить для обучения."
+        )
+        self.save_iq_btn.clicked.connect(self._save_deep_iq)
+        self.dataset_btn = QPushButton("В датасет")
+        self.dataset_btn.setEnabled(False)
+        self.dataset_btn.setToolTip(
+            "Поставить метку класса сохранённой записи глубокого взгляда."
+        )
+        self.dataset_btn.clicked.connect(self._label_deep_iq)
         self.export_btn = QPushButton("Экспорт отчёта…")
         self.export_btn.clicked.connect(self._export)
         self.folder_btn = QPushButton("Папка IQ")
@@ -253,6 +309,8 @@ class DroneEventDialog(QDialog):
         close_btn = QPushButton("Закрыть")
         close_btn.clicked.connect(self.accept)
         buttons.addWidget(self.deep_btn)
+        buttons.addWidget(self.save_iq_btn)
+        buttons.addWidget(self.dataset_btn)
         buttons.addWidget(self.export_btn)
         buttons.addWidget(self.folder_btn)
         buttons.addWidget(self.white_btn)
@@ -262,21 +320,39 @@ class DroneEventDialog(QDialog):
         root.addLayout(buttons)
 
     # ------------------------------------------------------------- deep look
+    @property
+    def deep_recording(self):
+        return self._deep_recording
+
     def _run_deep_look(self) -> None:
         if self._deep_look is None:
             return
+        seconds = float(self.window_spin.value())
+        windows = int(self.windows_spin.value())
+        settings = load_settings(DATA_DIR / "settings.json")
+        settings["deep_look_seconds"] = seconds
+        settings["deep_look_windows"] = windows
+        save_settings(DATA_DIR / "settings.json", settings)
+
         self.deep_btn.setEnabled(False)
         self.deep_label.show()
+        self._deep_result = None
+        self._deep_recording = None
+        self.save_iq_btn.setEnabled(False)
+        self.dataset_btn.setEnabled(False)
         set_style(self.deep_label, "color:#facc15; font-size:11px;")
         self.deep_label.setText(
-            "Слушаю 1 секунду на частоте события — не выключайте приёмник…"
+            f"Слушаю {windows} окн. по {seconds:.1f} с на частоте события — "
+            "мониторинг на паузе…"
         )
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
         result: DeepResult | None = None
         error = ""
         try:
-            result = self._deep_look(float(self.drone_event.freq_hz))
+            result = self._deep_look(
+                float(self.drone_event.freq_hz), seconds, windows,
+            )
         except Exception as exc:                     # pragma: no cover - UI guard
             error = str(exc)
         finally:
@@ -289,6 +365,7 @@ class DroneEventDialog(QDialog):
                 f"Проверка не удалась: {error or 'приёмник не ответил'}"
             )
             return
+        self._deep_result = result
         if not result.ok:
             set_style(self.deep_label, "color:#f87171; font-size:11px;")
         elif (result.behavior is not None
@@ -298,6 +375,55 @@ class DroneEventDialog(QDialog):
         else:
             set_style(self.deep_label, "color:#facc15; font-size:11px;")
         self.deep_label.setText(result.text())
+        if result.ok and result.data is not None:
+            self.save_iq_btn.setEnabled(True)
+
+    def _save_deep_iq(self) -> None:
+        result = self._deep_result
+        if result is None or not result.ok or result.data is None:
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            info = save_capture(result, RECORDINGS_DIR)
+        finally:
+            QApplication.restoreOverrideCursor()
+        if info is None:
+            self.status.setText("Не удалось сохранить IQ глубокого взгляда.")
+            set_style(self.status, "color:#f87171; font-size:11px;")
+            return
+        self._deep_recording = info
+        self.save_iq_btn.setEnabled(False)
+        self.dataset_btn.setEnabled(True)
+        self.status.setText(
+            f"IQ сохранён: {info.recording_id}. "
+            "Его можно разметить кнопкой «В датасет»."
+        )
+        set_style(self.status, "color:#4ade80; font-size:11px;")
+        self.deep_label.setText(result.text())
+
+    def _label_deep_iq(self) -> None:
+        info = self._deep_recording
+        if info is None:
+            return
+        keys = [
+            "FHSS", "TELEMETRY", "VIDEO_ANALOG", "VIDEO_DIGITAL",
+            "WIFI", "NARROW",
+        ]
+        labels = [CLASS_RU[key] for key in keys]
+        label, ok = QInputDialog.getItem(
+            self, "Класс сигнала",
+            "Какая это запись? Метка пойдёт в обучение.",
+            labels, 0, False,
+        )
+        if not ok:
+            return
+        index = labels.index(label) if label in labels else 0
+        set_label(info, keys[index])
+        self.status.setText(
+            f"Метка сохранена: {label}. Запись появится в панели ML."
+        )
+        set_style(self.status, "color:#4ade80; font-size:11px;")
+        self.dataset_btn.setEnabled(False)
 
     # ------------------------------------------------------------------ helpers
     def _binary_text(self) -> str:

@@ -2036,7 +2036,9 @@ class MainWindow(QMainWindow):
         reason = self._deep_look_block_reason()
         deep = None
         if not reason:
-            deep = lambda hz: self._deep_look_event(hz)  # noqa: E731
+            deep = lambda hz, sec, win: self._deep_look_event(  # noqa: E731
+                event, hz, sec, win,
+            )
         dialog = DroneEventDialog(
             event, self,
             store=self.signature_store,
@@ -2046,15 +2048,21 @@ class MainWindow(QMainWindow):
         )
         dialog.feedback_requested.connect(self._save_ml_feedback)
         dialog.exec()
+        if dialog.deep_recording is not None:
+            self._refresh_recordings()
+            self.ml_panel.refresh()
 
     def _deep_look_block_reason(self) -> str:
         """Why the deep look cannot run right now, or an empty string."""
-        if self._drone_active:
-            return "идёт мониторинг дронов"
         if self._recording:
             return "идёт запись IQ"
         if self._scanning:
             return "идёт сканирование"
+        if self._drone_active:
+            manager = self._drone_manager
+            if manager is None or not manager.running:
+                return "мониторинг не запущен"
+            return ""
         session = self.sessions.get(self.selected_id) if self.selected_id else None
         if session is None:
             return "нет выбранного приёмника"
@@ -2064,17 +2072,46 @@ class MainWindow(QMainWindow):
             return "приёмник не запущен"
         return ""
 
-    def _deep_look_event(self, center_hz: float) -> DeepResult:
-        session = self.sessions.get(self.selected_id) if self.selected_id else None
+    def _deep_look_event(self, event, center_hz: float,
+                         seconds: float = 0.7,
+                         windows: int = 3) -> DeepResult:
+        manager = self._drone_manager
+        controller = None
+        if self._drone_active and manager is not None:
+            controller = manager.pause_for_deep_look(
+                list(getattr(event, "device_ids", []) or [])
+            )
+            if controller is None:
+                return DeepResult(
+                    False, "не удалось приостановить монитор",
+                    center_hz, 0.0, None, "",
+                )
+            session = controller.session
+        else:
+            session = (
+                self.sessions.get(self.selected_id)
+                if self.selected_id else None
+            )
         if session is None:
             return DeepResult(
                 False, "нет выбранного приёмника", center_hz, 0.0, None, "",
             )
+        rate = 20.48e6 if session.config.kind == "hackrf" else 6.144e6
         self.status_label.setText(
-            f"Глубокий взгляд: {format_freq(center_hz)} — слушаю 1 секунду…"
+            f"Глубокий взгляд: {format_freq(center_hz)} — "
+            f"{windows} окн. по {seconds:.1f} с…"
         )
         set_style(self.status_label, "color:#67e8f9;")
-        result = deep_look_look(session, float(center_hz))
+        try:
+            result = deep_look_look(
+                session, float(center_hz),
+                seconds=float(seconds), windows=int(windows),
+                sample_rate=rate,
+                background=float(getattr(event, "background", 0.0) or 0.0),
+            )
+        finally:
+            if controller is not None and manager is not None:
+                manager.resume_after_deep_look(controller)
         if result.ok:
             self.status_label.setText(
                 f"Глубокий взгляд {format_freq(center_hz)}: {result.verdict}"

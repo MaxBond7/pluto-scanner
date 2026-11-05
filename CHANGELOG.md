@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-05
+
+- **Deep look stage 1: no more stopping the monitor.** The event card now
+  pauses the drone controller, captures on the event frequency and resumes
+  the same chunk afterwards. With two receivers it uses the one that heard
+  the event.
+- **Several windows instead of one.** The card takes 1–6 windows of
+  0.2–2 s and reports the spread (min–max) and a stability line, so a verdict
+  is not based on one lucky burst.
+- **«Почему такой вывод»** lists the features and thresholds behind the
+  verdict; the background share from the map is shown as well.
+- **Save the capture.** «Сохранить IQ» writes the windows as a normal
+  recording; «В датасет» labels it with the chosen class. Saved recordings
+  appear in the recordings panel after the card closes.
+- Window length and count are remembered in `user_data/settings.json`.
+- Tests cover capture, multi-window analysis, saving, the dialog and
+  controller pause/resume. Live Pluto check: pause, two windows, same chunk,
+  timer running again.
+
 ## [0.26.0] - 2026-11-05
 
 - **The drone event list moved into the right-hand column**, under

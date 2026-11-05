@@ -52,6 +52,7 @@ class DroneWatchController(QObject):
         self.min_blocks = max(1, int(min_blocks))
 
         self._running = False
+        self._paused = False
         self._index = 0
         self._blocks = 0
         self._passes = 0
@@ -74,6 +75,10 @@ class DroneWatchController(QObject):
     @property
     def running(self) -> bool:
         return self._running
+
+    @property
+    def paused(self) -> bool:
+        return self._paused
 
     @property
     def passes(self) -> int:
@@ -134,9 +139,28 @@ class DroneWatchController(QObject):
         self._begin_chunk()
         return True
 
+    # ------------------------------------------------------------------- pause
+    def pause(self) -> bool:
+        """Free the receiver for a deep look without losing the chunk.
+
+        The controller keeps its index and simply stops retuning.  ``resume``
+        re-tunes the same chunk and starts the dwell timer again.
+        """
+        if not self._running or self._paused:
+            return False
+        self._paused = True
+        self._timer.stop()
+        return True
+
+    def resume(self) -> None:
+        if not self._running or not self._paused:
+            return
+        self._paused = False
+        self._begin_chunk()
+
     # ------------------------------------------------------------------- chunk
     def _begin_chunk(self) -> None:
-        if not self._running:
+        if not self._running or self._paused:
             return
         if self._index >= len(self.chunks):
             self._index = 0
@@ -159,7 +183,7 @@ class DroneWatchController(QObject):
         )
 
     def _on_iq(self, device_id: str, block) -> None:
-        if not self._running or block is None:
+        if not self._running or self._paused or block is None:
             return
         if device_id != self.device_id:
             return
@@ -177,7 +201,7 @@ class DroneWatchController(QObject):
         self._next_chunk()
 
     def _on_timeout(self) -> None:
-        if not self._running:
+        if not self._running or self._paused:
             return
         if not self._analyzed_current and self._last_block is not None:
             self._analyze_block(self._last_block)
@@ -244,7 +268,7 @@ class DroneWatchController(QObject):
             self._bg_saved[obs.band_key] = floor
 
     def _next_chunk(self) -> None:
-        if not self._running:
+        if not self._running or self._paused:
             return
         self._timer.stop()
         self._index += 1
