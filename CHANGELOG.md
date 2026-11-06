@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-06
+
+- **Fixed deep look failing on HackRF after the monitor was stopped.** The
+  probe asked for a new sample rate (10.24 → 20.0); libhackrf sometimes
+  returned `start_rx: -1000` or accepted the call without delivering any
+  callbacks. The HackRF is now opened at 20.0 MS/s and the monitor/deep look
+  adopt the device's current rate instead of changing it mid-stream. The
+  rate selector is locked for HackRF with an explanation.
+- The worker still reopens the device as a fallback if a rate change is ever
+  requested, and deep look retries a capture once instead of returning an
+  empty result immediately.
+- **Quiet-channel guard.** A flat noise floor or a residual LO spur no longer
+  looks like 100% duty: the result says «сигнал не обнаружен — только шум
+  или узкий спур». This also stops a quiet channel from producing fake
+  channel maps.
+- **Stage 3: analog video line sync.** A strong envelope line in the
+  14–17 kHz band is reported as a PAL/NTSC line rate (15.625 or 15.734 kHz)
+  and gives the verdict «аналоговый видеолинк». A digital 5–8 kHz envelope
+  peak is not called analog.
+- The event card prints the envelope line rate and its strength; synthetic
+  tests cover both the analog line and the digital false positive.
+- Docs: HackRF rate behaviour, stage 3 limits; the real FPV recording is
+  still needed to confirm the threshold on air.
+
 ## [0.29.0] - 2026-11-06
 
 - **Deep look stage 2: channel map.** New `ml/channels.py` groups per-frame

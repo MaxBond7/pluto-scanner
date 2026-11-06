@@ -279,23 +279,22 @@ class HackRFWorker(DeviceWorker):
                 # USB stream for an unchanged value can fail with
                 # HACKRF_ERROR_OTHER while stop_rx is still unwinding.
                 return
+            if self._stop_event.is_set():
+                return
             streaming = bool(library.hackrf_is_streaming(self.sdr) == 1)
-            if streaming:
-                self._require(library.hackrf_stop_rx(self.sdr), "stop_rx")
-                for _ in range(50):
-                    if library.hackrf_is_streaming(self.sdr) != 1:
-                        break
-                    time.sleep(0.02)
-                time.sleep(0.05)
             self.sample_rate = rate
-            self._require(
-                library.hackrf_set_sample_rate(self.sdr, rate),
-                "set_sample_rate",
-            )
-            # During shutdown the worker is about to close the device; do not
-            # restart the stream just to satisfy a queued restore command.
-            if streaming and not self._stop_event.is_set():
-                self._start_rx(library)
+            if not streaming:
+                self._require(
+                    library.hackrf_set_sample_rate(self.sdr, rate),
+                    "set_sample_rate",
+                )
+                return
+            # Changing the rate while streaming leaves libhackrf in a state
+            # where start_rx can return success but no callbacks ever arrive.
+            # Closing and reopening the device is slower but deterministic;
+            # rate changes happen only at monitor start/stop and deep look.
+            self._reopen(library)
+            self._start_rx(library)
         elif name == "bandwidth":
             self.bandwidth = float(value)
             self._require(
@@ -337,6 +336,54 @@ class HackRFWorker(DeviceWorker):
             library.hackrf_set_amp_enable(self.sdr, 1 if amp else 0),
             "set_amp_enable",
         )
+
+    def _configure(self, library: ctypes.CDLL) -> None:
+        self._require(
+            library.hackrf_set_sample_rate(self.sdr, self.sample_rate),
+            "set_sample_rate",
+        )
+        self._require(
+            library.hackrf_set_freq(self.sdr, int(self.center_freq)),
+            "set_freq",
+        )
+        self._require(
+            library.hackrf_set_baseband_filter_bandwidth(
+                self.sdr, snap_filter_bw(self.bandwidth)
+            ),
+            "set_baseband_filter_bandwidth",
+        )
+        self._apply_gain()
+
+    def _reopen(self, library: ctypes.CDLL) -> None:
+        """Reopen the device when libhackrf refuses to restart the stream.
+
+        ``hackrf_start_rx`` can return HACKRF_ERROR_OTHER after a rate change
+        even though the stream was stopped and is_streaming says 0.  Closing
+        and opening the device is the reliable way out; rate changes are rare
+        (monitor start/stop and deep look), so the cost is acceptable.
+        """
+        if self._stop_event.is_set():
+            return
+        try:
+            library.hackrf_stop_rx(self.sdr)
+        except Exception:
+            pass
+        time.sleep(0.15)
+        try:
+            library.hackrf_close(self.sdr)
+        except Exception:
+            pass
+        device = ctypes.c_void_p()
+        if self._serial:
+            status = library.hackrf_open_by_serial(
+                self._serial.encode("utf-8"), ctypes.byref(device)
+            )
+        else:
+            status = library.hackrf_open(ctypes.byref(device))
+        if status != 0:
+            raise RuntimeError(f"hackrf_open after restart: {status}")
+        self.sdr = device
+        self._configure(library)
 
     # -------------------------------------------------------------- receive
     def _on_transfer(self, transfer_ptr) -> int:

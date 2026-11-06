@@ -62,6 +62,18 @@ def test_analog_video_line_rate():
     assert result.sync_strength > 5.0
 
 
+def test_quiet_noise_is_not_a_permanent_carrier():
+    rng = np.random.default_rng(11)
+    noise = (
+        rng.normal(size=int(RATE * 0.1))
+        + 1j * rng.normal(size=int(RATE * 0.1))
+    ).astype(np.complex64)
+    result = analyze(noise, RATE, max_seconds=0.1)
+    assert result.snr_db < 7.0
+    assert result.duty == 0.0
+    assert result.occupied == 0.0
+
+
 def test_short_block_is_safe():
     result = analyze(np.zeros(10, dtype=np.complex64), RATE)
     assert result.frames == 0

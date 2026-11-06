@@ -42,6 +42,21 @@ def test_bursty_narrow_signal_is_not_called_drone():
     assert "маяки" in verdict
 
 
+def test_analog_line_sync_is_recognised():
+    verdict = interpret(
+        _behavior(sync_khz=15.625, sync_strength=40.0), 6.144e6,
+    )
+    assert "аналоговый" in verdict
+    assert "15.62" in verdict
+
+
+def test_digital_envelope_peak_is_not_called_analog():
+    verdict = interpret(
+        _behavior(sync_khz=5.8, sync_strength=48.0), 6.144e6,
+    )
+    assert "аналоговый" not in verdict
+
+
 def test_ambiguous_middle_is_reported_as_ambiguous():
     verdict = interpret(_behavior(duty=0.55, occupied=0.45), 6.144e6)
     assert "неоднозначно" in verdict
@@ -101,7 +116,9 @@ class FakeSession(QObject):
         self._timer.start()
 
     def _emit(self) -> None:
-        samples = np.ones(self._block, dtype=np.complex64)
+        # A DC block would be removed before the FFT; use a real tone.
+        t = np.arange(self._block) / self._rate
+        samples = np.exp(2j * np.pi * 300e3 * t).astype(np.complex64)
         block = SimpleNamespace(
             device_id="sim-1",
             center_freq=self.config.center_freq,

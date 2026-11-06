@@ -188,10 +188,17 @@ class DroneMonitorManager(QObject):
             self.error.emit("Нет доступных устройств.")
             return False
 
-        # HackRF tops out at 20 MS/s; asking for 20.48 would make the
-        # controller reject every block because the device reports 20.0.
-        if any(session.config.kind == "hackrf" for session in targets):
-            sample_rate = min(float(sample_rate), 20.0e6)
+        # The HackRF rate is set when the device is opened.  Changing it in
+        # the middle of a stream is unreliable in libhackrf, so the monitor
+        # adopts the device's current rate instead of forcing a new one.
+        hackrf = next(
+            (session for session in targets if session.config.kind == "hackrf"),
+            None,
+        )
+        if hackrf is not None:
+            sample_rate = min(
+                20.0e6, max(2.0e6, float(hackrf.config.sample_rate))
+            )
 
         chunks = chunks_for_bands(bands, sample_rate)
         if not chunks:

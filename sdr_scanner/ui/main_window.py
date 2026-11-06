@@ -53,6 +53,7 @@ from ..config import (
 )
 from ..dsp.audio import AudioSink
 from ..devices import probe_hackrf, scan_pluto_uris
+from ..devices.hackrf import clamp_rate as clamp_hackrf_rate
 from ..drone.background import BackgroundMap, DroneBackgroundStore
 from ..drone.bands import chunks_for_bands, selected_bands
 from ..drone.deep_look import DeepResult, look as deep_look_look
@@ -672,8 +673,8 @@ class MainWindow(QMainWindow):
             kind="hackrf",
             uri=serial,
             center_freq=float(DEFAULT_CENTER_FREQ),
-            sample_rate=10.24e6,
-            bandwidth=10.0e6,
+            sample_rate=20.0e6,
+            bandwidth=20.0e6,
             gain=32.0,
             fft_size=int(DEFAULT_FFT_SIZE),
             seed=1,
@@ -836,6 +837,12 @@ class MainWindow(QMainWindow):
         session.set_audio_enabled(self.audio_enabled)
         self.audio_sink.clear()
         self.device_panel.select_device(device_id)
+        if session.config.kind == "hackrf":
+            index = self.drone_panel.rate_combo.findData(
+                float(session.config.sample_rate)
+            )
+            if index >= 0:
+                self.drone_panel.rate_combo.setCurrentIndex(index)
         self._guard = True
         try:
             self.center_spin.setValue(session.config.center_freq / 1e6)
@@ -1434,6 +1441,22 @@ class MainWindow(QMainWindow):
             return
         fs = float(self.fs_combo.currentData())
         session = self.sessions[self.selected_id]
+        if (session.config.kind == "hackrf"
+                and abs(fs - float(session.config.sample_rate)) > 1.0):
+            # libhackrf can hang while restarting the USB stream.  Keep the
+            # rate the device was opened with; it is set when the board is
+            # added or the app is restarted.
+            self._guard = True
+            try:
+                self._set_fs_combo(float(session.config.sample_rate))
+            finally:
+                self._guard = False
+            self.status_label.setText(
+                "Скорость HackRF задаётся при подключении платы; "
+                "перезапустите приложение или добавьте плату заново."
+            )
+            set_style(self.status_label, "color:#facc15;")
+            return
         session.set_sample_rate(fs)
         if session.config.kind == "hackrf":
             # The analog filter does not follow the sample rate by itself.
@@ -1768,6 +1791,21 @@ class MainWindow(QMainWindow):
             )
             return
 
+        hackrf = next(
+            (item for item in sessions if item.config.kind == "hackrf"),
+            None,
+        )
+        if hackrf is not None:
+            # Keep the panel and the manager on the rate the device was
+            # opened with; changing it mid-stream is unreliable.
+            device_rate = clamp_hackrf_rate(hackrf.config.sample_rate)
+            index = self.drone_panel.rate_combo.findData(device_rate)
+            if index < 0:
+                self.drone_panel.rate_combo.addItem(
+                    f"{device_rate / 1e6:.3f} MS/s", device_rate
+                )
+                index = self.drone_panel.rate_combo.count() - 1
+            self.drone_panel.rate_combo.setCurrentIndex(index)
         sample_rate = self.drone_panel.sample_rate()
         usb_plutos = sum(
             1 for session in sessions
@@ -2102,7 +2140,10 @@ class MainWindow(QMainWindow):
             return DeepResult(
                 False, "нет выбранного приёмника", center_hz, 0.0, None, "",
             )
-        rate = 20.0e6 if session.config.kind == "hackrf" else 6.144e6
+        rate = (
+            clamp_hackrf_rate(session.config.sample_rate)
+            if session.config.kind == "hackrf" else 6.144e6
+        )
         self.status_label.setText(
             f"Глубокий взгляд: {format_freq(center_hz)} — "
             f"{windows} окн. по {seconds:.1f} с…"

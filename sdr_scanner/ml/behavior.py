@@ -35,6 +35,7 @@ class Behavior:
     sync_khz: float
     sync_strength: float
     frames: int
+    snr_db: float = 99.0
 
     def to_dict(self) -> dict[str, float | int]:
         return {
@@ -47,6 +48,7 @@ class Behavior:
             "sync_khz": round(self.sync_khz, 2),
             "sync_strength": round(self.sync_strength, 2),
             "frames": int(self.frames),
+            "snr_db": round(self.snr_db, 2),
         }
 
 
@@ -132,6 +134,21 @@ def analyze(
     psd_db = 10.0 * np.log10(psd + 1e-20)
     floor_db = float(np.percentile(psd_db, 20.0))
     occupied = float(np.mean(psd_db > floor_db + 6.0))
+    snr_db = float(psd_db.max() - floor_db)
+    peak_bin = int(np.argmax(psd_db))
+    centre_spur = abs(float(freqs[peak_bin])) < 150e3
+    if snr_db < 7.0 or (
+        centre_spur and occupied < 0.005 and duty > 0.95
+    ):
+        # Only noise or the residual LO spur at the tuned centre: a steady
+        # tone or a real link always lifts a wider part of the spectrum.
+        # Without this guard a quiet channel looked like 100% duty because
+        # its frame power was flat.
+        return Behavior(
+            duty=0.0, burst_rate_hz=0.0, burst_interval_cv=0.0,
+            hop_rate_hz=0.0, channels=0, occupied=0.0,
+            sync_khz=0.0, sync_strength=0.0, frames=frames, snr_db=snr_db,
+        )
 
     active_peaks = peaks[active]
     if active_peaks.size >= 4:
@@ -175,6 +192,7 @@ def analyze(
         sync_khz=sync_khz,
         sync_strength=sync_strength,
         frames=frames,
+        snr_db=snr_db,
     )
 
 

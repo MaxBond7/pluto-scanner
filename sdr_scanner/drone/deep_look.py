@@ -95,7 +95,8 @@ class DeepResult:
                 "перескоки и каналы при полосе меньше 15 МГц недостоверны: "
                 "для них нужен HackRF (20 МГц).\n"
             )
-        if self.channel_map is not None:
+        quiet = b.occupied < 0.005
+        if self.channel_map is not None and not quiet:
             cm = self.channel_map
             if cm.channels:
                 text += (
@@ -127,6 +128,16 @@ class DeepResult:
                 )
             if self.sample_rate >= 15e6:
                 text += "профиль: " + fingerprint(cm, b) + "\n"
+        if b.sync_khz > 0 and b.sync_strength > 0:
+            label = (
+                "строчная синхронизация"
+                if 14.0 <= b.sync_khz <= 17.0
+                else "пик огибающей"
+            )
+            text += (
+                f"{label}: {b.sync_khz:.2f} кГц "
+                f"(×{b.sync_strength:.1f})\n"
+            )
         if self.background >= 0.6:
             text += (
                 f"карта фона: {self.background * 100:.0f}% — сигнал был "
@@ -159,6 +170,17 @@ def reasons(
 ) -> list[str]:
     """Human-readable causes for the verdict, with the thresholds used."""
     result: list[str] = []
+    if behavior.occupied < 0.005:
+        return ["нет участков выше шума на 6 дБ — только шум или спур"]
+    if behavior.snr_db < 7.0:
+        return [f"пик над шумом {behavior.snr_db:.1f} дБ < 7 дБ"]
+    if (14.0 <= behavior.sync_khz <= 17.0
+            and behavior.sync_strength >= 6.0):
+        result.append(
+            f"строчная синхронизация {behavior.sync_khz:.2f} кГц "
+            f"(×{behavior.sync_strength:.1f}) — PAL/NTSC"
+        )
+        return result
     if behavior.duty >= 0.70:
         result.append(f"скважность {behavior.duty:.2f} ≥ 0.70")
     elif behavior.duty <= 0.40:
@@ -188,6 +210,14 @@ def reasons(
 
 def interpret(behavior: Behavior, bandwidth: float) -> str:
     """A cautious reading of the numbers, never a promise."""
+    if behavior.occupied < 0.005 or behavior.snr_db < 7.0:
+        return "сигнал не обнаружен — только шум или узкий спур"
+    if (14.0 <= behavior.sync_khz <= 17.0
+            and behavior.sync_strength >= 6.0):
+        return (
+            "аналоговый видеолинк: строчная синхронизация "
+            f"{behavior.sync_khz:.2f} кГц (PAL/NTSC)"
+        )
     category = _category(behavior)
     if category == "continuous":
         verdict = "непрерывный широкий линк — похоже на видеолинк дрона"
@@ -235,6 +265,7 @@ def _aggregate(windows: list[Behavior]) -> Behavior:
         sync_khz=_median([window.sync_khz for window in windows]),
         sync_strength=_median([window.sync_strength for window in windows]),
         frames=sum(window.frames for window in windows),
+        snr_db=_median([window.snr_db for window in windows]),
     )
 
 
@@ -370,14 +401,30 @@ def look(
             f"окно сокращено до {seconds:.2f} с, чтобы захват остался "
             "в памяти"
         )
-    data, rate, error = capture(
-        session, center_hz,
-        seconds=seconds, windows=windows, sample_rate=sample_rate,
-    )
+    data = np.empty(0, dtype=np.complex64)
+    rate = float(sample_rate)
+    error = ""
+    attempts = 0
+    for attempt in range(2):
+        attempts = attempt + 1
+        data, rate, error = capture(
+            session, center_hz,
+            seconds=seconds, windows=windows, sample_rate=sample_rate,
+            timeout_s=8.0,
+        )
+        if data.size >= float(rate) * seconds * windows * 0.25:
+            break
+        if attempt == 0:
+            # A HackRF occasionally refuses the first start after a rate
+            # change; the command loop and the reopen fallback need a moment.
+            time.sleep(0.4)
     wanted = float(rate) * seconds * windows
     if data.size < wanted * 0.25:
         return DeepResult(
-            False, error or "нет данных", center_hz, rate, None, "",
+            False,
+            (error or "нет данных")
+            + (f" (попыток: {attempts})" if attempts > 1 else ""),
+            center_hz, rate, None, "",
         )
 
     parts = np.array_split(data, windows)
