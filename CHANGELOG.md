@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-11-06
+
+- **Recorded IQ can be played in the video tab.** Selecting an IQ-file
+  session and pressing «Смотреть» decodes the first 2 seconds offline in a
+  background thread; no real-time stream is needed. This allows testing on
+  a short dataset block that would end before a live playback could start.
+- `tools/extract_fpv_recording.py` extracts one frequency block from the FPV
+  dataset and writes a normal cf32 + JSON recording, ready for the IQ-file
+  session.
+- Checked with the real 1240 MHz VTX block: the app built a 345-line
+  monochrome frame (PAL) and saved it as a PNG.
+
 ## [0.35.0] - 2026-11-06
 
 - **SECAM (monochrome) standard** in the video tab for Russian 625/50 TV;

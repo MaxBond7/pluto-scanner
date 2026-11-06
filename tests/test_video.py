@@ -97,7 +97,7 @@ class FakeSession(QObject):
         super().__init__()
         self.config = SimpleNamespace(
             device_id="fake", center_freq=1240e6, sample_rate=20e6,
-            bandwidth=20e6, kind="hackrf",
+            bandwidth=20e6, kind="hackrf", uri="",
         )
         self.audio_enabled = False
         self.worker = SimpleNamespace(isRunning=lambda: True)
@@ -151,6 +151,31 @@ def test_video_window_builds_a_frame_from_a_fake_session():
     assert window._last_frame is not None
     window._stop()
     assert ("monitor", 0.0) in session.calls
+    window.deleteLater()
+    app.processEvents()
+
+
+def test_video_tab_decodes_an_iq_file(tmp_path):
+    from sdr_scanner.ui.video_window import VideoPanel
+
+    app = QApplication.instance() or QApplication([])
+    rate = 10e6
+    iq = _fm_iq(_video_wave(PAL, rate, 2200), rate)
+    path = tmp_path / "recording.cf32"
+    iq.tofile(path)
+    session = FakeSession()
+    session.config.kind = "iqfile"
+    session.config.uri = str(path)
+    session.config.sample_rate = rate
+    window = VideoPanel(session)
+    window._start()
+    deadline = time.monotonic() + 8.0
+    while window._last_image is None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.03)
+    assert window._last_image is not None
+    assert window._last_frame is not None
+    window._stop()
     window.deleteLater()
     app.processEvents()
 

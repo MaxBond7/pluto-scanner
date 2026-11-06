@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import Qt, Signal
@@ -29,6 +30,7 @@ class VideoPanel(QWidget):
     """Analog video as a main-window tab; owns the receiver while running."""
 
     frame_ready = Signal(object)
+    decode_failed = Signal(str)
 
     def __init__(self, session=None, parent: QWidget | None = None,
                  guard=None) -> None:
@@ -45,7 +47,9 @@ class VideoPanel(QWidget):
         self._decode_busy = False
         self._frame_seconds = 0.12
         self._max_seconds = 0.20
+        self._file_mode = False
         self.frame_ready.connect(self._show_frame)
+        self.decode_failed.connect(self._show_failure)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -167,7 +171,10 @@ class VideoPanel(QWidget):
                 return
         if self.session is None:
             set_style(self.status, "color:#f87171; font-size:11px;")
-            self.status.setText("Сначала выберите Pluto или HackRF.")
+            self.status.setText("Сначала выберите Pluto, HackRF или запись.")
+            return
+        if self.session.config.kind == "iqfile":
+            self._start_file()
             return
         if not self.session.worker.isRunning():
             set_style(self.status, "color:#f87171; font-size:11px;")
@@ -186,14 +193,20 @@ class VideoPanel(QWidget):
         self._video_blocks = []
         self._video_size = 0
         self._decode_busy = False
+        self._file_mode = self.session.config.kind == "iqfile"
+        # A dataset block can be only 30-40 ms; do not wait 120 ms for a
+        # frame that will never arrive.
+        self._frame_seconds = 0.025 if self._file_mode else 0.12
+        self._max_seconds = 0.08 if self._file_mode else 0.20
         rate = self._rate_for_session()
         center = float(self.freq_spin.value()) * 1e6
         try:
             self.session.set_monitor_mode(True)
             self.session.set_audio_enabled(False)
-            self.session.set_sample_rate(rate)
-            self.session.set_bandwidth(min(rate, 12.0e6))
-            self.session.set_center_freq(center)
+            if not self._file_mode:
+                self.session.set_sample_rate(rate)
+                self.session.set_bandwidth(min(rate, 12.0e6))
+                self.session.set_center_freq(center)
             self.session.set_buffer_size(int(rate * 0.02))
             self.session.iq_ready.connect(self._on_iq)
         except Exception as exc:
@@ -205,10 +218,81 @@ class VideoPanel(QWidget):
         self.start_btn.setText("Остановить")
         self.snapshot_btn.setEnabled(False)
         set_style(self.status, "color:#67e8f9; font-size:11px;")
+        prefix = "Файл" if self._file_mode else "Слушаю"
         self.status.setText(
-            f"Слушаю {format_freq(center)} · {standard.name} · "
+            f"{prefix} {format_freq(center)} · {standard.name} · "
             f"{rate / 1e6:.2f} МС/с. Ждём строку…"
         )
+
+    def _start_file(self) -> None:
+        from ..recordings import load_info
+
+        path = Path(str(self.session.config.uri))
+        if path.suffix.lower() == ".json":
+            info = load_info(path)
+            if info is not None:
+                path = info.path
+        if not path.exists():
+            set_style(self.status, "color:#f87171; font-size:11px;")
+            self.status.setText(f"Запись не найдена: {path}")
+            return
+        standard = STANDARDS[self.standard_combo.currentData()]
+        rate = float(self.session.config.sample_rate)
+        if rate <= 0:
+            set_style(self.status, "color:#f87171; font-size:11px;")
+            self.status.setText("В записи не указана частота дискретизации.")
+            return
+        self._old = {}
+        self._file_mode = True
+        self._running = True
+        self._decode_busy = True
+        self._last_frame = None
+        self._last_image = None
+        self.start_btn.setText("Остановить")
+        self.snapshot_btn.setEnabled(False)
+        set_style(self.status, "color:#67e8f9; font-size:11px;")
+        self.status.setText(
+            f"Читаю запись {path.name} (первые 2 с) и собираю кадр…"
+        )
+        threading.Thread(
+            target=self._decode_file,
+            args=(
+                path, rate, standard, self.mode_combo.currentData(),
+                self.invert_check.isChecked(),
+            ),
+            name="analog-video-file",
+            daemon=True,
+        ).start()
+
+    def _decode_file(self, path: Path, rate: float, standard,
+                     mode: str, invert: bool) -> None:
+        try:
+            data = np.memmap(path, dtype=np.complex64, mode="r")
+            count = min(int(data.size), int(rate * 2.0))
+            iq = np.array(data[:count], dtype=np.complex64, copy=True)
+            del data
+            frame = decode_frame(
+                iq, rate, standard, mode=mode, invert=invert,
+            )
+            if frame is None:
+                self.decode_failed.emit(
+                    "Кадр не собран: нет устойчивой строки. "
+                    "Попробуйте другой стандарт, AM/FM или инверсию."
+                )
+            else:
+                self.frame_ready.emit(frame)
+        except Exception as exc:
+            self.decode_failed.emit(f"Ошибка чтения записи: {exc}")
+        finally:
+            self._decode_busy = False
+
+    def _show_failure(self, message: str) -> None:
+        if not self._running:
+            return
+        self.start_btn.setText("Смотреть")
+        self._running = False
+        set_style(self.status, "color:#f87171; font-size:11px;")
+        self.status.setText(message)
 
     def _stop(self) -> None:
         if not self._running:
@@ -216,7 +300,7 @@ class VideoPanel(QWidget):
         self._running = False
         self.start_btn.setText("Смотреть")
         try:
-            if self.session is not None:
+            if self.session is not None and not self._file_mode:
                 self.session.iq_ready.disconnect(self._on_iq)
         except (RuntimeError, TypeError):
             pass
@@ -232,9 +316,10 @@ class VideoPanel(QWidget):
             return
         self._old = {}
         try:
-            self.session.set_sample_rate(old["rate"])
-            self.session.set_bandwidth(old["bandwidth"])
-            self.session.set_center_freq(old["center"])
+            if not self._file_mode:
+                self.session.set_sample_rate(old["rate"])
+                self.session.set_bandwidth(old["bandwidth"])
+                self.session.set_center_freq(old["center"])
             self.session.set_audio_enabled(old["audio"])
             self.session.set_monitor_mode(False)
         except Exception:

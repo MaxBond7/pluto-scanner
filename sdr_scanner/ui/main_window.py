@@ -2114,8 +2114,10 @@ class MainWindow(QMainWindow):
             self._status_hint(reason)
             return
         session = self.sessions.get(self.selected_id) if self.selected_id else None
-        if session is None or session.config.kind not in ("pluto", "hackrf"):
-            self._status_hint("Выберите Pluto или HackRF.")
+        if session is None or session.config.kind not in (
+            "pluto", "hackrf", "iqfile",
+        ):
+            self._status_hint("Выберите Pluto, HackRF или запись IQ.")
             return
         if not session.worker.isRunning():
             self._status_hint("Приёмник не запущен.")
