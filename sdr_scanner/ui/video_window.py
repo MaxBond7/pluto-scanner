@@ -12,8 +12,11 @@ from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
+    QFormLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -22,8 +25,86 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import format_freq
+from ..paths import RECORDINGS_DIR
+from ..recordings import load_info
 from ..video import PAL, STANDARDS, DecodedFrame, decode_frame
+from ..video.dataset import frequencies as dataset_frequencies
+from ..video.dataset import load_blocks as dataset_blocks
+from ..video.dataset import metadata_for as dataset_metadata
 from .themes import set_style
+
+
+class _DatasetDialog(QDialog):
+    """Choose a sweep frequency and the sample rate of a dataset folder."""
+
+    def __init__(self, meta: Path, current_hz: float,
+                 parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Свип датасета")
+        form = QFormLayout(self)
+        self.freq_combo = QComboBox()
+        values = dataset_frequencies(meta)
+        nearest = min(values, key=lambda item: abs(item - float(current_hz)))
+        for value in values:
+            self.freq_combo.addItem(format_freq(value), value)
+            if value == nearest:
+                self.freq_combo.setCurrentIndex(self.freq_combo.count() - 1)
+        form.addRow("Частота", self.freq_combo)
+        self.rate_spin = QDoubleSpinBox()
+        self.rate_spin.setRange(0.1, 80.0)
+        self.rate_spin.setDecimals(2)
+        self.rate_spin.setSuffix(" МС/с")
+        self.rate_spin.setValue(20.0)
+        form.addRow("Частота дискретизации", self.rate_spin)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        form.addRow(buttons)
+
+    def values(self) -> tuple[float, float]:
+        return (
+            float(self.freq_combo.currentData()),
+            float(self.rate_spin.value()) * 1e6,
+        )
+
+
+class _RawDialog(QDialog):
+    """Sample rate and centre frequency for a raw IQ file."""
+
+    def __init__(self, name: str, rate_hz: float, center_hz: float,
+                 parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Параметры записи")
+        form = QFormLayout(self)
+        form.addRow(QLabel(f"{name}\nВ файле нет метаданных, укажите их."))
+        self.rate_spin = QDoubleSpinBox()
+        self.rate_spin.setRange(0.1, 80.0)
+        self.rate_spin.setDecimals(2)
+        self.rate_spin.setSuffix(" МС/с")
+        self.rate_spin.setValue(max(0.1, float(rate_hz) / 1e6))
+        form.addRow("Частота дискретизации", self.rate_spin)
+        self.center_spin = QDoubleSpinBox()
+        self.center_spin.setRange(1.0, 6000.0)
+        self.center_spin.setDecimals(3)
+        self.center_spin.setSuffix(" МГц")
+        self.center_spin.setValue(max(1.0, float(center_hz) / 1e6))
+        form.addRow("Центральная частота", self.center_spin)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        form.addRow(buttons)
+
+    def values(self) -> tuple[float, float]:
+        return (
+            float(self.rate_spin.value()) * 1e6,
+            float(self.center_spin.value()) * 1e6,
+        )
 
 
 class VideoPanel(QWidget):
@@ -48,6 +129,7 @@ class VideoPanel(QWidget):
         self._frame_seconds = 0.12
         self._max_seconds = 0.20
         self._file_mode = False
+        self._source = ""
         self.frame_ready.connect(self._show_frame)
         self.decode_failed.connect(self._show_failure)
 
@@ -92,6 +174,13 @@ class VideoPanel(QWidget):
         self.start_btn = QPushButton("Смотреть")
         self.start_btn.clicked.connect(self._toggle)
         controls.addWidget(self.start_btn)
+        self.open_btn = QPushButton("Открыть файл…")
+        self.open_btn.setToolTip(
+            "Открыть запись IQ или папку свипа датасета и собрать кадр, "
+            "не занимая приёмник."
+        )
+        self.open_btn.clicked.connect(self.open_file)
+        controls.addWidget(self.open_btn)
         self.snapshot_btn = QPushButton("Снимок…")
         self.snapshot_btn.setEnabled(False)
         self.snapshot_btn.clicked.connect(self._snapshot)
@@ -99,7 +188,7 @@ class VideoPanel(QWidget):
         controls.addStretch(1)
         root.addLayout(controls)
 
-        self.display = QLabel("Нажмите «Смотреть»")
+        self.display = QLabel("Нажмите «Смотреть» или «Открыть файл…»")
         self.display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.display.setMinimumSize(640, 480)
         self.display.setScaledContents(False)
@@ -145,6 +234,114 @@ class VideoPanel(QWidget):
 
     def stop(self) -> None:
         self._stop()
+
+    # ------------------------------------------------------------- file input
+    def open_file(self) -> None:
+        """Ask for an IQ file or a sweep folder and decode it right away."""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Открыть запись IQ",
+            str(RECORDINGS_DIR),
+            "Записи IQ (*.json *.cf32 *.bin *.iq);;Все файлы (*)",
+        )
+        if path:
+            self.open_path(Path(path))
+
+    def open_path(self, path: Path) -> None:
+        """Decode *path* without taking over a receiver."""
+        path = Path(path)
+        info = load_info(path)
+        if info is not None:
+            self.freq_spin.setValue(float(info.center_freq) / 1e6)
+            self._decode_job(
+                lambda: self._read_iq(info.path, info.sample_rate),
+                float(info.sample_rate),
+                Path(info.path).name,
+            )
+            return
+        meta = dataset_metadata(path)
+        if meta is not None:
+            dialog = _DatasetDialog(meta, self.freq_spin.value() * 1e6, self)
+            if not dialog.exec():
+                return
+            freq, rate = dialog.values()
+            self.freq_spin.setValue(freq / 1e6)
+            name = f"{path.parent.name} · {format_freq(freq)}"
+            self._decode_job(
+                lambda: dataset_blocks(path, meta, freq)[0], rate, name,
+            )
+            return
+        dialog = _RawDialog(
+            path.name, 20e6, self.freq_spin.value() * 1e6, self,
+        )
+        if not dialog.exec():
+            return
+        rate, center = dialog.values()
+        self.freq_spin.setValue(center / 1e6)
+        self._decode_job(
+            lambda: self._read_iq(path, rate), rate, path.name,
+        )
+
+    @staticmethod
+    def _read_iq(path: Path, rate: float) -> np.ndarray:
+        data = np.memmap(path, dtype=np.complex64, mode="r")
+        try:
+            count = min(int(data.size), int(rate * 2.0))
+            return np.array(data[:count], dtype=np.complex64, copy=True)
+        finally:
+            del data
+
+    def _decode_job(self, loader, rate: float, label: str) -> None:
+        """Decode one file or dataset block in a worker thread."""
+        if self._running:
+            self._stop()
+        if self._decode_busy:
+            return
+        self._file_mode = True
+        self._source = label
+        self._running = True
+        self._decode_busy = True
+        self._last_frame = None
+        self._last_image = None
+        self.snapshot_btn.setEnabled(False)
+        self.start_btn.setText("Остановить")
+        set_style(self.status, "color:#67e8f9; font-size:11px;")
+        self.status.setText(f"Читаю {label} …")
+        threading.Thread(
+            target=self._decode_job_worker,
+            args=(
+                loader, float(rate),
+                STANDARDS[self.standard_combo.currentData()],
+                self.mode_combo.currentData(),
+                self.invert_check.isChecked(),
+                label,
+            ),
+            name="analog-video-file",
+            daemon=True,
+        ).start()
+
+    def _decode_job_worker(self, loader, rate: float, standard,
+                           mode: str, invert: bool, label: str) -> None:
+        try:
+            iq = loader()
+            if iq.size == 0:
+                raise ValueError("в файле нет отсчётов")
+            seconds = iq.size / rate
+            frame = decode_frame(
+                iq, rate, standard, mode=mode, invert=invert,
+            )
+            if frame is None:
+                self.decode_failed.emit(
+                    f"{label}: кадр не собран за {seconds * 1000:.0f} мс. "
+                    "Попробуйте другой стандарт, AM/FM или инверсию."
+                )
+            else:
+                self.frame_ready.emit(frame)
+        except Exception as exc:
+            self.decode_failed.emit(f"{label}: {exc}")
+        finally:
+            self._decode_busy = False
+
     def _rate_for_session(self) -> float:
         if self.session is None:
             return 6.144e6
@@ -194,6 +391,7 @@ class VideoPanel(QWidget):
         self._video_size = 0
         self._decode_busy = False
         self._file_mode = self.session.config.kind == "iqfile"
+        self._source = ""
         # A dataset block can be only 30-40 ms; do not wait 120 ms for a
         # frame that will never arrive.
         self._frame_seconds = 0.025 if self._file_mode else 0.12
@@ -248,6 +446,7 @@ class VideoPanel(QWidget):
         self._decode_busy = True
         self._last_frame = None
         self._last_image = None
+        self._source = path.name
         self.start_btn.setText("Остановить")
         self.snapshot_btn.setEnabled(False)
         duration = path.stat().st_size / 8.0 / rate
@@ -282,8 +481,9 @@ class VideoPanel(QWidget):
             )
             if frame is None:
                 self.decode_failed.emit(
-                    "Кадр не собран: нет устойчивой строки. "
-                    "Попробуйте другой стандарт, AM/FM или инверсию."
+                    f"{self._source or path.name}: кадр не собран: нет "
+                    "устойчивой строки. Попробуйте другой стандарт, AM/FM "
+                    "или инверсию."
                 )
             else:
                 self.frame_ready.emit(frame)
@@ -401,8 +601,9 @@ class VideoPanel(QWidget):
         # correlation is low on a flat wall, so the frame lock matters more.
         good = frame.frame_locked or frame.quality >= 0.45
         quality = "картинка" if good else "похоже на шум/снег"
+        source = f"{self._source} · " if self._source else ""
         self.status.setText(
-            f"{frame.standard} · {frame.line_hz:.1f} Гц · "
+            f"{source}{frame.standard} · {frame.line_hz:.1f} Гц · "
             f"{frame.lines} строк · "
             f"{'кадр' if frame.frame_locked else 'поле/фрагмент'} · "
             f"синхронизация: {'есть' if frame.locked else 'слабая'} · "

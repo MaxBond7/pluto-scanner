@@ -15,7 +15,6 @@ one centre frequency and runs the same analog-video detector as the app::
 from __future__ import annotations
 
 import argparse
-import csv
 import sys
 from pathlib import Path
 
@@ -23,38 +22,9 @@ import numpy as np
 
 from sdr_scanner.drone.deep_look import _analog_line, interpret, reasons
 from sdr_scanner.ml.behavior import analyze
+from sdr_scanner.video.dataset import load_blocks
 
-
-def load_blocks(iq_path: Path, meta_path: Path, freq: float) -> tuple[np.ndarray, float]:
-    rows = []
-    with meta_path.open(newline="", encoding="utf-8") as handle:
-        for row in csv.DictReader(handle):
-            rows.append({
-                "center": float(row["center_freq"]),
-                "offset": int(row["offset_bytes"]),
-                "count": int(row["num_samples"]),
-            })
-    if not rows:
-        return np.empty(0, dtype=np.complex64), freq
-    nearest = min({item["center"] for item in rows}, key=lambda value: abs(value - freq))
-    selected = [item for item in rows if item["center"] == nearest]
-    data = np.memmap(iq_path, dtype=np.complex64, mode="r")
-    try:
-        pieces = []
-        for item in selected:
-            block = np.array(
-                data[item["offset"] // 8:
-                     item["offset"] // 8 + item["count"]],
-                dtype=np.complex64, copy=True,
-            )
-            # Recorder padding: the second half of every dataset block is
-            # zeros, not signal.  Keep only the real samples so blocks sit
-            # next to each other in time.
-            real = np.flatnonzero(np.abs(block) > 0)
-            pieces.append(block[: int(real[-1]) + 1] if real.size else block[:0])
-    finally:
-        del data
-    return np.concatenate(pieces) if pieces else np.empty(0, dtype=np.complex64), nearest
+__all__ = ["load_blocks", "main"]
 
 
 def main(argv: list[str] | None = None) -> int:

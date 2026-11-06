@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sdr-scanner"
-version = "0.37.0"
+version = "0.38.0"
 description = "Desktop SDR spectrum, scanner and passive drone-band monitor for Pluto+, HackRF One and IQ files"
 readme = "README.md"
 license = {text = "GPL-3.0-only"}

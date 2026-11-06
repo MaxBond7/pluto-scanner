@@ -14,6 +14,9 @@ from .analog import (
     decode_frame,
     demodulate,
 )
+from .dataset import frequencies as dataset_frequencies
+from .dataset import load_blocks as dataset_blocks
+from .dataset import metadata_for as dataset_metadata
 
 __all__ = [
     "DecodedFrame",
@@ -23,6 +26,9 @@ __all__ = [
     "STANDARDS",
     "VideoDecoder",
     "VideoStandard",
+    "dataset_blocks",
+    "dataset_frequencies",
+    "dataset_metadata",
     "decode_frame",
     "demodulate",
 ]

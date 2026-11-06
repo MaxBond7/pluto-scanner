@@ -456,6 +456,9 @@ class MainWindow(QMainWindow):
         bar = self.menuBar()
 
         file_menu = bar.addMenu("Файл")
+        action = file_menu.addAction("Открыть запись IQ…")
+        action.setShortcut("Ctrl+O")
+        action.triggered.connect(self._open_iq_for_video)
         action = file_menu.addAction("Папка записей IQ")
         action.triggered.connect(
             lambda: QDesktopServices.openUrl(
@@ -2107,6 +2110,14 @@ class MainWindow(QMainWindow):
         if self._drone_active:
             return "Остановите дрон-монитор перед просмотром видео."
         return ""
+
+    def _open_iq_for_video(self) -> None:
+        """Open an IQ file straight in the video tab."""
+        panel = getattr(self, "video_panel", None)
+        if panel is None:
+            return
+        self.right_tabs.setCurrentWidget(panel)
+        panel.open_file()
 
     def _open_video_window(self) -> None:
         reason = self._video_guard()
