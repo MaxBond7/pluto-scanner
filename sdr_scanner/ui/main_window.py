@@ -17,6 +17,7 @@ from PySide6.QtGui import (
     QCloseEvent,
     QDesktopServices,
     QFont,
+    QKeySequence,
     QIcon,
 )
 from PySide6.QtWidgets import (
@@ -82,7 +83,7 @@ from .device_panel import DevicePanel
 from .drone_panel import DronePanel
 from .drone_window import DroneWindow
 from .event_dialog import DroneEventDialog
-from .video_window import VideoWindow
+from .video_window import VideoPanel
 from .import_dialog import DatasetImportDialog
 from .ml_panel import MLPanel
 from .spectrum_view import SpectrumView
@@ -349,13 +350,19 @@ class MainWindow(QMainWindow):
             DATA_DIR / "ml_model.json", RECORDINGS_DIR
         )
         self.ml_panel.setMinimumWidth(520)
+        self.video_panel = VideoPanel(None, guard=self._video_guard)
+        self.video_panel.setMinimumWidth(520)
         self.right_tabs = QTabWidget()
+        self.right_tabs.addTab(self.video_panel, "Видео")
         self.right_tabs.addTab(self.contact_table, "Контакты")
         self.right_tabs.addTab(self.scan_panel, "Сканер")
         self.right_tabs.addTab(self._build_drone_launcher(), "Дроны")
         self.right_tabs.addTab(self.recording_panel, "Запись IQ")
         self.right_tabs.addTab(self.ml_panel, "ML")
         self.right_tabs.addTab(self.signature_panel, "Сигнатуры")
+        # Video is the first (leftmost) tab, but contacts stay the default view.
+        self.right_tabs.setCurrentWidget(self.contact_table)
+        self.right_tabs.currentChanged.connect(self._on_right_tab_changed)
         self.splitter.addWidget(self.right_tabs)
         self.splitter.setSizes([350, 860, 640])
         self.splitter.setStretchFactor(0, 0)
@@ -433,6 +440,12 @@ class MainWindow(QMainWindow):
         layout.addStretch(1)
         return page
 
+    def _on_right_tab_changed(self, _index: int) -> None:
+        if (self.right_tabs.currentWidget() is not self.video_panel
+                and self.video_panel.running):
+            self.video_panel.stop()
+            self.status_label.setText("Видео остановлено: вкладка закрыта.")
+
     def _show_drone_window(self) -> None:
         window = getattr(self, "drone_window", None)
         if window is None:
@@ -497,6 +510,7 @@ class MainWindow(QMainWindow):
         action = view_menu.addAction("Папка тем")
         action.triggered.connect(lambda: self._open_theme_folder())
         action = view_menu.addAction("Аналоговое видео…")
+        action.setShortcut(QKeySequence("Ctrl+Shift+V"))
         action.triggered.connect(self._open_video_window)
 
         help_menu = bar.addMenu("Справка")
@@ -795,6 +809,8 @@ class MainWindow(QMainWindow):
             self._stop_drone()
         if self._scanning and device_id == self.selected_id:
             self._stop_scan()
+        if self.selected_id == device_id and hasattr(self, "video_panel"):
+            self.video_panel.set_session(None)
         session = self.sessions.pop(device_id, None)
         if session is not None:
             try:
@@ -837,6 +853,7 @@ class MainWindow(QMainWindow):
         self.selected_id = device_id
         self._await_center = None
         session = self.sessions[device_id]
+        self.video_panel.set_session(session)
         session.set_audio_enabled(self.audio_enabled)
         self.audio_sink.clear()
         self.device_panel.select_device(device_id)
@@ -945,6 +962,8 @@ class MainWindow(QMainWindow):
         self._start_recording(seconds)
 
     def _start_recording(self, seconds: float) -> None:
+        if getattr(self, "video_panel", None) is not None:
+            self.video_panel.stop()
         if self._recording:
             return
         if self._scanning or self._drone_active:
@@ -1504,6 +1523,8 @@ class MainWindow(QMainWindow):
 
     # ---------------------------------------------------------------------- scan
     def start_scan(self) -> None:
+        if getattr(self, "video_panel", None) is not None:
+            self.video_panel.stop()
         """Public entry point used by the CLI and tests."""
         self._start_scan()
 
@@ -1755,6 +1776,8 @@ class MainWindow(QMainWindow):
         self._stop_drone()
 
     def _start_drone(self) -> None:
+        if getattr(self, "video_panel", None) is not None:
+            self.video_panel.stop()
         if self._recording:
             self._fail_drone("Сначала остановите запись IQ.")
             return
@@ -2076,15 +2099,19 @@ class MainWindow(QMainWindow):
     def _on_drone_observation(self, obs) -> None:
         self.drone_panel.update_observation(obs)
 
-    def _open_video_window(self) -> None:
+    def _video_guard(self) -> str:
         if self._recording:
-            self._status_hint("Остановите запись IQ перед просмотром видео.")
-            return
+            return "Остановите запись IQ перед просмотром видео."
         if self._scanning:
-            self._status_hint("Остановите сканирование перед просмотром видео.")
-            return
+            return "Остановите сканирование перед просмотром видео."
         if self._drone_active:
-            self._status_hint("Остановите дрон-монитор перед просмотром видео.")
+            return "Остановите дрон-монитор перед просмотром видео."
+        return ""
+
+    def _open_video_window(self) -> None:
+        reason = self._video_guard()
+        if reason:
+            self._status_hint(reason)
             return
         session = self.sessions.get(self.selected_id) if self.selected_id else None
         if session is None or session.config.kind not in ("pluto", "hackrf"):
@@ -2093,16 +2120,30 @@ class MainWindow(QMainWindow):
         if not session.worker.isRunning():
             self._status_hint("Приёмник не запущен.")
             return
-        dialog = VideoWindow(session, self)
-        dialog.exec()
-        self._guard = True
-        try:
-            self.center_spin.setValue(session.config.center_freq / 1e6)
-            self._set_fs_combo(session.config.sample_rate)
-        finally:
-            self._guard = False
-        self._update_controls()
-        self.status_label.setText("Аналоговое видео закрыто.")
+        self.video_panel.set_session(session)
+        self.right_tabs.setCurrentWidget(self.video_panel)
+        self.status_label.setText("Видео: вкладка «Видео», нажмите «Смотреть».")
+
+    def _watch_event_video(self, freq_hz: float, standard: str) -> None:
+        if self._drone_active:
+            self._stop_drone()
+            QTimer.singleShot(
+                1200, lambda: self._activate_video(freq_hz, standard)
+            )
+            return
+        self._activate_video(freq_hz, standard)
+
+    def _activate_video(self, freq_hz: float, standard: str) -> None:
+        session = self.sessions.get(self.selected_id) if self.selected_id else None
+        if session is None:
+            self._status_hint("Нет выбранного приёмника для видео.")
+            return
+        self.video_panel.set_session(session)
+        self.right_tabs.setCurrentWidget(self.video_panel)
+        self.video_panel.start_at(freq_hz, standard)
+        self.status_label.setText(
+            f"Видео: {format_freq(freq_hz)}, {standard}."
+        )
 
     def _status_hint(self, text: str) -> None:
         self.status_label.setText(text)
@@ -2126,6 +2167,7 @@ class MainWindow(QMainWindow):
             deep_reason=reason,
         )
         dialog.feedback_requested.connect(self._save_ml_feedback)
+        dialog.video_requested.connect(self._watch_event_video)
         dialog.exec()
         if dialog.deep_recording is not None:
             self._refresh_recordings()
@@ -2488,6 +2530,8 @@ class MainWindow(QMainWindow):
             return
         self._shutting_down = True
         self._save_theme()
+        if getattr(self, "video_panel", None) is not None:
+            self.video_panel.stop()
         window = getattr(self, "drone_window", None)
         if window is not None:
             try:

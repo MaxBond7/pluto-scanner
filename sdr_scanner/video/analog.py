@@ -43,6 +43,7 @@ class DecodedFrame:
     lines: int
     locked: bool
     standard: str
+    frame_locked: bool = False
 
 
 def _normalise(signal: np.ndarray) -> np.ndarray:
@@ -165,6 +166,26 @@ def decode_frame(
     grid.append(float(positions[-1]))
     positions = np.rint(grid).astype(np.int64)
 
+    # Vertical sync / blanking appears as a gap in the line rhythm.  Split
+    # there and keep the longest uninterrupted field/frame; this stops the
+    # decoder from stacking the end of one frame onto the start of the next.
+    runs: list[list[int]] = []
+    current: list[int] = [int(positions[0])]
+    gap_limit = 1.6 * period_samples
+    for position in positions[1:]:
+        if float(position - current[-1]) > gap_limit:
+            runs.append(current)
+            current = [int(position)]
+        else:
+            current.append(int(position))
+    runs.append(current)
+    best = max(runs, key=len)
+    # Keep the split only when it really is a field/frame.  A short fragment
+    # is more useful stacked with its neighbours than shown as a thin strip.
+    if len(best) >= max(min_lines, int(standard.lines * 0.5)):
+        positions = np.asarray(best, dtype=np.int64)
+    frame_locked = len(best) >= int(standard.lines * 0.8)
+
     width = int(pixels or standard.pixels)
     # PAL/NTSC active video starts after sync + back porch (~17% of a line)
     # and lasts about 78% of the line.
@@ -204,6 +225,7 @@ def decode_frame(
         lines=image.shape[0],
         locked=locked,
         standard=standard.name,
+        frame_locked=bool(frame_locked),
     )
 
 

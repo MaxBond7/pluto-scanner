@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.32.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.33.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -120,8 +120,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\SDRScanner\SDRScanner.exe          portable one-folder
-dist\SDRScanner-0.32.0-portable.zip        архив
-dist\SDRScanner-Setup-0.32.0.exe           установщик
+dist\SDRScanner-0.33.0-portable.zip        архив
+dist\SDRScanner-Setup-0.33.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 

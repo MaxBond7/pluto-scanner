@@ -6,11 +6,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QCloseEvent, QImage, QPixmap
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDialog,
     QDoubleSpinBox,
     QFileDialog,
     QHBoxLayout,
@@ -25,20 +24,19 @@ from ..video import NTSC, PAL, STANDARDS, DecodedFrame, VideoDecoder
 from .themes import set_style
 
 
-class VideoWindow(QDialog):
-    """Modal, because it owns the receiver while the picture is live."""
+class VideoPanel(QWidget):
+    """Analog video as a main-window tab; owns the receiver while running."""
 
-    def __init__(self, session, parent: QWidget | None = None) -> None:
+    def __init__(self, session=None, parent: QWidget | None = None,
+                 guard=None) -> None:
         super().__init__(parent)
         self.session = session
+        self._guard = guard
         self.decoder = VideoDecoder(PAL)
         self._running = False
         self._old: dict = {}
         self._last_image: QImage | None = None
         self._last_frame: DecodedFrame | None = None
-        self.setWindowTitle("Аналоговое видео — SDR Scanner")
-        self.resize(1040, 720)
-        self.setMinimumSize(760, 560)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -51,7 +49,11 @@ class VideoWindow(QDialog):
         self.freq_spin.setRange(1.0, 6000.0)
         self.freq_spin.setDecimals(3)
         self.freq_spin.setSuffix(" МГц")
-        self.freq_spin.setValue(float(session.config.center_freq) / 1e6)
+        center = (
+            float(session.config.center_freq) if session is not None
+            else 2437e6
+        )
+        self.freq_spin.setValue(center / 1e6)
         controls.addWidget(self.freq_spin)
 
         controls.addWidget(QLabel("Стандарт"))
@@ -101,7 +103,36 @@ class VideoWindow(QDialog):
         root.addWidget(self.status)
 
     # ------------------------------------------------------------------ state
+    @property
+    def running(self) -> bool:
+        return self._running
+
+    def start_at(self, freq_hz: float, standard: str = "PAL") -> None:
+        """Select the session/frequency and start watching immediately."""
+        self.set_session(self.session)
+        self.freq_spin.setValue(float(freq_hz) / 1e6)
+        index = self.standard_combo.findData(str(standard).upper())
+        if index >= 0:
+            self.standard_combo.setCurrentIndex(index)
+        self._start()
+
+    def set_session(self, session) -> None:
+        if self._running:
+            self.stop()
+        self.session = session
+        if session is not None:
+            self.freq_spin.setValue(float(session.config.center_freq) / 1e6)
+            self.status.setText(
+                f"Приёмник: {session.config.name}. Нажмите «Смотреть»."
+            )
+        else:
+            self.status.setText("Выберите Pluto или HackRF для видео.")
+
+    def stop(self) -> None:
+        self._stop()
     def _rate_for_session(self) -> float:
+        if self.session is None:
+            return 6.144e6
         rate = float(self.session.config.sample_rate)
         if self.session.config.kind == "hackrf":
             from ..devices.hackrf import clamp_rate
@@ -117,6 +148,16 @@ class VideoWindow(QDialog):
             self._start()
 
     def _start(self) -> None:
+        if self._guard is not None:
+            reason = self._guard()
+            if reason:
+                set_style(self.status, "color:#facc15; font-size:11px;")
+                self.status.setText(reason)
+                return
+        if self.session is None:
+            set_style(self.status, "color:#f87171; font-size:11px;")
+            self.status.setText("Сначала выберите Pluto или HackRF.")
+            return
         if not self.session.worker.isRunning():
             set_style(self.status, "color:#f87171; font-size:11px;")
             self.status.setText("Приёмник не запущен.")
@@ -165,7 +206,8 @@ class VideoWindow(QDialog):
         self._running = False
         self.start_btn.setText("Смотреть")
         try:
-            self.session.iq_ready.disconnect(self._on_iq)
+            if self.session is not None:
+                self.session.iq_ready.disconnect(self._on_iq)
         except (RuntimeError, TypeError):
             pass
         self._restore()
@@ -189,7 +231,8 @@ class VideoWindow(QDialog):
 
     # ------------------------------------------------------------------ video
     def _on_iq(self, device_id: str, block) -> None:
-        if not self._running or device_id != self.session.config.device_id:
+        if (not self._running or self.session is None
+                or device_id != self.session.config.device_id):
             return
         frame = self.decoder.feed(block.samples, block.sample_rate)
         if frame is None:
@@ -236,9 +279,4 @@ class VideoWindow(QDialog):
                 Qt.TransformationMode.SmoothTransformation,
             ))
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - Qt API
-        self._stop()
-        super().closeEvent(event)
-
-
-__all__ = ["VideoWindow"]
+__all__ = ["VideoPanel"]

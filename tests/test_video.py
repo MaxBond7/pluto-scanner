@@ -106,14 +106,14 @@ class FakeSession(QObject):
 
 
 def test_video_window_builds_a_frame_from_a_fake_session():
-    from sdr_scanner.ui.video_window import VideoWindow
+    from sdr_scanner.ui.video_window import VideoPanel
 
     app = QApplication.instance() or QApplication([])
     rate = 20e6
     video = _video_wave(PAL, rate, 2200)
     iq = _fm_iq(video, rate)
     session = FakeSession()
-    window = VideoWindow(session)
+    window = VideoPanel(session)
     window._start()
     block_size = 200_000
     for start in range(0, iq.size, block_size):

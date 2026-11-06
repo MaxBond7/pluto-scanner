@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-11-06
+
+- **Video is now the first main-window tab**, not a modal dialog. It follows
+  the selected Pluto/HackRF; switching away from the tab or starting a
+  scan/record/drone monitor stops it and restores the receiver.
+- Access from several places: the «Видео» tab, **Вид → Аналоговое видео…**
+  (`Ctrl+Shift+V`), and a **«Смотреть видео»** button in the event card when
+  deep look finds an analog line. The event button stops the drone monitor
+  and opens the tab on the event frequency/standard.
+- Frame/field split: vertical blanking gaps are detected, the longest
+  uninterrupted field/frame is preferred, and short fragments are still
+  stacked instead of being thrown away.
+- Contacts remain the default tab; the video tab is first on the left.
+
 ## [0.32.0] - 2026-11-06
 
 - **Analog video viewer (stage 4, first version).** New `video/analog.py`

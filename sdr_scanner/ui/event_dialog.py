@@ -30,6 +30,7 @@ from ..drone.deep_look import (
     DEFAULT_WINDOW_S,
     DEFAULT_WINDOWS,
     DeepResult,
+    _analog_line,
     save_capture,
 )
 from ..drone.report import export_event_bundle
@@ -44,6 +45,7 @@ from .themes import load_settings, save_settings, set_style, tcol
 
 class DroneEventDialog(QDialog):
     feedback_requested = Signal(str, str)
+    video_requested = Signal(float, str)   # frequency Hz, PAL/NTSC
 
     def __init__(self, event: DroneEvent, parent: QWidget | None = None,
                  store: SignatureStore | None = None,
@@ -58,6 +60,7 @@ class DroneEventDialog(QDialog):
         self._deep_reason = deep_reason
         self._deep_result: DeepResult | None = None
         self._deep_recording = None
+        self._video_standard = "PAL"
         settings = load_settings(DATA_DIR / "settings.json")
         self._deep_seconds = float(
             settings.get("deep_look_seconds") or DEFAULT_WINDOW_S
@@ -285,6 +288,13 @@ class DroneEventDialog(QDialog):
                 "время приостановится, приёмник потом вернётся на место."
             )
         self.deep_btn.clicked.connect(self._run_deep_look)
+        self.video_btn = QPushButton("Смотреть видео")
+        self.video_btn.setEnabled(False)
+        self.video_btn.setToolTip(
+            "Станет доступно, если глубокий взгляд найдёт аналоговую "
+            "строчную синхронизацию."
+        )
+        self.video_btn.clicked.connect(self._open_video)
         self.save_iq_btn = QPushButton("Сохранить IQ")
         self.save_iq_btn.setEnabled(False)
         self.save_iq_btn.setToolTip(
@@ -321,6 +331,7 @@ class DroneEventDialog(QDialog):
         close_btn = QPushButton("Закрыть")
         close_btn.clicked.connect(self.accept)
         buttons.addWidget(self.deep_btn)
+        buttons.addWidget(self.video_btn)
         buttons.addWidget(self.save_iq_btn)
         buttons.addWidget(self.dataset_btn)
         buttons.addWidget(self.export_btn)
@@ -352,6 +363,7 @@ class DroneEventDialog(QDialog):
         self._deep_recording = None
         self.save_iq_btn.setEnabled(False)
         self.dataset_btn.setEnabled(False)
+        self.video_btn.setEnabled(False)
         set_style(self.deep_label, "color:#facc15; font-size:11px;")
         self.deep_label.setText(
             f"Слушаю {windows} окн. по {seconds:.1f} с на частоте события — "
@@ -388,8 +400,25 @@ class DroneEventDialog(QDialog):
             set_style(self.deep_label, "color:#facc15; font-size:11px;")
         self.deep_label.setText(result.text())
         self._show_channel_map(result)
+        line = _analog_line(result.behavior) if result.behavior else None
+        self.video_btn.setEnabled(line is not None)
+        if line is not None:
+            _source, khz, _strength = line
+            self._video_standard = (
+                "PAL" if abs(khz - 15625.0) <= abs(khz - 15734.0) else "NTSC"
+            )
+            self.video_btn.setToolTip(
+                f"Открыть вкладку «Видео» на {self.drone_event.freq_hz / 1e6:.3f}"
+                f" МГц, стандарт {self._video_standard}."
+            )
         if result.ok and result.data is not None:
             self.save_iq_btn.setEnabled(True)
+
+    def _open_video(self) -> None:
+        self.video_requested.emit(
+            float(self.drone_event.freq_hz), self._video_standard,
+        )
+        self.accept()
 
     def _show_channel_map(self, result: DeepResult) -> None:
         channel_map = result.channel_map
