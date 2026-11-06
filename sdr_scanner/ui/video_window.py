@@ -3,9 +3,10 @@
 """Analog TV window: FM/AM video, PAL/NTSC line timing and a monochrome frame."""
 from __future__ import annotations
 
-from pathlib import Path
+import threading
 
-from PySide6.QtCore import Qt
+import numpy as np
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -20,23 +21,31 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import format_freq
-from ..video import NTSC, PAL, STANDARDS, DecodedFrame, VideoDecoder
+from ..video import PAL, STANDARDS, DecodedFrame, decode_frame
 from .themes import set_style
 
 
 class VideoPanel(QWidget):
     """Analog video as a main-window tab; owns the receiver while running."""
 
+    frame_ready = Signal(object)
+
     def __init__(self, session=None, parent: QWidget | None = None,
                  guard=None) -> None:
         super().__init__(parent)
         self.session = session
         self._guard = guard
-        self.decoder = VideoDecoder(PAL)
         self._running = False
         self._old: dict = {}
         self._last_image: QImage | None = None
         self._last_frame: DecodedFrame | None = None
+        self._video_blocks: list = []
+        self._video_size = 0
+        self._video_rate = 0.0
+        self._decode_busy = False
+        self._frame_seconds = 0.12
+        self._max_seconds = 0.20
+        self.frame_ready.connect(self._show_frame)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -169,13 +178,12 @@ class VideoPanel(QWidget):
             "audio": bool(self.session.audio_enabled),
         }
         standard = STANDARDS[self.standard_combo.currentData()]
-        self.decoder = VideoDecoder(
-            standard,
-            mode=self.mode_combo.currentData(),
-            invert=self.invert_check.isChecked(),
-            frame_seconds=0.12,
-            max_seconds=0.35,
-        )
+        self._video_standard = standard
+        self._video_mode = self.mode_combo.currentData()
+        self._video_invert = self.invert_check.isChecked()
+        self._video_blocks = []
+        self._video_size = 0
+        self._decode_busy = False
         rate = self._rate_for_session()
         center = float(self.freq_spin.value()) * 1e6
         try:
@@ -211,7 +219,8 @@ class VideoPanel(QWidget):
         except (RuntimeError, TypeError):
             pass
         self._restore()
-        self.decoder.reset()
+        self._video_blocks = []
+        self._video_size = 0
         set_style(self.status, "color:#94a3b8; font-size:11px;")
         self.status.setText("Остановлено.")
 
@@ -234,8 +243,49 @@ class VideoPanel(QWidget):
         if (not self._running or self.session is None
                 or device_id != self.session.config.device_id):
             return
-        frame = self.decoder.feed(block.samples, block.sample_rate)
-        if frame is None:
+        samples = np.asarray(block.samples, dtype=np.complex64)
+        self._video_blocks.append(samples)
+        self._video_size += int(samples.size)
+        self._video_rate = float(block.sample_rate)
+        need = int(self._frame_seconds * self._video_rate)
+        if self._video_size < need:
+            return
+        if self._decode_busy:
+            # Do not let a slow decoder grow the buffer without bound; the
+            # next frame will use the freshest samples.
+            limit = int(self._max_seconds * self._video_rate)
+            while (self._video_blocks
+                   and self._video_size - self._video_blocks[0].size >= limit):
+                self._video_size -= int(self._video_blocks.pop(0).size)
+            return
+        data = np.concatenate(self._video_blocks)[-need:]
+        self._video_blocks = []
+        self._video_size = 0
+        self._decode_busy = True
+        threading.Thread(
+            target=self._decode_worker,
+            args=(
+                data, self._video_rate, self._video_standard,
+                self._video_mode, self._video_invert,
+            ),
+            name="analog-video-decode",
+            daemon=True,
+        ).start()
+
+    def _decode_worker(self, data, rate, standard, mode, invert) -> None:
+        try:
+            frame = decode_frame(
+                data, rate, standard, mode=mode, invert=invert,
+            )
+            if frame is not None and self._running:
+                self.frame_ready.emit(frame)
+        except Exception:
+            pass
+        finally:
+            self._decode_busy = False
+
+    def _show_frame(self, frame: DecodedFrame) -> None:
+        if not self._running:
             return
         self._last_frame = frame
         image = QImage(
@@ -256,8 +306,9 @@ class VideoPanel(QWidget):
         set_style(self.status, "color:#4ade80; font-size:11px;")
         self.status.setText(
             f"{frame.standard} · {frame.line_hz:.1f} Гц · "
-            f"{frame.lines} строк · синхронизация: "
-            f"{'есть' if frame.locked else 'слабая'} · снимок кадра"
+            f"{frame.lines} строк · "
+            f"{'кадр' if frame.frame_locked else 'поле/фрагмент'} · "
+            f"синхронизация: {'есть' if frame.locked else 'слабая'}"
         )
 
     def _snapshot(self) -> None:

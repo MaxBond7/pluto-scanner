@@ -192,16 +192,22 @@ def decode_frame(
     start_offset = 0.17 * period
     active = 0.78 * period
     lines: list[np.ndarray] = []
-    xs = np.arange(width, dtype=np.float64)
     for position in positions:
         start = (position / float(sample_rate)) + start_offset
         stop = start + active
-        if stop * sample_rate >= video.size:
+        start_index = max(0, int(start * sample_rate))
+        stop_index = min(video.size, int(stop * sample_rate))
+        if stop_index - start_index < 2:
             continue
-        sample_x = np.linspace(
-            start * sample_rate, stop * sample_rate, width, endpoint=False,
-        )
-        lines.append(np.interp(sample_x, np.arange(video.size), video))
+        segment = video[start_index:stop_index]
+        # Interpolate inside the line only.  Using the full 2.4M-sample
+        # capture as the interpolation axis for every line was the reason a
+        # 20 MS/s frame took 15 seconds and froze the UI.
+        lines.append(np.interp(
+            np.linspace(0.0, segment.size - 1.0, width, endpoint=False),
+            np.arange(segment.size, dtype=np.float64),
+            segment,
+        ))
     if len(lines) < min_lines:
         return None
 

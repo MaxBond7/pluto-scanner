@@ -3,6 +3,7 @@
 """Synthetic PAL/NTSC tests for the analog video decoder."""
 from __future__ import annotations
 
+import time
 from types import SimpleNamespace
 
 import numpy as np
@@ -126,6 +127,10 @@ def test_video_window_builds_a_frame_from_a_fake_session():
         window._on_iq("fake", block)
         if window._last_image is not None:
             break
+    deadline = time.monotonic() + 8.0
+    while window._last_image is None and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.03)
     assert window._last_image is not None
     assert window._last_frame is not None
     window._stop()

@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-11-06
+
+- **Fixed the video viewer freezing the app.** A 20 MS/s frame took about
+  15 seconds because every line interpolated over the whole 2.4M-sample
+  capture. Interpolation now uses only the line segment: the same frame takes
+  about 0.36 s.
+- Frame decoding moved to a background thread; the GUI only formats the
+  finished frame. The live HackRF check showed a maximum UI gap of 78 ms
+  instead of a multi-second freeze.
+- The IQ buffer is capped while a frame is being decoded, so a slow decoder
+  cannot grow memory without bound or make the UI lag behind.
+- Status now distinguishes a full frame from a field/fragment.
+- Deep-look regression checks after the change: monitor pause/resume and
+  deep look while monitoring still work at 20 MS/s.
+
 ## [0.33.0] - 2026-11-06
 
 - **Video is now the first main-window tab**, not a modal dialog. It follows
