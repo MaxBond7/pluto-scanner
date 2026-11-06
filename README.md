@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.27.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.28.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -119,8 +119,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\SDRScanner\SDRScanner.exe          portable one-folder
-dist\SDRScanner-0.27.0-portable.zip        архив
-dist\SDRScanner-Setup-0.27.0.exe           установщик
+dist\SDRScanner-0.28.0-portable.zip        архив
+dist\SDRScanner-Setup-0.28.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -167,8 +167,9 @@ IQ (Pluto / симулятор / запись)
 - **Второй RX / 2R2T** зависит от прошивки; текущая плата отдаёт 1R1T.
   U-Boot-трюк проверен и опасен — см. [PLUTO_2R2T](docs/PLUTO_2R2T.md).
 - **KerberosSDR / пеленг** требует 4 антенны, кабели и калибровку.
-- **HackRF One** подготовлен в коде (20 МС/с, 1 МГц–6 ГГц, приём), но на
-  живой плате ещё не проверялся — см. [HACKRF](docs/HACKRF.md).
+- **HackRF One** проверен на живой плате: 20 МС/с, 1 МГц–6 ГГц, только приём.
+  На этой машине поток шёл на 99% реального времени; подробности и
+  необходимые DLL — в [HACKRF](docs/HACKRF.md).
 - **ML-классификатор** — из коробки идёт синтетическая модель; для реальной
   точности обучите на размеченных записях. Без веба и телефона.
 
@@ -289,6 +290,7 @@ python -m sdr_scanner --device usb:1.6.5
 ```text
 --sim                         добавить симулятор (по умолчанию он и так один, если нет --device)
 --device URI                  Pluto; можно повторять для нескольких устройств
+--hackrf                      добавить первый найденный HackRF (нужна libhackrf)
 --center Hz                   начальная частота LO, по умолчанию 433920000
 --sample-rate S/s             начальная частота дискретизации, по умолчанию 1024000
 --fft N                       размер FFT, по умолчанию 2048

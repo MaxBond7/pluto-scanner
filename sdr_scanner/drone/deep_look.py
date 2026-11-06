@@ -28,6 +28,9 @@ TOLERANCE_HZ = 20e3
 DEFAULT_WINDOW_S = 0.7
 DEFAULT_WINDOWS = 3
 MAX_WINDOWS = 6
+# Keep the capture in RAM reasonable: 24M complex64 is about 192 MB.  At
+# 20 MS/s this gives 1.2 s, enough for three 0.4 s windows.
+MAX_CAPTURE_SAMPLES = 24_000_000
 
 
 @dataclass
@@ -42,6 +45,7 @@ class DeepResult:
     reasons: list[str] = field(default_factory=list)
     stability: str = ""
     background: float = 0.0
+    note: str = ""
     data: np.ndarray | None = field(default=None, repr=False)
     path: str = ""
     device_id: str = ""
@@ -86,6 +90,8 @@ class DeepResult:
             )
         elif self.background > 0:
             text += f"карта фона: {self.background * 100:.0f}%.\n"
+        if self.note:
+            text += self.note + "\n"
         if self.stability:
             text += self.stability + "\n"
         if self.reasons:
@@ -197,6 +203,7 @@ def capture(
     """Retune one session, collect IQ, restore the previous settings."""
     old_center = float(session.config.center_freq)
     old_rate = float(session.config.sample_rate)
+    old_bandwidth = float(getattr(session.config, "bandwidth", 0.0) or 0.0)
     collected: list[np.ndarray] = []
     state = {"accept": False, "total": 0}
     total_seconds = max(0.1, float(seconds)) * max(1, int(windows))
@@ -218,6 +225,7 @@ def capture(
     error = ""
     try:
         session.set_sample_rate(float(sample_rate))
+        session.set_bandwidth(min(float(sample_rate), 20.0e6))
         session.set_center_freq(float(center_hz))
         QTimer.singleShot(SETTLE_MS, lambda: state.__setitem__("accept", True))
         deadline = time.monotonic() + float(timeout_s)
@@ -246,6 +254,8 @@ def capture(
             pass
         try:
             session.set_sample_rate(old_rate)
+            if old_bandwidth > 0:
+                session.set_bandwidth(old_bandwidth)
             session.set_center_freq(old_center)
         except Exception:
             pass
@@ -302,6 +312,17 @@ def look(
 ) -> DeepResult:
     windows = max(1, min(MAX_WINDOWS, int(windows)))
     seconds = max(0.1, min(3.0, float(seconds)))
+    requested = seconds
+    if float(sample_rate) * seconds * windows > MAX_CAPTURE_SAMPLES:
+        seconds = max(
+            0.2, MAX_CAPTURE_SAMPLES / (float(sample_rate) * windows)
+        )
+    note = ""
+    if abs(seconds - requested) > 0.01:
+        note = (
+            f"окно сокращено до {seconds:.2f} с, чтобы захват остался "
+            "в памяти"
+        )
     data, rate, error = capture(
         session, center_hz,
         seconds=seconds, windows=windows, sample_rate=sample_rate,
@@ -332,6 +353,7 @@ def look(
         reasons=reasons(aggregate, rate),
         stability=_stability(behaviors),
         background=float(background),
+        note=note,
         data=data,
         device_id=str(getattr(config, "device_id", "")),
         device_name=str(getattr(config, "name", "")),

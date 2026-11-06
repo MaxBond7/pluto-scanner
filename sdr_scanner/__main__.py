@@ -26,6 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--sim", action="store_true",
                    help="add a synthetic simulator even when --device is used")
+    p.add_argument("--hackrf", action="store_true",
+                   help="add the first HackRF found (needs libhackrf)")
     p.add_argument("--device", action="append", default=[], metavar="URI",
                    help="Pluto URI (e.g. ip:192.168.2.1 or usb:...). Repeat for multiple devices.")
     p.add_argument("--center", type=float, default=DEFAULT_CENTER_FREQ,
@@ -308,6 +310,8 @@ def main(argv: list[str] | None = None) -> int:
     if splash is not None:
         splash.set_progress(0.9, "СБОРКА ОКНА")
     window = MainWindow(args)
+    if args.hackrf:
+        window._add_hackrf()
     window.show()
     app.aboutToQuit.connect(window.shutdown)
     if splash is not None:

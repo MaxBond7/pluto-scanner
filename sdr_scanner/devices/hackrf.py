@@ -92,6 +92,10 @@ def _library_candidates() -> list[str]:
         for root in roots:
             names.append(str(root / "hackrf.dll"))
             names.append(str(root / "_internal" / "hackrf.dll"))
+            names.append(str(root / "dist" / "SDRScanner" / "hackrf.dll"))
+            names.append(str(
+                root / "dist" / "SDRScanner" / "_internal" / "hackrf.dll"
+            ))
     else:
         names.extend(("libhackrf.so.0", "libhackrf.so", "libhackrf.dylib"))
         # macOS builds usually put it in /usr/local/lib, which the loader
@@ -136,10 +140,9 @@ def _describe(library: ctypes.CDLL) -> None:
     ]
     library.hackrf_close.restype = ctypes.c_int
     library.hackrf_close.argtypes = [ctypes.c_void_p]
-    library.hackrf_device_list.restype = ctypes.c_int
-    library.hackrf_device_list.argtypes = [
-        ctypes.POINTER(ctypes.POINTER(_DeviceList)),
-    ]
+    # libhackrf returns the list pointer directly; it takes no arguments.
+    library.hackrf_device_list.restype = ctypes.POINTER(_DeviceList)
+    library.hackrf_device_list.argtypes = []
     library.hackrf_device_list_free.restype = None
     library.hackrf_device_list_free.argtypes = [ctypes.POINTER(_DeviceList)]
     library.hackrf_set_freq.restype = ctypes.c_int
@@ -211,8 +214,8 @@ def probe_hackrf() -> dict:
                 "ok": False, "error": f"hackrf_init: {status}",
                 "serials": [], "library": getattr(library, "_name", ""),
             }
-        device_list = ctypes.POINTER(_DeviceList)()
-        if library.hackrf_device_list(ctypes.byref(device_list)) != 0:
+        device_list = library.hackrf_device_list()
+        if not device_list:
             return {
                 "ok": False, "error": "hackrf_device_list failed",
                 "serials": [], "library": getattr(library, "_name", ""),
@@ -254,27 +257,49 @@ class HackRFWorker(DeviceWorker):
         self._serial = str(config.uri or "").strip()
 
     # ------------------------------------------------------------ commands
+    @staticmethod
+    def _require(status: int, what: str) -> None:
+        if int(status) != 0:
+            raise RuntimeError(f"{what}: {status}")
+
     def _apply_command(self, name: str, value) -> None:
         library = _ensure_library()
         if self.sdr is None:
             return
         if name == "center":
-            library.hackrf_set_freq(self.sdr, int(clamp_freq(value)))
-            self.center_freq = int(value)
+            freq = clamp_freq(value)
+            self._require(library.hackrf_set_freq(self.sdr, int(freq)),
+                          "set_freq")
+            self.center_freq = freq
         elif name == "sample_rate":
             rate = clamp_rate(value)
+            self._block_len = max(4096, int(rate * BLOCK_SECONDS))
+            if abs(rate - self.sample_rate) < 1.0:
+                # Deep look usually restores the same rate.  Restarting the
+                # USB stream for an unchanged value can fail with
+                # HACKRF_ERROR_OTHER while stop_rx is still unwinding.
+                return
             streaming = bool(library.hackrf_is_streaming(self.sdr) == 1)
             if streaming:
-                library.hackrf_stop_rx(self.sdr)
+                self._require(library.hackrf_stop_rx(self.sdr), "stop_rx")
+                for _ in range(50):
+                    if library.hackrf_is_streaming(self.sdr) != 1:
+                        break
+                    time.sleep(0.02)
             self.sample_rate = rate
-            self._block_len = max(4096, int(rate * BLOCK_SECONDS))
-            library.hackrf_set_sample_rate(self.sdr, rate)
+            self._require(
+                library.hackrf_set_sample_rate(self.sdr, rate),
+                "set_sample_rate",
+            )
             if streaming:
-                library.hackrf_start_rx(self.sdr, self._callback, None)
+                self._start_rx(library)
         elif name == "bandwidth":
             self.bandwidth = float(value)
-            library.hackrf_set_baseband_filter_bandwidth(
-                self.sdr, snap_filter_bw(value)
+            self._require(
+                library.hackrf_set_baseband_filter_bandwidth(
+                    self.sdr, snap_filter_bw(value)
+                ),
+                "set_baseband_filter_bandwidth",
             )
         elif name == "gain":
             self.gain = float(value)
@@ -282,14 +307,30 @@ class HackRFWorker(DeviceWorker):
         elif name == "buffer_size":
             self._block_len = max(4096, int(value))
 
+    def _start_rx(self, library: ctypes.CDLL) -> None:
+        """Start RX, retrying once after a rate change.
+
+        libhackrf occasionally returns HACKRF_ERROR_OTHER when ``start_rx``
+        follows ``stop_rx`` immediately; a short pause makes the retry
+        reliable without changing the requested settings.
+        """
+        status = library.hackrf_start_rx(self.sdr, self._callback, None)
+        if status != 0:
+            time.sleep(0.2)
+            status = library.hackrf_start_rx(self.sdr, self._callback, None)
+        self._require(status, "start_rx")
+
     def _apply_gain(self) -> None:
         library = _ensure_library()
         if self.sdr is None:
             return
         lna, vga, amp = gain_to_stages(self.gain)
-        library.hackrf_set_lna_gain(self.sdr, lna)
-        library.hackrf_set_vga_gain(self.sdr, vga)
-        library.hackrf_set_amp_enable(self.sdr, 1 if amp else 0)
+        self._require(library.hackrf_set_lna_gain(self.sdr, lna), "set_lna_gain")
+        self._require(library.hackrf_set_vga_gain(self.sdr, vga), "set_vga_gain")
+        self._require(
+            library.hackrf_set_amp_enable(self.sdr, 1 if amp else 0),
+            "set_amp_enable",
+        )
 
     # -------------------------------------------------------------- receive
     def _on_transfer(self, transfer_ptr) -> int:
@@ -352,20 +393,30 @@ class HackRFWorker(DeviceWorker):
                     + (" (устройство занято?)" if status == -6 else "")
                 )
             self.sdr = device
-            library.hackrf_set_sample_rate(
-                self.sdr, clamp_rate(self.config.sample_rate)
+            # Keep the reported values equal to what the device accepted;
+            # otherwise the monitor compares 20.48 against the 20.0 that
+            # libhackrf returns and silently drops every block.
+            self.sample_rate = clamp_rate(self.config.sample_rate)
+            self.center_freq = clamp_freq(self.config.center_freq)
+            self.bandwidth = float(self.config.bandwidth)
+            self._block_len = max(4096, int(self.sample_rate * BLOCK_SECONDS))
+            self._require(
+                library.hackrf_set_sample_rate(self.sdr, self.sample_rate),
+                "set_sample_rate",
             )
-            library.hackrf_set_freq(
-                self.sdr, int(clamp_freq(self.config.center_freq))
+            self._require(
+                library.hackrf_set_freq(self.sdr, int(self.center_freq)),
+                "set_freq",
             )
-            library.hackrf_set_baseband_filter_bandwidth(
-                self.sdr, snap_filter_bw(self.config.bandwidth)
+            self._require(
+                library.hackrf_set_baseband_filter_bandwidth(
+                    self.sdr, snap_filter_bw(self.bandwidth)
+                ),
+                "set_baseband_filter_bandwidth",
             )
             self._apply_gain()
             self._callback = _RX_CALLBACK(self._on_transfer)
-            status = library.hackrf_start_rx(self.sdr, self._callback, None)
-            if status != 0:
-                raise RuntimeError(f"hackrf_start_rx: {status}")
+            self._start_rx(library)
             self._set_status("running")
             self.info_ready.emit(self.config.device_id, {
                 "center_freq": float(self.center_freq),

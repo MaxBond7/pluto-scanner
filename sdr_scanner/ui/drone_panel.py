@@ -155,7 +155,7 @@ class DronePanel(QWidget):
         grid.setVerticalSpacing(5)
 
         self.rate_combo = QComboBox()
-        for rate in (4.096e6, 6.144e6, 10.24e6, 20.48e6, 30.72e6):
+        for rate in (4.096e6, 6.144e6, 10.24e6, 20.0e6, 20.48e6, 30.72e6):
             self.rate_combo.addItem(f"{rate / 1e6:.2f} MS/s", rate)
         # 4.096-6.144 MS/s is what a Pluto over USB 2.0 sustains without
         # dropping samples; the higher rates are kept for Ethernet/network
@@ -440,9 +440,9 @@ class DronePanel(QWidget):
         rate = self.sample_rate()
         if rate > 6.2e6:
             text = (
-                "USB 2.0: выше ~6 МГц отсчёты теряются и время в записи "
-                "рвётся. Для честного мониторинга выберите 4.096–6.144 MS/s "
-                "(или подключите Pluto по сети)."
+                "Для Pluto по USB 2.0 реально ~6 МС/с; выше начинаются "
+                "потери отсчётов. Для HackRF 20 МС/с — нормальный режим. "
+                "Скорость не меняется молча."
             )
         else:
             text = ""

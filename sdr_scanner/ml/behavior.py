@@ -60,8 +60,12 @@ def _frame_series(
 def _peaks(
     block: np.ndarray, freqs: np.ndarray, window: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
+    # HackRF has a strong DC spur at the tuned centre.  Remove each frame's
+    # mean before the FFT so the spur does not look like a permanent carrier.
+    centred = block.astype(np.complex64)
+    centred = centred - centred.mean(axis=1, keepdims=True)
     spectrum = np.fft.fftshift(
-        np.abs(np.fft.fft(block.astype(np.complex64) * window, axis=1)),
+        np.abs(np.fft.fft(centred * window, axis=1)),
         axes=1,
     )
     return freqs[np.argmax(spectrum, axis=1)], spectrum
@@ -88,6 +92,7 @@ def analyze(
     for start in range(0, frames, BLOCK_FRAMES):
         block = x[start * frame:(start + BLOCK_FRAMES) * frame]
         block = block.reshape(-1, frame)
+        block = block - block.mean(axis=1, keepdims=True)
         power[start:start + block.shape[0]] = (
             np.abs(block) ** 2
         ).mean(axis=1)

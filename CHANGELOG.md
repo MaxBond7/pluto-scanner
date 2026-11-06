@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-06
+
+- **HackRF readiness.** Fixed the `hackrf_device_list` call: libhackrf
+  returns the list pointer directly and takes no arguments, so the old
+  declaration would have found no device on real hardware.
+- **Actual rate is reported and used.** `HackRFWorker` now clamps to the
+  device limit (20.0 MS/s), stores the accepted value and emits it. Before,
+  asking for 20.48 left the worker reporting 20.48 while blocks carried 20.0,
+  and the drone controller rejected every block.
+- The drone monitor clamps a HackRF request to 20.0 MS/s; the rate lists now
+  include 20.0 and the warning explains that 20 MS/s is normal for HackRF but
+  not for a Pluto on USB 2.0.
+- Added `tools/check_hackrf.py`: first-contact check for serial, real stream
+  rate, ADC clipping, DC offset, spectrum peak, duty/bursts/hops/channels,
+  optional IQ save. Added `--hackrf` to start the app with the first board.
+- **Live check passed** on a HackRF One: 20 MS/s, 99% real time, drone
+  monitor and deep look working; the controller returns to the same chunk.
+- **DC spur removed before behaviour analysis.** The HackRF centre spike made
+  a quiet channel look 100% busy; per-frame mean removal brings duty back to
+  the real value (home Wi-Fi: 0.57–0.61 instead of 1.00).
+- Rate changes no longer restart the USB stream for the same value, and
+  `start_rx` retries once after a real change — this removes the occasional
+  `HACKRF_ERROR_OTHER` on resume.
+- Verified the int8 I/Q scaling and block splitting with a synthetic
+  transfer; buffer lengths, filter snapping, gain stages and missing-library
+  errors are covered by tests.
+- Deep look on HackRF uses 20.0 MS/s and caps the capture at 24M samples
+  (about 192 MB), shortening the window with a visible note.
+
 ## [0.27.0] - 2026-11-05
 
 - **Deep look stage 1: no more stopping the monitor.** The event card now

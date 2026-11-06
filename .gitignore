@@ -34,6 +34,9 @@ Thumbs.db
 # Presentation intermediates
 presentation/render_*.png
 
+# Native SDR libraries (installed separately, not redistributed)
+/*.dll
+
 # Build output
 build/
 dist/

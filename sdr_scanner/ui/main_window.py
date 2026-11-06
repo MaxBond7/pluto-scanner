@@ -105,7 +105,10 @@ from .themes import (
 
 log = logging.getLogger(__name__)
 
-_FS_CHOICES = [0.512e6, 1.024e6, 1.536e6, 2.048e6, 2.4e6, 3.2e6]
+_FS_CHOICES = [
+    0.512e6, 1.024e6, 1.536e6, 2.048e6, 2.4e6, 3.2e6,
+    4.096e6, 6.144e6, 10.24e6, 20.0e6,
+]
 _SIM_CENTERS = [433.92e6, 915.0e6, 2450.0e6, 1575.42e6, 868.0e6]
 _STATUS_RU = {
     "idle": "ожидание",
@@ -669,8 +672,8 @@ class MainWindow(QMainWindow):
             kind="hackrf",
             uri=serial,
             center_freq=float(DEFAULT_CENTER_FREQ),
-            sample_rate=2.048e6,
-            bandwidth=2.0e6,
+            sample_rate=10.24e6,
+            bandwidth=10.0e6,
             gain=32.0,
             fft_size=int(DEFAULT_FFT_SIZE),
             seed=1,
@@ -1432,6 +1435,9 @@ class MainWindow(QMainWindow):
         fs = float(self.fs_combo.currentData())
         session = self.sessions[self.selected_id]
         session.set_sample_rate(fs)
+        if session.config.kind == "hackrf":
+            # The analog filter does not follow the sample rate by itself.
+            session.set_bandwidth(min(fs, 20.0e6))
         max_offset = fs * 0.48
         offset = max(-max_offset, min(max_offset, session.vfo.offset_hz))
         vfo = replace(session.vfo, offset_hz=offset)
@@ -2096,7 +2102,7 @@ class MainWindow(QMainWindow):
             return DeepResult(
                 False, "нет выбранного приёмника", center_hz, 0.0, None, "",
             )
-        rate = 20.48e6 if session.config.kind == "hackrf" else 6.144e6
+        rate = 20.0e6 if session.config.kind == "hackrf" else 6.144e6
         self.status_label.setText(
             f"Глубокий взгляд: {format_freq(center_hz)} — "
             f"{windows} окн. по {seconds:.1f} с…"

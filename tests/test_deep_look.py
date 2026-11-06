@@ -90,6 +90,7 @@ class FakeSession(QObject):
         super().__init__()
         self.config = SimpleNamespace(
             device_id="sim-1", center_freq=2412e6, sample_rate=2.048e6,
+            bandwidth=1.6e6,
         )
         self.requested: list[tuple[str, float]] = []
         self._rate = rate
@@ -112,6 +113,10 @@ class FakeSession(QObject):
     def set_center_freq(self, hz: float) -> None:
         self.requested.append(("center", float(hz)))
         self.config.center_freq = float(hz)
+
+    def set_bandwidth(self, hz: float) -> None:
+        self.requested.append(("bandwidth", float(hz)))
+        self.config.bandwidth = float(hz)
 
     def set_sample_rate(self, hz: float) -> None:
         self.requested.append(("rate", float(hz)))
