@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-11-06
+
+- **Analog video viewer (stage 4, first version).** New `video/analog.py`
+  demodulates FM or AM, finds line sync, samples the active part of each line
+  and stacks a monochrome frame. `Вид → Аналоговое видео…` opens a modal
+  window with frequency, PAL/NTSC, FM/AM, inversion and a snapshot button.
+- The window owns the receiver while open: it retunes the selected Pluto or
+  HackRF, switches the session to raw-IQ mode and restores the previous
+  centre/rate/bandwidth on close. Recording, scanning and the drone monitor
+  must be stopped first.
+- Line-grid filling recovers missed sync pulses: a real 1240 MHz VTX sweep
+  from the FPV dataset produced a 345-line partial monochrome frame instead
+  of the 190 lines found by raw sync detection.
+- Synthetic PAL and NTSC signals decode into frames; the window is tested
+  with a fake live session.
+- Limits: monochrome only, no colour subcarrier, no full vertical-hold PLL;
+  a live continuous VTX is still needed for a stable picture.
+
 ## [0.31.0] - 2026-11-06
 
 - **Analog FPV validated on real recordings.** Downloaded the Zenodo

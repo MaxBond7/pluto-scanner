@@ -82,6 +82,7 @@ from .device_panel import DevicePanel
 from .drone_panel import DronePanel
 from .drone_window import DroneWindow
 from .event_dialog import DroneEventDialog
+from .video_window import VideoWindow
 from .import_dialog import DatasetImportDialog
 from .ml_panel import MLPanel
 from .spectrum_view import SpectrumView
@@ -495,6 +496,8 @@ class MainWindow(QMainWindow):
         view_menu.addSeparator()
         action = view_menu.addAction("Папка тем")
         action.triggered.connect(lambda: self._open_theme_folder())
+        action = view_menu.addAction("Аналоговое видео…")
+        action.triggered.connect(self._open_video_window)
 
         help_menu = bar.addMenu("Справка")
         action = help_menu.addAction("Документация")
@@ -2072,6 +2075,38 @@ class MainWindow(QMainWindow):
 
     def _on_drone_observation(self, obs) -> None:
         self.drone_panel.update_observation(obs)
+
+    def _open_video_window(self) -> None:
+        if self._recording:
+            self._status_hint("Остановите запись IQ перед просмотром видео.")
+            return
+        if self._scanning:
+            self._status_hint("Остановите сканирование перед просмотром видео.")
+            return
+        if self._drone_active:
+            self._status_hint("Остановите дрон-монитор перед просмотром видео.")
+            return
+        session = self.sessions.get(self.selected_id) if self.selected_id else None
+        if session is None or session.config.kind not in ("pluto", "hackrf"):
+            self._status_hint("Выберите Pluto или HackRF.")
+            return
+        if not session.worker.isRunning():
+            self._status_hint("Приёмник не запущен.")
+            return
+        dialog = VideoWindow(session, self)
+        dialog.exec()
+        self._guard = True
+        try:
+            self.center_spin.setValue(session.config.center_freq / 1e6)
+            self._set_fs_combo(session.config.sample_rate)
+        finally:
+            self._guard = False
+        self._update_controls()
+        self.status_label.setText("Аналоговое видео закрыто.")
+
+    def _status_hint(self, text: str) -> None:
+        self.status_label.setText(text)
+        set_style(self.status_label, "color:#facc15;")
 
     def _open_drone_event(self, event_id: str) -> None:
         event = self.drone_panel.find_event(event_id)

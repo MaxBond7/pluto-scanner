@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.31.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.32.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -44,6 +44,7 @@ AM/FM/SSB/CW, свип, монитор дроновых полос, IQ-запи�
  IQ RECORD    cf32 + JSON, оценка размера, воспроизведение через DSP без платы
  ML           встроенная модель из коробки, обучение на своих записях, top-3
  BINARY       дрон / не дрон: отдельная модель на DroneRF, score и порог
+ VIDEO        аналоговое видео: FM/AM, PAL/NTSC, ч/б кадр и снимок
  THEMES       ч/б терминал по умолчанию, три акцента, свои JSON-темы
  IMPORT       SigMF, raw float32 и .mat из открытых датасетов
  WINDOWS      portable ZIP, установщик Inno Setup, SHA256, версия и логи
@@ -119,8 +120,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\SDRScanner\SDRScanner.exe          portable one-folder
-dist\SDRScanner-0.31.0-portable.zip        архив
-dist\SDRScanner-Setup-0.31.0.exe           установщик
+dist\SDRScanner-0.32.0-portable.zip        архив
+dist\SDRScanner-Setup-0.32.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -172,9 +173,9 @@ IQ (Pluto / симулятор / запись)
   необходимые DLL — в [HACKRF](docs/HACKRF.md).
 - **ML-классификатор** — из коробки идёт синтетическая модель; для реальной
   точности обучите на размеченных записях. Без веба и телефона.
-- **Аналоговое видео не показывается.** Приложение находит видеолинк и
-  измеряет строчную частоту, но не демодулирует FM-видео и не рисует
-  кадры. Это отдельный этап 4 в [ROADMAP](docs/ROADMAP.md).
+- **Аналоговое видео показывается в ч/б.** Есть FM/AM-демодуляция, строки
+  PAL/NTSC и окно «Аналоговое видео». Цвет, устойчивая кадровая
+  синхронизация и живой VTX — ещё впереди, см. [ROADMAP](docs/ROADMAP.md).
 
 ## ДОКУМЕНТАЦИЯ
 
