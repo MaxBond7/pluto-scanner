@@ -33,7 +33,10 @@ class VideoStandard:
 
 PAL = VideoStandard("PAL", 15625.0, 625, 576, 768, 25.0)
 NTSC = VideoStandard("NTSC", 15734.264, 525, 480, 640, 29.97)
-STANDARDS = {"PAL": PAL, "NTSC": NTSC}
+# Russian SECAM D/K uses the same 625/50 geometry as PAL; colour is not
+# decoded yet, but the monochrome picture and line timing are identical.
+SECAM = VideoStandard("SECAM", 15625.0, 625, 576, 768, 25.0)
+STANDARDS = {"PAL": PAL, "NTSC": NTSC, "SECAM": SECAM}
 
 
 @dataclass(frozen=True)

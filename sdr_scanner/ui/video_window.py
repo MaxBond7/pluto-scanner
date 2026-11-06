@@ -67,8 +67,10 @@ class VideoPanel(QWidget):
 
         controls.addWidget(QLabel("Стандарт"))
         self.standard_combo = QComboBox()
-        for key in ("PAL", "NTSC"):
-            self.standard_combo.addItem(key, key)
+        for key in ("PAL", "NTSC", "SECAM"):
+            self.standard_combo.addItem(
+                "SECAM (ч/б)" if key == "SECAM" else key, key,
+            )
         controls.addWidget(self.standard_combo)
 
         controls.addWidget(QLabel("Демодуляция"))

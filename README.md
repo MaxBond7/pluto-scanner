@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.34.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.35.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -120,8 +120,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\SDRScanner\SDRScanner.exe          portable one-folder
-dist\SDRScanner-0.34.0-portable.zip        архив
-dist\SDRScanner-Setup-0.34.0.exe           установщик
+dist\SDRScanner-0.35.0-portable.zip        архив
+dist\SDRScanner-Setup-0.35.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -197,6 +197,7 @@ IQ (Pluto / симулятор / запись)
 | [HACKRF](docs/HACKRF.md) | подключение HackRF One: драйвер, libhackrf, параметры |
 | [TAMPERE](docs/TAMPERE.md) | поведение реальных линков дронов: скважность, перескоки |
 | [FPV_ANALOG](docs/FPV_ANALOG.md) | аналоговое FPV-видео: датасет и строчная синхронизация |
+| [TV_KRASNODAR](docs/TV_KRASNODAR.md) | аналоговое ТВ в Краснодаре: частоты и сканирование |
 | [PLUTO_2R2T](docs/PLUTO_2R2T.md) | второй RX, 2R2T, риски и восстановление |
 | [HARDWARE](docs/HARDWARE.md) | что есть, чего не хватает, ограничения |
 | [ROADMAP](docs/ROADMAP.md) | что сделано и что дальше |

@@ -6,6 +6,7 @@ from __future__ import annotations
 from .analog import (
     NTSC,
     PAL,
+    SECAM,
     STANDARDS,
     DecodedFrame,
     VideoDecoder,
@@ -18,6 +19,7 @@ __all__ = [
     "DecodedFrame",
     "NTSC",
     "PAL",
+    "SECAM",
     "STANDARDS",
     "VideoDecoder",
     "VideoStandard",

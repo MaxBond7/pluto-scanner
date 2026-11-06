@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-11-06
+
+- **SECAM (monochrome) standard** in the video tab for Russian 625/50 TV;
+  line timing and geometry are shared with PAL, colour is still not decoded.
+- **Analog TV scanner** `tools/scan_analog_tv.py`: scans Russian VHF/UHF
+  video carriers, requires a 15.3–15.9 kHz line and a wide signal, and only
+  counts blocks from the requested frequency. It does not mistake a 16 kHz
+  spur or a DVB-T2 multiplex for analog TV.
+- `docs/TV_KRASNODAR.md`: Russian D/K frequencies, scan commands, cable
+  attenuator warning and the result of the local UHF/VHF scan.
+- Local scan found **no analog TV** in Krasnodar (UHF 21–60, VHF 1–12):
+  wideband signals and narrow spurs were present, but no 15.6 kHz line.
+  This matches the analog switch-off; a cable or local RF source is needed
+  for a real TV test.
+- AM negative-modulation test for SECAM; the decoder now has PAL, NTSC and
+  SECAM monochrome tests.
+
 ## [0.34.0] - 2026-11-06
 
 - **Fixed the video viewer freezing the app.** A 20 MS/s frame took about

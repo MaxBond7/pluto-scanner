@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication
 from sdr_scanner.video.analog import (
     NTSC,
     PAL,
+    SECAM,
     VideoDecoder,
     decode_frame,
     demodulate,
@@ -46,7 +47,9 @@ def _fm_iq(video: np.ndarray, rate: float) -> np.ndarray:
     return np.exp(1j * phase).astype(np.complex64)
 
 
-@pytest.mark.parametrize("standard,pixels", ((PAL, 768), (NTSC, 640)))
+@pytest.mark.parametrize(
+    "standard,pixels", ((PAL, 768), (NTSC, 640), (SECAM, 768)),
+)
 def test_decodes_a_monochrome_frame(standard, pixels):
     rate = 10e6
     video = _video_wave(standard, rate, 300)
@@ -58,6 +61,19 @@ def test_decodes_a_monochrome_frame(standard, pixels):
     assert abs(frame.line_hz - standard.line_hz) < 300
     assert frame.locked is True
     assert frame.image.std() > 10
+
+
+def test_am_negative_modulation_decodes():
+    rate = 10e6
+    video = _video_wave(SECAM, rate, 300)
+    t = np.arange(video.size) / rate
+    # Negative AM modulation: sync tips are the strongest carrier.
+    iq = ((0.15 + 0.8 * video)
+          * np.exp(2j * np.pi * 1e6 * t)).astype(np.complex64)
+    frame = decode_frame(iq, rate, SECAM, mode="am")
+    assert frame is not None
+    assert frame.image.shape[0] >= 90
+    assert frame.image.std() > 5
 
 
 def test_decoder_emits_a_frame_from_blocks():
