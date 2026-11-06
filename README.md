@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.28.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.29.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -119,8 +119,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\SDRScanner\SDRScanner.exe          portable one-folder
-dist\SDRScanner-0.28.0-portable.zip        архив
-dist\SDRScanner-Setup-0.28.0.exe           установщик
+dist\SDRScanner-0.29.0-portable.zip        архив
+dist\SDRScanner-Setup-0.29.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -578,8 +578,12 @@ drone_logs/
 | Занято полосы | какая часть захвата выше шума на 6 дБ |
 | Пачек/с | сколько раз сигнал включается и выключается за секунду |
 | Перескоки/с, каналов | сколько раз и куда прыгает несущая |
+| Dwell, пауза | сколько миллисекунд передатчик стоит на канале |
+| Карта каналов | диаграмма занятости каналов и топ-3 |
 
-Ориентир по реальным записям (`docs/TAMPERE.md`): у DJI-видеолинка скважность 0.78–0.89 и занято около половины полосы, у Wi-Fi-дронов и домашней точки доступа — 0.10–0.23. Вывод в карточке всегда с оговоркой: занятая точка доступа с видеотрафиком выглядит так же, как непрерывный линк дрона.
+Ориентир по реальным записям (`docs/TAMPERE.md`): у DJI-видеолинка скважность 0.78–0.89, занято около половины полосы, 41–74 канала и 700–1830 перескоков/с; у Wi-Fi-дронов и домашней точки доступа — 0.10–0.23. Профиль в карточке сравнивает карту каналов с этими диапазонами и честно пишет, если сигнал широкополосный и карта неполная.
+
+Широкополосные кадры (Wi-Fi, цифровое видео) в карту каналов не попадают: у них нет стабильной несущей, иначе один Wi-Fi-канал выглядел бы как десятки «перескоков». Вывод в карточке всегда с оговоркой: занятая точка доступа с видеотрафиком выглядит так же, как непрерывный линк дрона.
 
 Что показывает карточка:
 

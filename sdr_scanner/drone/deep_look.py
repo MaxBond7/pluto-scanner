@@ -14,13 +14,19 @@ freeze with a busy cursor is simpler and safer than another worker thread.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import QEventLoop, QTimer
 
 from ..ml.behavior import Behavior, analyze
+from ..ml.channels import (
+    ChannelMap,
+    analyze_channels,
+    dwell_histogram,
+    fingerprint,
+)
 from ..recordings import RecordingInfo, new_recording_info, save_info
 
 SETTLE_MS = 350
@@ -42,6 +48,7 @@ class DeepResult:
     behavior: Behavior | None
     verdict: str
     windows: list[Behavior] = field(default_factory=list)
+    channel_map: ChannelMap | None = None
     reasons: list[str] = field(default_factory=list)
     stability: str = ""
     background: float = 0.0
@@ -68,6 +75,11 @@ class DeepResult:
         duration = sum(window.frames for window in windows) * 0.00025
         duties = [window.duty for window in windows]
         occupied = [window.occupied for window in windows]
+        channel_count = (
+            len(self.channel_map.channels) if self.channel_map is not None
+            else b.channels
+        )
+        channel_text = str(channel_count) if channel_count else "—"
         text = (
             f"{self.freq_hz / 1e6:.3f} МГц · "
             f"{self.sample_rate / 1e6:.2f} МС/с · "
@@ -76,13 +88,45 @@ class DeepResult:
             f" ({self._range(duties)} по окнам) · "
             f"занято {b.occupied:.2f} ({self._range(occupied)}) полосы · "
             f"пачек {b.burst_rate_hz:.0f}/с · "
-            f"перескоков {b.hop_rate_hz:.0f}/с · каналов {b.channels}\n"
+            f"перескоков {b.hop_rate_hz:.0f}/с · каналов {channel_text}\n"
         )
         if self.sample_rate < 15e6:
             text += (
                 "перескоки и каналы при полосе меньше 15 МГц недостоверны: "
                 "для них нужен HackRF (20 МГц).\n"
             )
+        if self.channel_map is not None:
+            cm = self.channel_map
+            if cm.channels:
+                text += (
+                    f"карта каналов: {len(cm.channels)} · "
+                    f"dwell {cm.dwell_ms:.2f} мс · "
+                    f"пауза {cm.hop_period_ms:.2f} мс · "
+                    f"перескоков {cm.hop_rate_hz:.0f}/с\n"
+                )
+                top = ", ".join(
+                    f"{item.center_hz / 1e6:.1f} МГц {item.share * 100:.0f}%"
+                    for item in cm.top(3)
+                )
+                if top:
+                    text += f"топ каналов: {top}\n"
+                hist = [
+                    f"{label} ×{count}"
+                    for label, count in dwell_histogram(cm) if count
+                ][:3]
+                if hist:
+                    text += "dwell: " + ", ".join(hist) + "\n"
+                if cm.wide_share >= 0.10:
+                    text += (
+                        f"широкополосных кадров: {cm.wide_share * 100:.0f}%\n"
+                    )
+            elif cm.wide_share >= 0.5:
+                text += (
+                    "карта каналов: широкополосный сигнал, перескоки "
+                    "не оцениваются\n"
+                )
+            if self.sample_rate >= 15e6:
+                text += "профиль: " + fingerprint(cm, b) + "\n"
         if self.background >= 0.6:
             text += (
                 f"карта фона: {self.background * 100:.0f}% — сигнал был "
@@ -110,7 +154,9 @@ def _category(behavior: Behavior) -> str:
     return "mixed"
 
 
-def reasons(behavior: Behavior, bandwidth: float) -> list[str]:
+def reasons(
+    behavior: Behavior, bandwidth: float, channels: int | None = None,
+) -> list[str]:
     """Human-readable causes for the verdict, with the thresholds used."""
     result: list[str] = []
     if behavior.duty >= 0.70:
@@ -124,15 +170,16 @@ def reasons(behavior: Behavior, bandwidth: float) -> list[str]:
     elif behavior.occupied < 0.40:
         result.append(f"занято {behavior.occupied:.2f} < 0.40 полосы")
     if bandwidth >= 15e6:
-        if behavior.channels >= 8 and behavior.hop_rate_hz >= 200:
+        count = behavior.channels if channels is None else int(channels)
+        if count >= 8 and behavior.hop_rate_hz >= 200:
             result.append(
                 f"перескоки {behavior.hop_rate_hz:.0f}/с, "
-                f"{behavior.channels} каналов"
+                f"{count} каналов"
             )
         else:
             result.append(
                 f"перескоков мало: {behavior.hop_rate_hz:.0f}/с, "
-                f"{behavior.channels} каналов"
+                f"{count} каналов"
             )
     else:
         result.append("полоса < 15 МГц: перескоки не оцениваются")
@@ -345,12 +392,34 @@ def look(
             False, error or "окна слишком короткие", center_hz, rate, None, "",
         )
     aggregate = _aggregate(behaviors)
+    channel_map = None
+    if float(rate) >= 15e6:
+        channel_map = analyze_channels(
+            data, rate, center_hz=float(center_hz),
+            max_seconds=seconds * windows,
+        )
+    # The channel map is the honest source for hop rate and channel count at
+    # 20 MHz; the per-frame peak metric in Behavior inflates them on weak
+    # noise frames.
+    report = aggregate
+    if channel_map is not None:
+        if channel_map.channels:
+            report = replace(
+                aggregate,
+                hop_rate_hz=channel_map.hop_rate_hz,
+                channels=len(channel_map.channels),
+            )
+        elif channel_map.wide_share >= 0.5:
+            # A wide signal has no meaningful FHSS channels; do not claim
+            # hops just because its peak wanders across subcarriers.
+            report = replace(aggregate, hop_rate_hz=0.0, channels=0)
     config = session.config
     return DeepResult(
-        True, "", center_hz, rate, aggregate,
-        interpret(aggregate, rate),
+        True, "", center_hz, rate, report,
+        interpret(report, rate),
         windows=behaviors,
-        reasons=reasons(aggregate, rate),
+        channel_map=channel_map,
+        reasons=reasons(report, rate),
         stability=_stability(behaviors),
         background=float(background),
         note=note,

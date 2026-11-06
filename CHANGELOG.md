@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-06
+
+- **Deep look stage 2: channel map.** New `ml/channels.py` groups per-frame
+  peaks into channels and reports dwell time, hop period, hop interval
+  variation and a dwell histogram. The event card draws the busiest channels
+  as a bar chart.
+- **Honest wideband guard.** A 20 MHz Wi-Fi channel has no stable carrier;
+  frames whose half-power width exceeds 4 MHz are excluded from the channel
+  map. The result prints the wide-frame share and refuses to call a wide
+  signal frequency-hopping. On live home Wi-Fi 91% of frames were wide, so
+  the map is marked incomplete instead of inventing dozens of channels.
+- **FHSS profile** compares the map with the Tampere measurements: DJI links
+  used 41–74 channels, 700–1830 hops/s and short dwells; Wi-Fi drones and
+  access points had fewer channels or longer dwells. It is a cautious profile,
+  not a model verdict.
+- At 20 MHz the channel map now supplies hop rate and channel count for the
+  final verdict; the per-frame peak counter is no longer allowed to inflate
+  them on noise frames.
+- Tests build synthetic 3-channel hoppers, steady carriers, wide noise and
+  histogram coverage; live HackRF check covers the wideband guard.
+- Deep look capture on HackRF remains 20.0 MS/s and the controller still
+  returns to the same chunk.
+
 ## [0.28.0] - 2026-11-06
 
 - **HackRF readiness.** Fixed the `hackrf_device_list` call: libhackrf

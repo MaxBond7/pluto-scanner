@@ -173,6 +173,18 @@ class DroneEventDialog(QDialog):
         self.deep_label.hide()
         root.addWidget(self.deep_label)
 
+        self.channel_plot = pg.PlotWidget(background=tcol("graph_bg"))
+        self.channel_plot.setMenuEnabled(False)
+        self.channel_plot.showGrid(x=True, y=True, alpha=0.12)
+        self.channel_plot.setLabel("bottom", "Частота", units="MHz")
+        self.channel_plot.setLabel("left", "Доля", units="%")
+        self.channel_plot.setTitle(
+            "Карта каналов", color=tcol("#67e8f9"), size="10pt"
+        )
+        self.channel_plot.setMinimumHeight(120)
+        self.channel_plot.hide()
+        root.addWidget(self.channel_plot)
+
         deep_row = QHBoxLayout()
         deep_row.setSpacing(6)
         deep_row.addWidget(QLabel("Окно"))
@@ -375,8 +387,34 @@ class DroneEventDialog(QDialog):
         else:
             set_style(self.deep_label, "color:#facc15; font-size:11px;")
         self.deep_label.setText(result.text())
+        self._show_channel_map(result)
         if result.ok and result.data is not None:
             self.save_iq_btn.setEnabled(True)
+
+    def _show_channel_map(self, result: DeepResult) -> None:
+        channel_map = result.channel_map
+        if (channel_map is None or len(channel_map.channels) < 2
+                or channel_map.wide_share >= 0.5):
+            self.channel_plot.hide()
+            return
+        self.channel_plot.setTitle(
+            "Карта каналов" if channel_map.wide_share < 0.35
+            else "Карта каналов (неполная: много широких кадров)",
+            color=tcol("#67e8f9"), size="10pt",
+        )
+        top = sorted(
+            channel_map.channels, key=lambda item: item.share, reverse=True,
+        )[:16]
+        top.sort(key=lambda item: item.center_hz)
+        self.channel_plot.clear()
+        self.channel_plot.addItem(pg.BarGraphItem(
+            x=[item.center_hz / 1e6 for item in top],
+            height=[item.share * 100.0 for item in top],
+            width=0.8,
+            brush=pg.mkBrush(tcol("accent")),
+            pen=pg.mkPen(tcol("accent")),
+        ))
+        self.channel_plot.show()
 
     def _save_deep_iq(self) -> None:
         result = self._deep_result

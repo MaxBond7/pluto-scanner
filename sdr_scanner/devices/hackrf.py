@@ -286,12 +286,15 @@ class HackRFWorker(DeviceWorker):
                     if library.hackrf_is_streaming(self.sdr) != 1:
                         break
                     time.sleep(0.02)
+                time.sleep(0.05)
             self.sample_rate = rate
             self._require(
                 library.hackrf_set_sample_rate(self.sdr, rate),
                 "set_sample_rate",
             )
-            if streaming:
+            # During shutdown the worker is about to close the device; do not
+            # restart the stream just to satisfy a queued restore command.
+            if streaming and not self._stop_event.is_set():
                 self._start_rx(library)
         elif name == "bandwidth":
             self.bandwidth = float(value)
@@ -308,16 +311,19 @@ class HackRFWorker(DeviceWorker):
             self._block_len = max(4096, int(value))
 
     def _start_rx(self, library: ctypes.CDLL) -> None:
-        """Start RX, retrying once after a rate change.
+        """Start RX, retrying after a rate change.
 
         libhackrf occasionally returns HACKRF_ERROR_OTHER when ``start_rx``
-        follows ``stop_rx`` immediately; a short pause makes the retry
+        follows ``stop_rx`` immediately; increasing pauses make the retry
         reliable without changing the requested settings.
         """
-        status = library.hackrf_start_rx(self.sdr, self._callback, None)
-        if status != 0:
-            time.sleep(0.2)
+        status = 0
+        for delay in (0.0, 0.1, 0.3, 0.7):
+            if delay:
+                time.sleep(delay)
             status = library.hackrf_start_rx(self.sdr, self._callback, None)
+            if status == 0:
+                return
         self._require(status, "start_rx")
 
     def _apply_gain(self) -> None:
