@@ -397,10 +397,10 @@ class VideoPanel(QWidget):
         ))
         self.snapshot_btn.setEnabled(True)
         set_style(self.status, "color:#4ade80; font-size:11px;")
-        quality = (
-            "картинка" if frame.quality >= 0.45
-            else "похоже на шум/снег"
-        )
+        # A woven frame is a picture even when the scene is plain: line
+        # correlation is low on a flat wall, so the frame lock matters more.
+        good = frame.frame_locked or frame.quality >= 0.45
+        quality = "картинка" if good else "похоже на шум/снег"
         self.status.setText(
             f"{frame.standard} · {frame.line_hz:.1f} Гц · "
             f"{frame.lines} строк · "

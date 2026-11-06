@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-11-06
+
+- **Real FPV picture.** The decoder now assembles a proper frame instead of
+  a torn strip. Sync pulses are fitted with one line grid (least squares,
+  outlier trimming) and the period comes from phase concentration, so the
+  camera/SDR clock offset no longer shifts the picture by half a line per
+  field. Two half-frames are woven into an interlaced 480/576-line frame;
+  a single half-frame is shown line-doubled.
+- **Video band limiting** at 4.2 MHz (NTSC) and 5.5 MHz (PAL/SECAM) removes
+  most of the FM-discriminator noise.
+- **Standard auto-match:** if the measured line rate is clearly another
+  standard (PAL ↔ NTSC), that geometry is used and reported.
+- Dataset quirks handled: the second half of every recording block is zero
+  padding, so blocks are trimmed and joined in time; sweeps that contain a
+  vertical sync now decode to a full frame.
+- Result on the public dataset: 1240 MHz PAL gives a readable workshop
+  scene («SDR-200 HERO5 TEST», «DISARMED»), 5840 MHz NTSC gives the
+  Betaflight OSD. Screenshots in `docs/FPV_ANALOG.md`.
+- Quality wording: a woven frame counts as a picture even when the camera
+  looks at a plain wall and line correlation is low.
+- Decoding is ~2× faster: phase-difference FM demodulation and subsampled
+  level estimates.
+
 ## [0.36.1] - 2026-11-06
 
 - **Frame quality metric.** The decoder computes line-to-line correlation:

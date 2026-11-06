@@ -15,7 +15,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from sdr_scanner.video.analog import NTSC, PAL, decode_frame
+from sdr_scanner.video.analog import STANDARDS, decode_frame
 from tools.analyze_fpv_sweep import load_blocks
 
 
@@ -25,11 +25,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--meta", required=True)
     parser.add_argument("--freq", type=float, default=1240e6)
     parser.add_argument("--rate", type=float, default=20e6)
-    parser.add_argument("--standard", choices=("PAL", "NTSC"), default="PAL")
+    parser.add_argument("--standard", choices=tuple(STANDARDS), default="PAL")
     parser.add_argument("--out", default="fpv_frame.png")
     args = parser.parse_args(argv)
     iq, center = load_blocks(Path(args.iq), Path(args.meta), args.freq)
-    standard = PAL if args.standard == "PAL" else NTSC
+    standard = STANDARDS[args.standard]
     frame = decode_frame(iq, args.rate, standard)
     if frame is None:
         print("кадр не собран: нет устойчивой строки")
@@ -37,7 +37,8 @@ def main(argv: list[str] | None = None) -> int:
     Image.fromarray(frame.image, "L").save(args.out)
     print(
         f"{center / 1e6:.1f} МГц · {frame.standard} · "
-        f"{frame.line_hz:.1f} Гц · {frame.lines} строк · {args.out}"
+        f"{frame.line_hz:.1f} Гц · {frame.lines} строк · "
+        f"{'кадр' if frame.frame_locked else 'поле/фрагмент'} · {args.out}"
     )
     return 0
 

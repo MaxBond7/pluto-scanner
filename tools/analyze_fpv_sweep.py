@@ -40,12 +40,18 @@ def load_blocks(iq_path: Path, meta_path: Path, freq: float) -> tuple[np.ndarray
     selected = [item for item in rows if item["center"] == nearest]
     data = np.memmap(iq_path, dtype=np.complex64, mode="r")
     try:
-        pieces = [
-            np.array(data[item["offset"] // 8:
-                          item["offset"] // 8 + item["count"]],
-                     dtype=np.complex64, copy=True)
-            for item in selected
-        ]
+        pieces = []
+        for item in selected:
+            block = np.array(
+                data[item["offset"] // 8:
+                     item["offset"] // 8 + item["count"]],
+                dtype=np.complex64, copy=True,
+            )
+            # Recorder padding: the second half of every dataset block is
+            # zeros, not signal.  Keep only the real samples so blocks sit
+            # next to each other in time.
+            real = np.flatnonzero(np.abs(block) > 0)
+            pieces.append(block[: int(real[-1]) + 1] if real.size else block[:0])
     finally:
         del data
     return np.concatenate(pieces) if pieces else np.empty(0, dtype=np.complex64), nearest

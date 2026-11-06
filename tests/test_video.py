@@ -16,6 +16,10 @@ from sdr_scanner.video.analog import (
     PAL,
     SECAM,
     VideoDecoder,
+    _assemble,
+    _fit_line_grid,
+    _match_standard,
+    _vertical_syncs,
     decode_frame,
     demodulate,
 )
@@ -62,6 +66,86 @@ def test_decodes_a_monochrome_frame(standard, pixels):
     assert frame.locked is True
     assert frame.image.std() > 10
     assert frame.quality > 0.45
+
+
+@pytest.mark.parametrize("standard", (PAL, NTSC))
+def test_weaves_two_fields_into_a_full_frame(standard):
+    """The line grid and the field weaving accept a synthetic capture."""
+    rate = 10e6
+    slope = rate / standard.line_hz
+    rows = standard.rows_per_field
+    active = int(0.8 * slope)
+    per_field = int(round(slope * standard.lines / 2))
+    video = np.zeros(per_field * 3, dtype=np.float64)
+    field_rows = []
+    for field in range(3):
+        base = field * per_field
+        values = np.empty(rows)
+        for row in range(rows):
+            head = base + int((standard.top_blank + row) * slope)
+            values[row] = 0.1 + 0.8 * row / max(1, rows - 1)
+            video[head:head + active] = values[row]
+        field_rows.append(values)
+    vsync = [0.0, float(per_field), 2.0 * per_field]
+    assembled = _assemble(video, standard, slope, 0.0, vsync, standard.pixels)
+    assert assembled is not None
+    image, quality_rows, full = assembled
+    assert full is True
+    assert image.shape == (standard.active_lines, standard.pixels)
+    # Even rows come from the first field, odd rows from the second.
+    assert np.allclose(image[0, 0], field_rows[0][0], atol=0.02)
+    assert np.allclose(image[1, 0], field_rows[1][0], atol=0.02)
+    assert np.allclose(image[-2, 0], field_rows[0][-1], atol=0.02)
+    assert quality_rows is image
+
+
+def test_a_single_field_is_doubled():
+    standard = NTSC
+    rate = 10e6
+    slope = rate / standard.line_hz
+    rows = standard.rows_per_field
+    per_field = int(round(slope * standard.lines / 2))
+    video = np.zeros(per_field * 2, dtype=np.float64)
+    for row in range(rows):
+        head = int((standard.top_blank + row) * slope)
+        video[head:head + 40] = 0.1 + 0.8 * row / max(1, rows - 1)
+    assembled = _assemble(
+        video, standard, slope, 0.0, [0.0, float(per_field)], standard.pixels,
+    )
+    assert assembled is not None
+    image, quality_rows, full = assembled
+    assert full is False
+    assert image.shape == (standard.active_lines, standard.pixels)
+    assert np.allclose(image[0], image[1])
+    assert quality_rows.shape[0] == rows
+
+
+def test_line_grid_finds_the_period_from_sync_pulses():
+    rng = np.random.default_rng(7)
+    slope = 635.56
+    index = np.arange(900)
+    positions = 1000.0 + index * slope + rng.normal(0.0, 3.0, index.size)
+    fitted, intercept, confidence = _fit_line_grid(positions, 635.0)
+    assert abs(fitted - slope) < 0.05
+    assert abs(intercept - 1000.0) < 10.0
+    assert confidence > 0.9
+
+
+def test_line_rate_selects_the_matching_standard():
+    assert _match_standard(15734.8, PAL).name == "NTSC"
+    assert _match_standard(15625.2, NTSC).name == "PAL"
+    assert _match_standard(15625.0, SECAM).name == "SECAM"
+
+
+def test_vertical_sync_pulses_are_grouped():
+    slope = 635.0
+    first = 500.0
+    pulses = [first + step * 0.5 * slope for step in range(6)]
+    pulses += [value + 400000.0 for value in pulses]
+    groups = _vertical_syncs(np.asarray(pulses), slope)
+    assert len(groups) == 2
+    assert abs(groups[0] - first) < 1e-6
+    assert abs(groups[1] - (first + 400000.0)) < 1e-6
 
 
 def test_am_negative_modulation_decodes():

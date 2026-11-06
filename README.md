@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.36.1-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.37.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -120,8 +120,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\SDRScanner\SDRScanner.exe          portable one-folder
-dist\SDRScanner-0.36.1-portable.zip        архив
-dist\SDRScanner-Setup-0.36.1.exe           установщик
+dist\SDRScanner-0.37.0-portable.zip        архив
+dist\SDRScanner-Setup-0.37.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -174,8 +174,11 @@ IQ (Pluto / симулятор / запись)
 - **ML-классификатор** — из коробки идёт синтетическая модель; для реальной
   точности обучите на размеченных записях. Без веба и телефона.
 - **Аналоговое видео показывается в ч/б.** Есть FM/AM-демодуляция, строки
-  PAL/NTSC и окно «Аналоговое видео». Цвет, устойчивая кадровая
-  синхронизация и живой VTX — ещё впереди, см. [ROADMAP](docs/ROADMAP.md).
+  PAL/NTSC/SECAM, ограничение полосы видео и сборка кадра из двух полей.
+  На реальном FPV-датсете декодер собирает читаемую картинку с OSD
+  (скриншоты в [FPV_ANALOG](docs/FPV_ANALOG.md)). Цвет и устойчивая
+  кадровая синхронизация на слабом сигнале — ещё впереди, см.
+  [ROADMAP](docs/ROADMAP.md).
 
 ## ДОКУМЕНТАЦИЯ
 
