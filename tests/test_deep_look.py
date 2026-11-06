@@ -50,6 +50,13 @@ def test_analog_line_sync_is_recognised():
     assert "15.62" in verdict
 
 
+def test_fm_line_sync_is_recognised():
+    verdict = interpret(
+        _behavior(fm_sync_khz=15.625, fm_sync_strength=30.0), 6.144e6,
+    )
+    assert "аналоговый" in verdict
+
+
 def test_digital_envelope_peak_is_not_called_analog():
     verdict = interpret(
         _behavior(sync_khz=5.8, sync_strength=48.0), 6.144e6,

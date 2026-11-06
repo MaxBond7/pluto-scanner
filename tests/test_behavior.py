@@ -62,6 +62,19 @@ def test_analog_video_line_rate():
     assert result.sync_strength > 5.0
 
 
+def test_fm_video_line_rate_is_found_in_the_discriminator():
+    rate = 4e6
+    seconds = 0.5
+    t = np.arange(int(rate * seconds)) / rate
+    video = np.sign(np.sin(2 * np.pi * 15625.0 * t))
+    integral = np.cumsum(video) / rate
+    phase = 2 * np.pi * (1e6 * t + 0.8e6 * integral)
+    iq = np.exp(1j * phase).astype(np.complex64)
+    result = analyze(iq, rate, max_seconds=seconds)
+    assert abs(result.fm_sync_khz - 15.625) < 2.0
+    assert result.fm_sync_strength > 5.0
+
+
 def test_quiet_noise_is_not_a_permanent_carrier():
     rng = np.random.default_rng(11)
     noise = (
@@ -78,3 +91,9 @@ def test_short_block_is_safe():
     result = analyze(np.zeros(10, dtype=np.complex64), RATE)
     assert result.frames == 0
     assert result.duty == 0.0
+
+
+def test_non_multiple_length_does_not_break_the_frame_loop():
+    iq = _tone(np.full(10003, 5e6), rate=1e6)
+    result = analyze(iq, 1e6, max_seconds=0.1, frame_s=0.00025)
+    assert result.frames > 0

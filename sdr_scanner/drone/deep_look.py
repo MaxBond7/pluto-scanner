@@ -96,7 +96,8 @@ class DeepResult:
                 "для них нужен HackRF (20 МГц).\n"
             )
         quiet = b.occupied < 0.005
-        if self.channel_map is not None and not quiet:
+        analog = _analog_line(b) is not None
+        if self.channel_map is not None and not quiet and not analog:
             cm = self.channel_map
             if cm.channels:
                 text += (
@@ -130,13 +131,23 @@ class DeepResult:
                 text += "профиль: " + fingerprint(cm, b) + "\n"
         if b.sync_khz > 0 and b.sync_strength > 0:
             label = (
-                "строчная синхронизация"
+                "строчная синхронизация (огибающая)"
                 if 14.0 <= b.sync_khz <= 17.0
                 else "пик огибающей"
             )
             text += (
                 f"{label}: {b.sync_khz:.2f} кГц "
                 f"(×{b.sync_strength:.1f})\n"
+            )
+        if b.fm_sync_khz > 0 and b.fm_sync_strength > 0:
+            label = (
+                "строчная синхронизация (FM)"
+                if 14.0 <= b.fm_sync_khz <= 17.0
+                else "пик FM-демодуляции"
+            )
+            text += (
+                f"{label}: {b.fm_sync_khz:.2f} кГц "
+                f"(×{b.fm_sync_strength:.1f})\n"
             )
         if self.background >= 0.6:
             text += (
@@ -165,6 +176,23 @@ def _category(behavior: Behavior) -> str:
     return "mixed"
 
 
+def _analog_line(behavior: Behavior) -> tuple[str, float, float] | None:
+    """Return (source, kHz, strength) for a plausible PAL/NTSC line rate."""
+    if (14.0 <= behavior.fm_sync_khz <= 17.0
+            and behavior.fm_sync_strength >= 6.0):
+        return (
+            "FM", float(behavior.fm_sync_khz),
+            float(behavior.fm_sync_strength),
+        )
+    if (14.0 <= behavior.sync_khz <= 17.0
+            and behavior.sync_strength >= 6.0):
+        return (
+            "огибающая", float(behavior.sync_khz),
+            float(behavior.sync_strength),
+        )
+    return None
+
+
 def reasons(
     behavior: Behavior, bandwidth: float, channels: int | None = None,
 ) -> list[str]:
@@ -174,11 +202,12 @@ def reasons(
         return ["нет участков выше шума на 6 дБ — только шум или спур"]
     if behavior.snr_db < 7.0:
         return [f"пик над шумом {behavior.snr_db:.1f} дБ < 7 дБ"]
-    if (14.0 <= behavior.sync_khz <= 17.0
-            and behavior.sync_strength >= 6.0):
+    line = _analog_line(behavior)
+    if line is not None:
+        source, khz, strength = line
         result.append(
-            f"строчная синхронизация {behavior.sync_khz:.2f} кГц "
-            f"(×{behavior.sync_strength:.1f}) — PAL/NTSC"
+            f"строчная синхронизация {source} {khz:.2f} кГц "
+            f"(×{strength:.1f}) — PAL/NTSC"
         )
         return result
     if behavior.duty >= 0.70:
@@ -212,11 +241,12 @@ def interpret(behavior: Behavior, bandwidth: float) -> str:
     """A cautious reading of the numbers, never a promise."""
     if behavior.occupied < 0.005 or behavior.snr_db < 7.0:
         return "сигнал не обнаружен — только шум или узкий спур"
-    if (14.0 <= behavior.sync_khz <= 17.0
-            and behavior.sync_strength >= 6.0):
+    line = _analog_line(behavior)
+    if line is not None:
+        _source, rate, _strength = line
         return (
             "аналоговый видеолинк: строчная синхронизация "
-            f"{behavior.sync_khz:.2f} кГц (PAL/NTSC)"
+            f"{rate:.2f} кГц (PAL/NTSC)"
         )
     category = _category(behavior)
     if category == "continuous":
@@ -266,6 +296,10 @@ def _aggregate(windows: list[Behavior]) -> Behavior:
         sync_strength=_median([window.sync_strength for window in windows]),
         frames=sum(window.frames for window in windows),
         snr_db=_median([window.snr_db for window in windows]),
+        fm_sync_khz=_median([window.fm_sync_khz for window in windows]),
+        fm_sync_strength=_median(
+            [window.fm_sync_strength for window in windows]
+        ),
     )
 
 

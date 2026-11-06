@@ -36,6 +36,8 @@ class Behavior:
     sync_strength: float
     frames: int
     snr_db: float = 99.0
+    fm_sync_khz: float = 0.0
+    fm_sync_strength: float = 0.0
 
     def to_dict(self) -> dict[str, float | int]:
         return {
@@ -49,6 +51,8 @@ class Behavior:
             "sync_strength": round(self.sync_strength, 2),
             "frames": int(self.frames),
             "snr_db": round(self.snr_db, 2),
+            "fm_sync_khz": round(self.fm_sync_khz, 2),
+            "fm_sync_strength": round(self.fm_sync_strength, 2),
         }
 
 
@@ -90,6 +94,7 @@ def analyze(
         return Behavior(0.0, 0.0, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 0)
 
     frames = x.size // frame
+    x = x[:frames * frame]
     power = np.empty(frames, dtype=np.float64)
     for start in range(0, frames, BLOCK_FRAMES):
         block = x[start * frame:(start + BLOCK_FRAMES) * frame]
@@ -182,6 +187,34 @@ def analyze(
         sync_khz = 0.0
         sync_strength = 0.0
 
+    # Analog FPV video is usually frequency-modulated, so the envelope stays
+    # flat.  Discriminate the IQ and look for the same line rate in the
+    # instantaneous frequency.  A 8M-sample cap keeps the phase unwrap
+    # bounded on 120 MS/s dataset files.
+    fm_sync_khz = 0.0
+    fm_sync_strength = 0.0
+    sync_len = min(x.size, int(float(sample_rate) * 0.5), 8_000_000)
+    if sync_len > frame * 16:
+        y = x[:sync_len]
+        phase = np.unwrap(np.angle(y))
+        fm = np.diff(phase).astype(np.float64)
+        fm *= float(sample_rate) / (2.0 * np.pi)
+        step_fm = max(1, int(round(float(sample_rate) / 200e3)))
+        count_fm = fm.size // step_fm
+        if count_fm >= 64:
+            series = fm[:count_fm * step_fm].reshape(count_fm, step_fm).mean(axis=1)
+            series = series - series.mean()
+            fm_spec = np.abs(np.fft.rfft(series * np.hanning(series.size)))
+            fm_freqs = np.fft.rfftfreq(count_fm, step_fm / float(sample_rate))
+            fm_band = (fm_freqs >= 5e3) & (fm_freqs <= 30e3)
+            if fm_band.any():
+                local = fm_spec[fm_band]
+                index = int(np.argmax(local))
+                fm_sync_khz = float(fm_freqs[fm_band][index]) / 1e3
+                fm_sync_strength = float(
+                    local[index] / (np.median(local) + 1e-12)
+                )
+
     return Behavior(
         duty=duty,
         burst_rate_hz=burst_rate,
@@ -193,6 +226,8 @@ def analyze(
         sync_strength=sync_strength,
         frames=frames,
         snr_db=snr_db,
+        fm_sync_khz=fm_sync_khz,
+        fm_sync_strength=fm_sync_strength,
     )
 
 

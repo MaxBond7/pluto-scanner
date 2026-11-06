@@ -132,6 +132,7 @@ def analyze_channels(
         return _empty()
 
     frames = x.size // frame
+    x = x[:frames * frame]
     power = np.empty(frames, dtype=np.float64)
     for start in range(0, frames, BLOCK_FRAMES):
         block = x[start * frame:(start + BLOCK_FRAMES) * frame]

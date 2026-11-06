@@ -4,6 +4,33 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-11-06
+
+- **Analog FPV validated on real recordings.** Downloaded the Zenodo
+  `10.5281/zenodo.19870020` dataset (CC BY 4.0) and analyzed three 1240 MHz
+  VTX sweeps captured with a HackRF: FM line rate **15.636 kHz**, strength
+  147–175, verdict «аналоговый видеолинк». A 100 MHz broadcast block in the
+  same sweep did not pass the analog test. Results in `docs/FPV_ANALOG.md`.
+- **FM line-sync detection.** Analog FPV video is usually FM, so the
+  envelope is flat. The analyzer now discriminates the IQ (phase derivative)
+  and looks for 14–17 kHz in both the envelope and the FM signal.
+  Synthetic FM PAL and envelope PAL tests both pass.
+- `tools/download_fpv_analog.py` downloads selected chunks with resume;
+  `tools/analyze_fpv_sweep.py` reads only the blocks around one frequency;
+  `tools/check_analog.py` checks any cf32/int16 file.
+- **Fixed non-multiple capture lengths.** `behavior.analyze` and
+  `channels.analyze_channels` truncated the frame block incorrectly when the
+  sample count was not a multiple of the 0.25 ms frame, which crashed on the
+  dataset's 655360-sample sweep blocks.
+- **Deep look after stopping the monitor on HackRF.** The monitor and deep
+  look now use the rate the device was opened with (20.0 MS/s); the rate
+  selector is locked for HackRF, and the worker reopens the device if a rate
+  change is ever requested. A capture is retried once.
+- The event card shows both envelope and FM line peaks, and a quiet channel
+  or LO spur is reported as noise instead of 100% duty.
+- The video viewer (FM demodulation to frames, PAL/NTSC decoder) is now a
+  separate stage 4 in `docs/ROADMAP.md`; it is not part of this release.
+
 ## [0.30.0] - 2026-11-06
 
 - **Fixed deep look failing on HackRF after the monitor was stopped.** The
