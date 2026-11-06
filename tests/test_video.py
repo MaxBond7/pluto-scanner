@@ -61,6 +61,7 @@ def test_decodes_a_monochrome_frame(standard, pixels):
     assert abs(frame.line_hz - standard.line_hz) < 300
     assert frame.locked is True
     assert frame.image.std() > 10
+    assert frame.quality > 0.45
 
 
 def test_am_negative_modulation_decodes():

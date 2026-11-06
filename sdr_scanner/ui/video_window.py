@@ -250,9 +250,15 @@ class VideoPanel(QWidget):
         self._last_image = None
         self.start_btn.setText("Остановить")
         self.snapshot_btn.setEnabled(False)
+        duration = path.stat().st_size / 8.0 / rate
+        short = (
+            " · короткий фрагмент, кадр будет частичным/рваным"
+            if duration < 0.08 else ""
+        )
         set_style(self.status, "color:#67e8f9; font-size:11px;")
         self.status.setText(
-            f"Читаю запись {path.name} (первые 2 с) и собираю кадр…"
+            f"Читаю запись {path.name} ({duration * 1000:.0f} мс, "
+            f"первые 2 с){short}…"
         )
         threading.Thread(
             target=self._decode_file,
@@ -391,11 +397,16 @@ class VideoPanel(QWidget):
         ))
         self.snapshot_btn.setEnabled(True)
         set_style(self.status, "color:#4ade80; font-size:11px;")
+        quality = (
+            "картинка" if frame.quality >= 0.45
+            else "похоже на шум/снег"
+        )
         self.status.setText(
             f"{frame.standard} · {frame.line_hz:.1f} Гц · "
             f"{frame.lines} строк · "
             f"{'кадр' if frame.frame_locked else 'поле/фрагмент'} · "
-            f"синхронизация: {'есть' if frame.locked else 'слабая'}"
+            f"синхронизация: {'есть' if frame.locked else 'слабая'} · "
+            f"качество: {quality} ({frame.quality:.2f})"
         )
 
     def _snapshot(self) -> None:

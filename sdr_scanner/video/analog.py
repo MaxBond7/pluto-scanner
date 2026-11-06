@@ -47,6 +47,7 @@ class DecodedFrame:
     locked: bool
     standard: str
     frame_locked: bool = False
+    quality: float = 0.0          # line-to-line correlation, 0..1
 
 
 def _normalise(signal: np.ndarray) -> np.ndarray:
@@ -225,6 +226,20 @@ def decode_frame(
     if invert:
         image = 1.0 - image
     image = (image * 255.0).astype(np.uint8)
+    # Vertical correlation separates a real picture from sync + snow.  A
+    # camera scene changes slowly between neighbouring lines; noise does not.
+    quality = 0.0
+    if image.shape[0] >= 2:
+        top = image[:-1].astype(np.float64)
+        bottom = image[1:].astype(np.float64)
+        top -= top.mean(axis=1, keepdims=True)
+        bottom -= bottom.mean(axis=1, keepdims=True)
+        denom = np.sqrt((top ** 2).sum(axis=1) * (bottom ** 2).sum(axis=1))
+        valid = denom > 1e-9
+        if bool(valid.any()):
+            quality = float(
+                ((top * bottom).sum(axis=1)[valid] / denom[valid]).mean()
+            )
     locked = bool(
         abs(line_hz - standard.line_hz) / standard.line_hz < 0.03
     )
@@ -235,6 +250,7 @@ def decode_frame(
         locked=locked,
         standard=standard.name,
         frame_locked=bool(frame_locked),
+        quality=quality,
     )
 
 

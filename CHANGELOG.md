@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-11-06
+
+- **Frame quality metric.** The decoder computes line-to-line correlation:
+  a camera scene changes slowly between lines, sync + snow does not. The
+  video status now says «картинка» or «похоже на шум/снег» with the value.
+- The real 1240 MHz FPV dataset block scores **0.28** and is now honestly
+  labelled as noise/snow, not a picture; synthetic PAL/NTSC/SECAM scores
+  about **0.98**.
+- Short IQ files (under 80 ms) are marked as a partial/torn frame in the
+  status, so a 33 ms sweep block is not presented as a normal video frame.
+
 ## [0.36.0] - 2026-11-06
 
 - **Recorded IQ can be played in the video tab.** Selecting an IQ-file
