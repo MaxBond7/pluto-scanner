@@ -9,8 +9,9 @@ from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QImage, QPainter, QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -27,12 +28,20 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import format_freq
+from ..devices.pluto_tx import (
+    DEFAULT_DEVIATION,
+    DEFAULT_RATE,
+    PlutoTransmitter,
+    PlutoVideoStream,
+)
 from ..paths import RECORDINGS_DIR
 from ..recordings import load_info
 from ..video import STANDARDS, DecodedFrame, decode_frame
 from ..video.dataset import frequencies as dataset_frequencies
 from ..video.dataset import load_blocks as dataset_blocks
 from ..video.dataset import metadata_for as dataset_metadata
+from ..video.testcard import build as build_testcard
+from ..video.testcard import build_frame as build_test_frame
 from .themes import set_style
 
 
@@ -137,6 +146,7 @@ class VideoPanel(QWidget):
 
     frame_ready = Signal(object)
     decode_failed = Signal(str)
+    tx_state = Signal(bool, str)
 
     def __init__(self, session=None, parent: QWidget | None = None,
                  guard=None) -> None:
@@ -167,8 +177,20 @@ class VideoPanel(QWidget):
         self._play_timer = QTimer(self)
         self._play_timer.setInterval(25)
         self._play_timer.timeout.connect(self._play_tick)
+        self._transmitter = PlutoTransmitter()
+        self._stream = PlutoVideoStream()
+        self._tx_kind = ""
+        self._tx_timer = QTimer(self)
+        self._tx_timer.setSingleShot(True)
+        self._tx_timer.timeout.connect(self._stop_tx_job)
         self.frame_ready.connect(self._show_frame)
         self.decode_failed.connect(self._show_failure)
+        self.tx_state.connect(self._on_tx_state)
+
+        app = QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._transmitter.stop)
+            app.aboutToQuit.connect(self._stream.stop)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -252,6 +274,66 @@ class VideoPanel(QWidget):
         )
         player.addWidget(self.smooth_check)
         root.addLayout(player)
+
+        bench = QHBoxLayout()
+        bench.setSpacing(6)
+        self.tx_btn = QPushButton("Вещать тест-картинку")
+        self.tx_btn.setCheckable(True)
+        self.tx_btn.setToolTip(
+            "Стендовая проверка: Pluto передаёт тестовую картинку, "
+            "HackRF принимает её в этой же программе. Только антенны на "
+            "столе или аттенюатор — не в эфир."
+        )
+        if not PlutoTransmitter.available():
+            self.tx_btn.setEnabled(False)
+            self.tx_btn.setToolTip("Не установлен pyadi-iio / libiio.")
+        self.tx_btn.toggled.connect(self._toggle_tx)
+        bench.addWidget(self.tx_btn)
+        self.tx_file_btn = QPushButton("Файл…")
+        self.tx_file_btn.setToolTip(
+            "Передать картинку (JPEG/PNG) или видео (MP4/MKV): картинка "
+            "идёт циклом, видео — кадрами."
+        )
+        self.tx_file_btn.clicked.connect(self._send_file)
+        bench.addWidget(self.tx_file_btn)
+        bench.addWidget(QLabel("Передача"))
+        self.tx_freq_spin = QDoubleSpinBox()
+        self.tx_freq_spin.setRange(1.0, 6000.0)
+        self.tx_freq_spin.setDecimals(3)
+        self.tx_freq_spin.setSuffix(" МГц")
+        self.tx_freq_spin.setToolTip(
+            "На 1 МГц выше приёма: ровно в центре HackRF сигнал тонет "
+            "в DC-спайке."
+        )
+        self.tx_freq_spin.setValue(min(
+            6000.0, self.freq_spin.value() + 1.0,
+        ))
+        bench.addWidget(self.tx_freq_spin)
+        self.tx_gain_spin = QDoubleSpinBox()
+        self.tx_gain_spin.setRange(-60.0, 0.0)
+        self.tx_gain_spin.setDecimals(1)
+        self.tx_gain_spin.setSingleStep(1.0)
+        self.tx_gain_spin.setSuffix(" дБ")
+        self.tx_gain_spin.setValue(0.0)
+        self.tx_gain_spin.setToolTip(
+            "0 дБ — максимум Pluto. Для кабеля нужен аттенюатор 30–40 дБ."
+        )
+        bench.addWidget(self.tx_gain_spin)
+        bench.addWidget(QLabel("Время"))
+        self.tx_duration_spin = QDoubleSpinBox()
+        self.tx_duration_spin.setRange(0.0, 600.0)
+        self.tx_duration_spin.setDecimals(0)
+        self.tx_duration_spin.setSuffix(" с")
+        self.tx_duration_spin.setValue(30.0)
+        self.tx_duration_spin.setToolTip(
+            "Сколько секунд вещать; 0 — до кнопки «Стоп»."
+        )
+        bench.addWidget(self.tx_duration_spin)
+        self.tx_status = QLabel("стенд: антенны или аттенюатор")
+        set_style(self.tx_status, "color:#94a3b8; font-size:11px;")
+        bench.addWidget(self.tx_status, 1)
+        root.addLayout(bench)
+        self.freq_spin.valueChanged.connect(self._follow_rx)
         self.standard_combo.currentIndexChanged.connect(self._forget_frames)
         self.mode_combo.currentIndexChanged.connect(self._forget_frames)
         self.invert_check.toggled.connect(self._forget_frames)
@@ -524,6 +606,185 @@ class VideoPanel(QWidget):
         self.time_label.setText("— / —")
         self._source = ""
 
+    # ------------------------------------------------------ bench transmitter
+    def _follow_rx(self, value: float) -> None:
+        """Keep the test transmitter 1 MHz above the receiver."""
+        if not (self._transmitter.active or self._stream.active):
+            self.tx_freq_spin.setValue(min(6000.0, float(value) + 1.0))
+
+    def _toggle_tx(self, checked: bool) -> None:
+        if checked:
+            if not self._tx_allowed():
+                return
+            self._start_tx_job("card")
+        else:
+            self._stop_tx_job()
+
+    def _tx_allowed(self) -> bool:
+        kind = getattr(self.session.config, "kind", "") if self.session else ""
+        if kind == "pluto":
+            self._on_tx_state(
+                False,
+                "для приёма выберите HackRF: один Pluto не может "
+                "одновременно вещать и принимать здесь",
+            )
+            return False
+        return True
+
+    def _send_file(self) -> None:
+        if self._transmitter.active or self._stream.active:
+            self._on_tx_state(False, "сначала остановите текущую передачу")
+            return
+        if not self._tx_allowed():
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Что передавать",
+            str(RECORDINGS_DIR),
+            "Картинка или видео (*.jpg *.jpeg *.png *.bmp *.mp4 *.mkv "
+            "*.mov *.avi);;Все файлы (*)",
+        )
+        if path:
+            self._start_tx_job("file", Path(path))
+
+    def _start_tx_job(self, kind: str, path: Path | None = None) -> None:
+        self._set_tx_buttons(False)
+        set_style(self.tx_status, "color:#67e8f9; font-size:11px;")
+        self.tx_status.setText("готовлю передачу…")
+        threading.Thread(
+            target=self._start_tx_worker, args=(kind, path),
+            name="bench-tx", daemon=True,
+        ).start()
+
+    def _start_tx_worker(self, kind: str, path: Path | None) -> None:
+        try:
+            self._stop_engines()
+            standard = STANDARDS[self.standard_combo.currentData()]
+            freq = self.tx_freq_spin.value() * 1e6
+            gain = self.tx_gain_spin.value()
+            rate = DEFAULT_RATE
+            if kind == "card":
+                iq, field = build_testcard(
+                    standard, rate, 0.04, DEFAULT_DEVIATION,
+                )
+                whole = (iq.size // field) * field
+                uri = self._transmitter.start(
+                    iq[:whole], rate, freq, gain,
+                )
+                label = f"тест-картинка · {uri}"
+            else:
+                suffix = path.suffix.lower() if path else ""
+                if suffix in (".jpg", ".jpeg", ".png", ".bmp"):
+                    rows = self._image_rows(path, standard)
+                    iq, field = build_test_frame(
+                        standard, rate, rows, DEFAULT_DEVIATION, fields=2,
+                    )
+                    whole = (iq.size // field) * field
+                    uri = self._transmitter.start(
+                        iq[:whole], rate, freq, gain,
+                    )
+                    label = f"{path.name} (цикл) · {uri}"
+                else:
+                    frames = self._video_rows(path, standard)
+                    if not frames:
+                        raise RuntimeError("в видео нет кадров")
+                    self._stream.start(
+                        frames, standard, 6.144e6, freq, gain,
+                    )
+                    label = f"{path.name} ({len(frames)} кадров)"
+            self._tx_kind = kind
+            self.tx_state.emit(
+                True,
+                f"передаю {label} · {freq / 1e6:.3f} МГц · {standard.name}",
+            )
+        except Exception as exc:
+            self.tx_state.emit(False, f"не удалось: {exc}")
+
+    def _stop_tx_job(self) -> None:
+        self._set_tx_buttons(False)
+        self.tx_status.setText("останавливаю…")
+        threading.Thread(
+            target=self._stop_tx_worker, name="bench-tx", daemon=True,
+        ).start()
+
+    def _stop_tx_worker(self) -> None:
+        self._stop_engines()
+        self.tx_state.emit(False, "передача остановлена")
+
+    def _stop_engines(self) -> None:
+        self._transmitter.stop()
+        self._stream.stop()
+
+    @staticmethod
+    def _image_rows(path: Path, standard) -> np.ndarray:
+        image = QImage(str(path))
+        if image.isNull():
+            raise RuntimeError("не удалось прочитать картинку")
+        image = image.convertToFormat(QImage.Format.Format_Grayscale8)
+        width, height = standard.pixels, standard.active_lines
+        scaled = image.scaled(
+            width, height,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        raw = np.frombuffer(
+            scaled.constBits(), dtype=np.uint8, count=scaled.sizeInBytes(),
+        )
+        stride = scaled.bytesPerLine()
+        return (raw.reshape(height, stride)[:, :width]
+                .astype(np.float64) / 255.0)
+
+    def _video_rows(self, path: Path, standard) -> list[np.ndarray]:
+        from ..devices.pluto_tx import STREAM_RATE
+        from ..video.videofile import read_frames
+
+        seconds = float(self.tx_duration_spin.value())
+        if seconds <= 0:
+            seconds = 10.0
+        seconds = min(seconds, 10.0)
+        # The stream runs at STREAM_RATE; ffmpeg scales with its own
+        # antialiasing, so the composite does not alias.
+        active = int(round(52e-6 * STREAM_RATE))
+        frames: list[np.ndarray] = []
+        for frame in read_frames(
+            path, active, standard.active_lines,
+            standard.fps, seconds=seconds,
+        ):
+            frames.append(frame)
+            if len(frames) >= 250:
+                break
+        return frames
+
+    def _set_tx_buttons(self, enabled: bool) -> None:
+        ready = enabled and PlutoTransmitter.available()
+        self.tx_btn.setEnabled(ready)
+        self.tx_file_btn.setEnabled(ready)
+        self.tx_freq_spin.setEnabled(ready)
+        self.tx_gain_spin.setEnabled(ready)
+        self.tx_duration_spin.setEnabled(ready)
+
+    def _on_tx_state(self, active: bool, text: str) -> None:
+        self.tx_btn.blockSignals(True)
+        self.tx_btn.setChecked(bool(active))
+        self.tx_btn.blockSignals(False)
+        if active:
+            self._set_tx_buttons(False)
+            self.tx_btn.setEnabled(True)
+            self.tx_btn.setText("Стоп вещания")
+        else:
+            self._set_tx_buttons(True)
+            self.tx_btn.setText("Вещать тест-картинку")
+        self._tx_timer.stop()
+        if active:
+            seconds = float(self.tx_duration_spin.value())
+            if seconds > 0:
+                self._tx_timer.start(int(seconds * 1000))
+        set_style(
+            self.tx_status,
+            f"color:{'#4ade80' if active else '#94a3b8'}; font-size:11px;",
+        )
+        self.tx_status.setText(text)
+
     def _rate_for_session(self) -> float:
         if self.session is None:
             return 6.144e6
@@ -638,6 +899,9 @@ class VideoPanel(QWidget):
         self.status.setText(message)
 
     def _stop(self) -> None:
+        if self._transmitter.active:
+            self._transmitter.stop()
+            self._on_tx_state(False, "передача остановлена")
         if not self._running:
             return
         self._running = False

@@ -47,6 +47,17 @@ extra_datas = collect_data_files(
     ],
 )
 
+# FFmpeg for the bench transmitter: imageio-ffmpeg ships a static binary.
+try:
+    import imageio_ffmpeg
+
+    BINARIES.append(
+        (str(imageio_ffmpeg.get_ffmpeg_exe()), "imageio_ffmpeg/binaries")
+    )
+    hiddenimports.append("imageio_ffmpeg")
+except Exception:
+    pass
+
 a = Analysis(  # noqa: F821 - provided by PyInstaller
     [str(ROOT / "packaging" / "launcher.py")],
     pathex=[str(ROOT)],
