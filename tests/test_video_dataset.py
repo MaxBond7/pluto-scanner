@@ -44,6 +44,23 @@ def _make_sweep(tmp_path, rate: float = 10e6):
     return iq_path, meta, block_samples
 
 
+def test_frame_accumulation_averages_frames():
+    from sdr_scanner.ui.video_window import VideoPanel
+
+    app = QApplication.instance() or QApplication([])
+    panel = VideoPanel(None)
+    panel.smooth_check.setChecked(True)
+    first = np.full((8, 8), 100, dtype=np.uint8)
+    second = np.full((8, 8), 200, dtype=np.uint8)
+    panel._smoothed(first)
+    averaged = panel._smoothed(second)
+    assert abs(float(averaged.mean()) - 150.0) < 1.0
+    panel.smooth_check.setChecked(False)
+    assert not panel._play_frames
+    panel.deleteLater()
+    app.processEvents()
+
+
 def test_metadata_is_found_next_to_iq_bin(tmp_path):
     iq_path, meta, _ = _make_sweep(tmp_path)
     assert metadata_for(iq_path) == meta
@@ -80,8 +97,9 @@ def test_video_panel_decodes_a_file_without_a_session(tmp_path):
     app = QApplication.instance() or QApplication([])
     rate = 10e6
     line = int(round(rate / 15734.264))
-    video = np.zeros(line * 300, dtype=np.float64)
-    for index in range(300):
+    frames = 6000
+    video = np.zeros(line * frames, dtype=np.float64)
+    for index in range(frames):
         base = index * line
         sync = int(0.073 * line)
         porch = int(0.09 * line)
@@ -97,15 +115,42 @@ def test_video_panel_decodes_a_file_without_a_session(tmp_path):
     iq.astype(np.complex64).tofile(path)
 
     panel = VideoPanel(None)
-    panel._decode_job(
-        lambda: panel._read_iq(path, rate), rate, "video.cf32",
-    )
-    deadline = time.monotonic() + 10.0
+    panel._load_source(panel._file_source(path, rate, 1240e6))
+
+    deadline = time.monotonic() + 15.0
     while panel._last_image is None and time.monotonic() < deadline:
         app.processEvents()
         time.sleep(0.02)
     assert panel._last_image is not None
     assert panel._last_frame is not None
     assert "video.cf32" in panel.status.text()
+    assert panel.play_btn.isEnabled()
+    assert panel.pos_slider.isEnabled()
+    duration = iq.size / rate
+    assert panel.pos_slider.maximum() == int(duration * 1000)
+
+    # Playback advances the position until it is paused.
+    panel._toggle_play()
+    assert panel._play_playing is True
+    deadline = time.monotonic() + 15.0
+    while panel._play_pos < 0.15 and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.02)
+    assert panel._play_pos > 0.1
+    panel._pause()
+    assert panel._play_playing is False
+    assert panel.play_btn.text() == "Играть"
+
+    # Seeking decodes the frame at the requested position.
+    panel.pos_slider.setValue(int(0.3 * 1000))
+    panel._seek()
+    deadline = time.monotonic() + 15.0
+    while panel._play_busy and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.02)
+    assert abs(panel._play_pos - 0.3) < 0.01
+
+    panel._stop()
+    assert panel._play_source is None
     panel.deleteLater()
     app.processEvents()

@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VERSION-0.38.0-000000?style=flat-square&labelColor=ffffff" alt="version">
+  <img src="https://img.shields.io/badge/VERSION-0.39.0-000000?style=flat-square&labelColor=ffffff" alt="version">
   <img src="https://img.shields.io/badge/PYTHON-3.10%2B-000000?style=flat-square&labelColor=ffffff" alt="python">
   <img src="https://img.shields.io/badge/WINDOWS-10%2F11-000000?style=flat-square&labelColor=ffffff" alt="windows">
   <img src="https://img.shields.io/badge/LICENSE-GPLv3-000000?style=flat-square&labelColor=ffffff" alt="license">
@@ -120,8 +120,8 @@ python -m pip install pyinstaller
 
 ```text
 dist\SDRScanner\SDRScanner.exe          portable one-folder
-dist\SDRScanner-0.38.0-portable.zip        архив
-dist\SDRScanner-Setup-0.38.0.exe           установщик
+dist\SDRScanner-0.39.0-portable.zip        архив
+dist\SDRScanner-Setup-0.39.0.exe           установщик
 dist\SHA256SUMS.txt
 ```
 
@@ -176,7 +176,8 @@ IQ (Pluto / симулятор / запись)
 - **Аналоговое видео показывается в ч/б.** Есть FM/AM-демодуляция, строки
   PAL/NTSC/SECAM, ограничение полосы видео и сборка кадра из двух полей.
   Во вкладке «Видео» кнопка «Открыть файл…» (или «Файл → Открыть запись
-  IQ…», Ctrl+O) читает запись и свип датасета без приёмника.
+  IQ…», Ctrl+O) открывает запись в плеере: играть/пауза, ползунок
+  положения, накопление кадров против шума.
   На реальном FPV-датсете декодер собирает читаемую картинку с OSD
   (скриншоты в [FPV_ANALOG](docs/FPV_ANALOG.md)). Цвет и устойчивая
   кадровая синхронизация на слабом сигнале — ещё впереди, см.

@@ -121,7 +121,9 @@ def band_limit(signal: np.ndarray, rate: float, cutoff: float) -> np.ndarray:
     cutoff = float(min(cutoff, 0.45 * rate))
     if cutoff <= 0:
         return signal
-    taps = 63
+    # A windowed sinc only needs a few lobes: the kernel is zero at
+    # rate / (2 * cutoff) samples.  A short kernel keeps live video cheap.
+    taps = int(min(63, max(9, 2.5 * rate / cutoff))) | 1
     offset = np.arange(taps) - (taps - 1) / 2.0
     kernel = np.sinc(2.0 * cutoff / rate * offset) * np.hamming(taps)
     total = float(kernel.sum())
@@ -141,6 +143,21 @@ def _rhythm(diff_samples: float, rate: float) -> float:
     return 0.0
 
 
+def _moving_average(signal: np.ndarray, width: int) -> np.ndarray:
+    """Box filter in O(n), edges padded with the first/last sample."""
+    width = max(1, int(width))
+    if width == 1 or signal.size < 2:
+        return signal
+    half = width // 2
+    pad = np.concatenate((
+        np.full(half, signal[0]),
+        signal,
+        np.full(width - half - 1, signal[-1]),
+    ))
+    cumulative = np.cumsum(np.concatenate(([0.0], pad)))
+    return (cumulative[width:] - cumulative[:-width]) / float(width)
+
+
 def _sync_runs(video: np.ndarray, rate: float) -> tuple[np.ndarray, np.ndarray]:
     """Return sync-pulse positions and vertical-sync starts, in samples.
 
@@ -151,12 +168,11 @@ def _sync_runs(video: np.ndarray, rate: float) -> tuple[np.ndarray, np.ndarray]:
     bottom does not.
     """
     width = max(3, int(round(2.0e-6 * rate)))
-    kernel = np.ones(width) / width
     narrow_width = 12e-6 * rate
 
     best: tuple[float, np.ndarray, np.ndarray] | None = None
     for signal in (video, -video):
-        smooth = np.convolve(signal, kernel, mode="same")
+        smooth = _moving_average(signal, width)
         # Percentiles of the full buffer would sort 2.4M samples twice; a
         # regular subsample is enough for a level estimate.
         step = max(1, smooth.size // 150_000)
@@ -228,15 +244,21 @@ def _fit_line_grid(
     if positions.size < 8:
         first = float(positions[0]) if positions.size else 0.0
         return guess_samples, first, 0.0
+    # The concentration peak is sharp enough with a few hundred pulses;
+    # using every pulse of a 2 s capture only costs time.
+    sample = positions
+    if positions.size > 400:
+        step = positions.size // 400
+        sample = positions[::step]
     best_period, best_conc = guess_samples, -1.0
     for period in np.linspace(guess_samples * 0.97, guess_samples * 1.03, 241):
-        angle = 2.0 * np.pi * (positions % period) / period
+        angle = 2.0 * np.pi * (sample % period) / period
         conc = float(abs(np.mean(np.exp(1j * angle))))
         if conc > best_conc:
             best_period, best_conc = float(period), conc
     # Second pass: the concentration peak is narrow, so refine it locally.
     for period in np.linspace(best_period - 0.5, best_period + 0.5, 201):
-        angle = 2.0 * np.pi * (positions % period) / period
+        angle = 2.0 * np.pi * (sample % period) / period
         conc = float(abs(np.mean(np.exp(1j * angle))))
         if conc > best_conc:
             best_period, best_conc = float(period), conc
@@ -407,7 +429,10 @@ def decode_frame(
         return None
     measured = sample_rate / slope
     standard = _match_standard(measured, standard)
-    video = band_limit(video, sample_rate, standard.video_bw)
+    if standard.video_bw < widest:
+        video = band_limit(video, sample_rate, standard.video_bw)
+    else:
+        video = probe
 
     width = int(pixels or standard.pixels)
     vsync = _vertical_syncs(broad, slope)

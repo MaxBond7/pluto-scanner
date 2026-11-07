@@ -4,10 +4,11 @@
 from __future__ import annotations
 
 import threading
+import time
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -27,7 +29,7 @@ from PySide6.QtWidgets import (
 from ..config import format_freq
 from ..paths import RECORDINGS_DIR
 from ..recordings import load_info
-from ..video import PAL, STANDARDS, DecodedFrame, decode_frame
+from ..video import STANDARDS, DecodedFrame, decode_frame
 from ..video.dataset import frequencies as dataset_frequencies
 from ..video.dataset import load_blocks as dataset_blocks
 from ..video.dataset import metadata_for as dataset_metadata
@@ -107,6 +109,29 @@ class _RawDialog(QDialog):
         )
 
 
+class _PlaySource:
+    """Random access to the IQ of one recording or dataset frequency."""
+
+    def __init__(self, label: str, rate: float, total: int,
+                 center: float, read) -> None:
+        self.label = label
+        self.rate = float(rate)
+        self.total = int(total)
+        self.center = float(center)
+        self._read = read
+
+    @property
+    def duration(self) -> float:
+        return self.total / self.rate if self.rate > 0 else 0.0
+
+    def read(self, start: int, count: int) -> np.ndarray:
+        start = max(0, min(int(start), self.total))
+        count = max(0, min(int(count), self.total - start))
+        if count <= 0:
+            return np.empty(0, dtype=np.complex64)
+        return np.asarray(self._read(start, count), dtype=np.complex64)
+
+
 class VideoPanel(QWidget):
     """Analog video as a main-window tab; owns the receiver while running."""
 
@@ -130,6 +155,18 @@ class VideoPanel(QWidget):
         self._max_seconds = 0.20
         self._file_mode = False
         self._source = ""
+        self._play_source: _PlaySource | None = None
+        self._play_pos = 0.0
+        self._play_playing = False
+        self._play_busy = False
+        self._play_started = 0.0
+        self._play_origin = 0.0
+        self._play_window = 0.12
+        self._frame_pos = 0.0
+        self._play_frames: list[np.ndarray] = []
+        self._play_timer = QTimer(self)
+        self._play_timer.setInterval(25)
+        self._play_timer.timeout.connect(self._play_tick)
         self.frame_ready.connect(self._show_frame)
         self.decode_failed.connect(self._show_failure)
 
@@ -187,6 +224,38 @@ class VideoPanel(QWidget):
         controls.addWidget(self.snapshot_btn)
         controls.addStretch(1)
         root.addLayout(controls)
+
+        player = QHBoxLayout()
+        player.setSpacing(6)
+        self.play_btn = QPushButton("Играть")
+        self.play_btn.setEnabled(False)
+        self.play_btn.setToolTip(
+            "Воспроизведение открытой записи. Если декодер не успевает, "
+            "кадры пропускаются, но время идёт ровно."
+        )
+        self.play_btn.clicked.connect(self._toggle_play)
+        player.addWidget(self.play_btn)
+        self.pos_slider = QSlider(Qt.Orientation.Horizontal)
+        self.pos_slider.setRange(0, 1000)
+        self.pos_slider.setEnabled(False)
+        self.pos_slider.sliderReleased.connect(self._seek)
+        player.addWidget(self.pos_slider, 1)
+        self.time_label = QLabel("— / —")
+        self.time_label.setMinimumWidth(110)
+        self.time_label.setAlignment(Qt.AlignmentFlag.AlignRight
+                                     | Qt.AlignmentFlag.AlignVCenter)
+        player.addWidget(self.time_label)
+        self.smooth_check = QCheckBox("Накопление")
+        self.smooth_check.setToolTip(
+            "Усреднять несколько кадров подряд: меньше шума, если сцена "
+            "не двигается."
+        )
+        player.addWidget(self.smooth_check)
+        root.addLayout(player)
+        self.standard_combo.currentIndexChanged.connect(self._forget_frames)
+        self.mode_combo.currentIndexChanged.connect(self._forget_frames)
+        self.invert_check.toggled.connect(self._forget_frames)
+        self.smooth_check.toggled.connect(self._forget_frames)
 
         self.display = QLabel("Нажмите «Смотреть» или «Открыть файл…»")
         self.display.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -248,16 +317,14 @@ class VideoPanel(QWidget):
             self.open_path(Path(path))
 
     def open_path(self, path: Path) -> None:
-        """Decode *path* without taking over a receiver."""
+        """Open *path* for playback without taking over a receiver."""
         path = Path(path)
         info = load_info(path)
         if info is not None:
             self.freq_spin.setValue(float(info.center_freq) / 1e6)
-            self._decode_job(
-                lambda: self._read_iq(info.path, info.sample_rate),
-                float(info.sample_rate),
-                Path(info.path).name,
-            )
+            self._load_source(self._file_source(
+                Path(info.path), float(info.sample_rate), info.center_freq,
+            ))
             return
         meta = dataset_metadata(path)
         if meta is not None:
@@ -266,10 +333,18 @@ class VideoPanel(QWidget):
                 return
             freq, rate = dialog.values()
             self.freq_spin.setValue(freq / 1e6)
-            name = f"{path.parent.name} · {format_freq(freq)}"
-            self._decode_job(
-                lambda: dataset_blocks(path, meta, freq)[0], rate, name,
-            )
+            iq, center = dataset_blocks(path, meta, freq)
+            if iq.size == 0:
+                set_style(self.status, "color:#f87171; font-size:11px;")
+                self.status.setText(
+                    "В свипе нет отсчётов для этой частоты."
+                )
+                return
+            label = f"{path.parent.name} · {format_freq(center)}"
+            self._load_source(_PlaySource(
+                label, rate, iq.size, center,
+                lambda start, count, data=iq: data[start:start + count],
+            ))
             return
         dialog = _RawDialog(
             path.name, 20e6, self.freq_spin.value() * 1e6, self,
@@ -278,69 +353,176 @@ class VideoPanel(QWidget):
             return
         rate, center = dialog.values()
         self.freq_spin.setValue(center / 1e6)
-        self._decode_job(
-            lambda: self._read_iq(path, rate), rate, path.name,
-        )
+        self._load_source(self._file_source(path, rate, center))
 
     @staticmethod
-    def _read_iq(path: Path, rate: float) -> np.ndarray:
-        data = np.memmap(path, dtype=np.complex64, mode="r")
-        try:
-            count = min(int(data.size), int(rate * 2.0))
-            return np.array(data[:count], dtype=np.complex64, copy=True)
-        finally:
-            del data
+    def _file_source(path: Path, rate: float, center: float) -> _PlaySource:
+        def read(start: int, count: int, target=Path(path)) -> np.ndarray:
+            # Open per read: a memmap kept alive would lock the file for the
+            # whole session, and the copy is only a few MB.
+            data = np.memmap(target, dtype=np.complex64, mode="r")
+            try:
+                return np.array(data[start:start + count], dtype=np.complex64)
+            finally:
+                del data
+        total = Path(path).stat().st_size // 8
+        return _PlaySource(Path(path).name, rate, total, center, read)
 
-    def _decode_job(self, loader, rate: float, label: str) -> None:
-        """Decode one file or dataset block in a worker thread."""
+    # -------------------------------------------------------------- playback
+    def _load_source(self, source: _PlaySource) -> None:
         if self._running:
             self._stop()
-        if self._decode_busy:
+        if source.total < 4096:
+            set_style(self.status, "color:#f87171; font-size:11px;")
+            self.status.setText(
+                f"{source.label}: слишком мало отсчётов для кадра."
+            )
             return
+        self._play_source = source
         self._file_mode = True
-        self._source = label
+        self._source = source.label
         self._running = True
-        self._decode_busy = True
+        self._play_pos = 0.0
+        self._play_playing = False
+        self._play_busy = False
+        self._play_frames.clear()
         self._last_frame = None
         self._last_image = None
         self.snapshot_btn.setEnabled(False)
         self.start_btn.setText("Остановить")
+        self.play_btn.setEnabled(source.duration > 0.02)
+        self.play_btn.setText("Играть")
+        self.pos_slider.setEnabled(source.duration > 0.02)
+        self.pos_slider.setRange(0, max(1, int(source.duration * 1000)))
+        self.pos_slider.setValue(0)
+        self._update_time_label()
         set_style(self.status, "color:#67e8f9; font-size:11px;")
-        self.status.setText(f"Читаю {label} …")
+        self.status.setText(
+            f"{source.label} · {source.duration * 1000:.0f} мс. "
+            "Читаю первый кадр…"
+        )
+        self._play_timer.stop()
+        self._decode_at(0.0)
+
+    def _decode_at(self, position: float) -> None:
+        source = self._play_source
+        if source is None or self._play_busy:
+            return
+        start = max(0.0, min(float(position),
+                             max(0.0, source.duration - 0.005)))
+        offset = int(start * source.rate)
+        count = min(int(self._play_window * source.rate),
+                    source.total - offset)
+        if count < 4096:
+            return
+        self._play_busy = True
+        self._frame_pos = start
         threading.Thread(
-            target=self._decode_job_worker,
+            target=self._play_worker,
             args=(
-                loader, float(rate),
+                source, offset, count,
                 STANDARDS[self.standard_combo.currentData()],
                 self.mode_combo.currentData(),
                 self.invert_check.isChecked(),
-                label,
             ),
-            name="analog-video-file",
+            name="analog-video-playback",
             daemon=True,
         ).start()
 
-    def _decode_job_worker(self, loader, rate: float, standard,
-                           mode: str, invert: bool, label: str) -> None:
+    def _play_worker(self, source: _PlaySource, offset: int, count: int,
+                     standard, mode: str, invert: bool) -> None:
         try:
-            iq = loader()
-            if iq.size == 0:
-                raise ValueError("в файле нет отсчётов")
-            seconds = iq.size / rate
+            iq = source.read(offset, count)
             frame = decode_frame(
-                iq, rate, standard, mode=mode, invert=invert,
+                iq, source.rate, standard, mode=mode, invert=invert,
             )
-            if frame is None:
-                self.decode_failed.emit(
-                    f"{label}: кадр не собран за {seconds * 1000:.0f} мс. "
-                    "Попробуйте другой стандарт, AM/FM или инверсию."
-                )
-            else:
+            if self._play_source is not source:
+                return
+            if frame is not None:
                 self.frame_ready.emit(frame)
+            elif not self._play_playing:
+                self.decode_failed.emit(
+                    f"{source.label}: кадр не собран за "
+                    f"{count / source.rate * 1000:.0f} мс. Попробуйте другой "
+                    "стандарт, AM/FM или инверсию."
+                )
         except Exception as exc:
-            self.decode_failed.emit(f"{label}: {exc}")
+            if self._play_source is source and not self._play_playing:
+                self.decode_failed.emit(f"{source.label}: {exc}")
         finally:
-            self._decode_busy = False
+            if self._play_source is source:
+                self._play_busy = False
+
+    def _toggle_play(self) -> None:
+        source = self._play_source
+        if source is None:
+            return
+        if self._play_playing:
+            self._pause()
+            return
+        if self._play_pos >= source.duration - 0.01:
+            self._play_pos = 0.0
+        self._play_playing = True
+        self._play_origin = self._play_pos
+        self._play_started = time.monotonic()
+        self.play_btn.setText("Пауза")
+        self._play_timer.start()
+        self._decode_at(self._play_pos)
+
+    def _pause(self) -> None:
+        self._play_playing = False
+        self._play_timer.stop()
+        self.play_btn.setText("Играть")
+
+    def _play_tick(self) -> None:
+        source = self._play_source
+        if source is None or not self._play_playing:
+            return
+        elapsed = time.monotonic() - self._play_started
+        target = self._play_origin + elapsed
+        if target >= source.duration - 0.005:
+            self._play_pos = source.duration
+            self._pause()
+            self._update_time_label()
+            return
+        self._play_pos = target
+        self._decode_at(target)
+        self._update_time_label()
+
+    def _seek(self) -> None:
+        source = self._play_source
+        if source is None:
+            return
+        position = self.pos_slider.value() / 1000.0
+        self._play_pos = min(position, source.duration)
+        self._play_frames.clear()
+        if self._play_playing:
+            self._play_origin = self._play_pos
+            self._play_started = time.monotonic()
+        self._update_time_label()
+        self._decode_at(self._play_pos)
+
+    def _update_time_label(self) -> None:
+        source = self._play_source
+        if source is None:
+            self.time_label.setText("— / —")
+            return
+        self.time_label.setText(
+            f"{self._play_pos:.2f} / {source.duration:.2f} с"
+        )
+
+    def _clear_source(self) -> None:
+        self._play_playing = False
+        self._play_timer.stop()
+        self._play_source = None
+        self._play_busy = False
+        self._play_frames.clear()
+        self.play_btn.setEnabled(False)
+        self.play_btn.setText("Играть")
+        self.pos_slider.setEnabled(False)
+        self.pos_slider.setValue(0)
+        self.time_label.setText("— / —")
+        self._source = ""
 
     def _rate_for_session(self) -> float:
         if self.session is None:
@@ -423,77 +605,32 @@ class VideoPanel(QWidget):
         )
 
     def _start_file(self) -> None:
-        from ..recordings import load_info
-
         path = Path(str(self.session.config.uri))
         if path.suffix.lower() == ".json":
             info = load_info(path)
             if info is not None:
-                path = info.path
+                path = Path(info.path)
         if not path.exists():
             set_style(self.status, "color:#f87171; font-size:11px;")
             self.status.setText(f"Запись не найдена: {path}")
             return
-        standard = STANDARDS[self.standard_combo.currentData()]
         rate = float(self.session.config.sample_rate)
         if rate <= 0:
             set_style(self.status, "color:#f87171; font-size:11px;")
             self.status.setText("В записи не указана частота дискретизации.")
             return
         self._old = {}
-        self._file_mode = True
-        self._running = True
-        self._decode_busy = True
-        self._last_frame = None
-        self._last_image = None
-        self._source = path.name
-        self.start_btn.setText("Остановить")
-        self.snapshot_btn.setEnabled(False)
-        duration = path.stat().st_size / 8.0 / rate
-        short = (
-            " · короткий фрагмент, кадр будет частичным/рваным"
-            if duration < 0.08 else ""
-        )
-        set_style(self.status, "color:#67e8f9; font-size:11px;")
-        self.status.setText(
-            f"Читаю запись {path.name} ({duration * 1000:.0f} мс, "
-            f"первые 2 с){short}…"
-        )
-        threading.Thread(
-            target=self._decode_file,
-            args=(
-                path, rate, standard, self.mode_combo.currentData(),
-                self.invert_check.isChecked(),
-            ),
-            name="analog-video-file",
-            daemon=True,
-        ).start()
-
-    def _decode_file(self, path: Path, rate: float, standard,
-                     mode: str, invert: bool) -> None:
-        try:
-            data = np.memmap(path, dtype=np.complex64, mode="r")
-            count = min(int(data.size), int(rate * 2.0))
-            iq = np.array(data[:count], dtype=np.complex64, copy=True)
-            del data
-            frame = decode_frame(
-                iq, rate, standard, mode=mode, invert=invert,
-            )
-            if frame is None:
-                self.decode_failed.emit(
-                    f"{self._source or path.name}: кадр не собран: нет "
-                    "устойчивой строки. Попробуйте другой стандарт, AM/FM "
-                    "или инверсию."
-                )
-            else:
-                self.frame_ready.emit(frame)
-        except Exception as exc:
-            self.decode_failed.emit(f"Ошибка чтения записи: {exc}")
-        finally:
-            self._decode_busy = False
+        self._load_source(self._file_source(
+            path, rate, float(self.session.config.center_freq),
+        ))
 
     def _show_failure(self, message: str) -> None:
         if not self._running:
+            return
+        if self._play_source is not None:
+            # A player stays usable: the user can seek to another part.
+            set_style(self.status, "color:#f87171; font-size:11px;")
+            self.status.setText(message)
             return
         self.start_btn.setText("Смотреть")
         self._running = False
@@ -504,6 +641,7 @@ class VideoPanel(QWidget):
         if not self._running:
             return
         self._running = False
+        self._clear_source()
         self.start_btn.setText("Смотреть")
         try:
             if self.session is not None and not self._file_mode:
@@ -581,11 +719,14 @@ class VideoPanel(QWidget):
         if not self._running:
             return
         self._last_frame = frame
+        picture = frame.image
+        if self._play_source is not None and self.smooth_check.isChecked():
+            picture = self._smoothed(picture)
         image = QImage(
-            frame.image.tobytes(),
-            frame.image.shape[1],
-            frame.image.shape[0],
-            frame.image.strides[0],
+            picture.tobytes(),
+            picture.shape[1],
+            picture.shape[0],
+            picture.strides[0],
             QImage.Format.Format_Grayscale8,
         ).copy()
         self._last_image = image
@@ -596,6 +737,9 @@ class VideoPanel(QWidget):
             Qt.TransformationMode.SmoothTransformation,
         ))
         self.snapshot_btn.setEnabled(True)
+        if self._play_source is not None:
+            self.pos_slider.setValue(int(self._frame_pos * 1000))
+            self._update_time_label()
         set_style(self.status, "color:#4ade80; font-size:11px;")
         # A woven frame is a picture even when the scene is plain: line
         # correlation is low on a flat wall, so the frame lock matters more.
@@ -609,6 +753,21 @@ class VideoPanel(QWidget):
             f"синхронизация: {'есть' if frame.locked else 'слабая'} · "
             f"качество: {quality} ({frame.quality:.2f})"
         )
+
+    def _smoothed(self, picture: np.ndarray) -> np.ndarray:
+        """Average the last few frames: static scenes lose their noise."""
+        self._play_frames.append(picture.astype(np.float32))
+        while len(self._play_frames) > 4:
+            self._play_frames.pop(0)
+        if len(self._play_frames) == 1:
+            return picture
+        return np.clip(
+            np.mean(self._play_frames, axis=0), 0, 255,
+        ).astype(np.uint8)
+
+    def _forget_frames(self, *_args) -> None:
+        """Drop accumulated frames when the decoding settings change."""
+        self._play_frames.clear()
 
     def _snapshot(self) -> None:
         if self._last_image is None:
