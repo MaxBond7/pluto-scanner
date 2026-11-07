@@ -35,7 +35,7 @@ dependencies = [
 
 [project.optional-dependencies]
 hardware = ["pyadi-iio>=0.0.21"]
-ml = ["h5py>=3.10"]
+ml = ["h5py>=3.16.0"]
 dev = ["pytest>=8.0", "pyinstaller>=6.22.3"]
 
 [project.scripts]
