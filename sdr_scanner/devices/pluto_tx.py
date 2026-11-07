@@ -78,7 +78,17 @@ class PlutoTransmitter:
                 "Pluto не найден по USB. Подключите плату и повторите."
             )
         uri = uris[0]
-        sdr = adi.Pluto(uri=uri)
+        sdr = None
+        last: Exception | None = None
+        for attempt in range(3):
+            try:
+                sdr = adi.Pluto(uri=uri)
+                break
+            except Exception as exc:
+                last = exc
+                time.sleep(1.2)
+        if sdr is None:
+            raise RuntimeError(f"Pluto не открывается: {last}")
         try:
             sdr.sample_rate = int(rate)
             sdr.tx_rf_bandwidth = int(rate)
@@ -185,7 +195,17 @@ class PlutoVideoStream:
                 )
             if not frames:
                 raise RuntimeError("нет кадров для передачи")
-            sdr = adi.Pluto(uri=uris[0])
+            sdr = None
+            last: Exception | None = None
+            for attempt in range(3):
+                try:
+                    sdr = adi.Pluto(uri=uris[0])
+                    break
+                except Exception as exc:
+                    last = exc
+                    time.sleep(1.2)
+            if sdr is None:
+                raise RuntimeError(f"Pluto не открывается: {last}")
             sdr.sample_rate = int(rate)
             sdr.tx_rf_bandwidth = int(rate)
             sdr.tx_lo = int(freq)

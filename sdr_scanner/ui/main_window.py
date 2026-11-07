@@ -377,6 +377,7 @@ class MainWindow(QMainWindow):
         # Windows has no taskbar button and minimises into a tiny title bar.
         self.drone_window = DroneWindow(self.drone_panel)
         self.bench_window = BenchWindow()
+        self.bench_window.prepare = self._stop_pluto_sessions
         self.video_panel.bench_requested.connect(self._show_bench_window)
         self._build_menu()
         self._refresh_background_status()
@@ -460,6 +461,20 @@ class MainWindow(QMainWindow):
         if window is None:
             return
         window.show_and_raise()
+
+    def _stop_pluto_sessions(self) -> None:
+        """Free the Pluto before the bench transmitter opens it.
+
+        A running Pluto session in the main window holds the USB device; two
+        libiio contexts on the same board end with a broken pipe.
+        """
+        for session in list(self.sessions.values()):
+            try:
+                if session.config.kind == "pluto" and session.worker.isRunning():
+                    session.stop()
+            except Exception:
+                continue
+        time.sleep(1.0)
 
     def _build_menu(self) -> None:
         bar = self.menuBar()

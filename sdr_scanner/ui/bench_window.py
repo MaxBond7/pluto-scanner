@@ -55,6 +55,7 @@ class BenchWindow(QWidget):
         self._transmitter = PlutoTransmitter()
         self._stream = PlutoVideoStream()
         self._source = ""
+        self.prepare = None  # callable set by the main window
         self._preview_rows: np.ndarray | None = None
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
@@ -230,6 +231,11 @@ class BenchWindow(QWidget):
         if self.active:
             self._set_status("сначала остановите текущую передачу", "#facc15")
             return
+        if self.prepare is not None:
+            try:
+                self.prepare()
+            except Exception:
+                pass
         self._update_buttons()
         self._set_status("готовлю передачу…", "#67e8f9")
         self.card_btn.setEnabled(False)
