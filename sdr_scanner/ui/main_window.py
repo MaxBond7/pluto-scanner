@@ -81,6 +81,7 @@ from ..store import ContactStore
 from .contact_table import ContactTable
 from .device_panel import DevicePanel
 from .drone_panel import DronePanel
+from .bench_window import BenchWindow
 from .drone_window import DroneWindow
 from .event_dialog import DroneEventDialog
 from .video_window import VideoPanel
@@ -375,6 +376,8 @@ class MainWindow(QMainWindow):
         # deliberately *not* parented to the main window: an owned window on
         # Windows has no taskbar button and minimises into a tiny title bar.
         self.drone_window = DroneWindow(self.drone_panel)
+        self.bench_window = BenchWindow()
+        self.video_panel.bench_requested.connect(self._show_bench_window)
         self._build_menu()
         self._refresh_background_status()
 
@@ -452,6 +455,12 @@ class MainWindow(QMainWindow):
             return
         window.show_and_raise()
 
+    def _show_bench_window(self) -> None:
+        window = getattr(self, "bench_window", None)
+        if window is None:
+            return
+        window.show_and_raise()
+
     def _build_menu(self) -> None:
         bar = self.menuBar()
 
@@ -482,6 +491,8 @@ class MainWindow(QMainWindow):
         monitor_menu = bar.addMenu("Монитор")
         action = monitor_menu.addAction("Дрон-монитор…")
         action.triggered.connect(self._show_drone_window)
+        action = monitor_menu.addAction("Стенд передачи…")
+        action.triggered.connect(self._show_bench_window)
         monitor_menu.addSeparator()
         action = monitor_menu.addAction("Сканер")
         action.triggered.connect(
@@ -564,6 +575,9 @@ class MainWindow(QMainWindow):
         if (getattr(self, "drone_window", None) is not None
                 and self.drone_window.isVisible()):
             retint(self.drone_window)
+        if (getattr(self, "bench_window", None) is not None
+                and self.bench_window.isVisible()):
+            retint(self.bench_window)
         self.contact_table.refresh_theme()
         self.drone_panel.refresh_events()
         for widget in (self.spectrum, self.waterfall,

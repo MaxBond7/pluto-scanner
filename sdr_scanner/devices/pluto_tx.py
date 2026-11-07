@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 
 import numpy as np
 
@@ -52,6 +53,17 @@ class PlutoTransmitter:
             return False
         return True
 
+    @staticmethod
+    def _find_uris(scan) -> list[str]:
+        """Scan a few times: the Pluto re-enumerates for a second or two."""
+        for attempt in range(4):
+            uris = [item for item in scan() if item.startswith("usb:")]
+            if uris:
+                return uris
+            if attempt < 3:
+                time.sleep(1.0)
+        return []
+
     def start(self, iq: np.ndarray, rate: float, freq: float,
               gain_db: float = 0.0, amplitude: float = 0.5) -> str:
         """Start transmitting; returns the Pluto URI that was opened."""
@@ -60,8 +72,7 @@ class PlutoTransmitter:
         _ensure_pylibiio_windows()
         import adi  # type: ignore
 
-        uris = [item for item in scan_pluto_uris()
-                if item.startswith("usb:")]
+        uris = self._find_uris(scan_pluto_uris)
         if not uris:
             raise RuntimeError(
                 "Pluto не найден по USB. Подключите плату и повторите."

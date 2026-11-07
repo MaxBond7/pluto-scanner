@@ -60,58 +60,73 @@ def test_generated_ntsc_decodes_to_a_full_frame():
     assert frame.quality > 0.8
 
 
-def test_tx_frequency_follows_the_receiver():
-    from sdr_scanner.ui.video_window import VideoPanel
+def test_bench_window_has_controls():
+    from sdr_scanner.devices.pluto_tx import PlutoTransmitter
+    from sdr_scanner.ui.bench_window import BenchWindow
 
     app = QApplication.instance() or QApplication([])
-    panel = VideoPanel(None)
-    panel.freq_spin.setValue(1240.0)
-    assert abs(panel.tx_freq_spin.value() - 1241.0) < 1e-6
-    panel.deleteLater()
+    window = BenchWindow()
+    assert "передача" in window.windowTitle().lower()
+    assert window.freq_spin.value() == 1241.0
+    assert "антенн" in window.status.text()
+    if PlutoTransmitter.available():
+        assert window.card_btn.isEnabled()
+        assert not window.stop_btn.isEnabled()
+    window.deleteLater()
     app.processEvents()
 
 
-def test_bench_button_switches_state():
-    from sdr_scanner.ui.video_window import VideoPanel
+def test_bench_preview_shows_the_card():
+    from sdr_scanner.ui.bench_window import BenchWindow
 
     app = QApplication.instance() or QApplication([])
-    panel = VideoPanel(None)
-    panel._on_tx_state(True, "передаю")
-    assert panel.tx_btn.isChecked()
-    assert panel.tx_btn.text() == "Стоп вещания"
-    assert "передаю" in panel.tx_status.text()
-    panel._on_tx_state(False, "остановлено")
-    assert not panel.tx_btn.isChecked()
-    assert panel.tx_btn.text() == "Вещать тест-картинку"
-    panel.deleteLater()
+    window = BenchWindow()
+    rows = make_card(PAL.pixels, PAL.active_lines, 0.0)
+    window._show_preview(rows)
+    assert window._preview_rows is not None
+    assert window._preview_rows.shape == (PAL.active_lines, PAL.pixels)
+    assert window.preview.pixmap() is not None
+    window.deleteLater()
     app.processEvents()
 
 
-def test_bench_refuses_the_same_pluto_for_reception():
-    from sdr_scanner.ui.video_window import VideoPanel
+def test_bench_image_is_converted_to_a_picture(tmp_path):
+    from PySide6.QtGui import QImage
+
+    from sdr_scanner.ui.bench_window import BenchWindow
 
     app = QApplication.instance() or QApplication([])
-    panel = VideoPanel(None)
-    panel.session = SimpleNamespace(
-        config=SimpleNamespace(kind="pluto"),
-    )
-    panel._toggle_tx(True)
-    assert panel.tx_btn.isChecked() is False
-    assert "HackRF" in panel.tx_status.text()
-    panel.session = None
-    panel.deleteLater()
+    card = make_card(768, 576, 0.0)
+    path = tmp_path / "still.png"
+    buffer = (card * 255).astype(np.uint8).tobytes()
+    image = QImage(buffer, 768, 576, 768, QImage.Format.Format_Grayscale8)
+    assert image.save(str(path), "PNG")
+    rows = BenchWindow._image_rows(path, PAL)
+    assert rows.shape == (PAL.active_lines, PAL.pixels)
+    assert 0.0 <= rows.min() and rows.max() <= 1.0
+    assert rows.max() > 0.8
     app.processEvents()
 
 
 def test_video_file_is_decoded_as_frames(tmp_path):
     import subprocess
 
-    from sdr_scanner.video.videofile import ffmpeg_exe, read_frames
+    import pytest
 
+    from sdr_scanner.video.videofile import (
+        VideoUnavailable,
+        ffmpeg_exe,
+        read_frames,
+    )
+
+    try:
+        exe = ffmpeg_exe()
+    except VideoUnavailable as exc:
+        pytest.skip(str(exc))
     path = tmp_path / "clip.mp4"
     subprocess.run(
         [
-            ffmpeg_exe(), "-y", "-v", "error", "-f", "lavfi",
+            exe, "-y", "-v", "error", "-f", "lavfi",
             "-i", "testsrc=size=320x240:rate=25", "-t", "0.4",
             "-pix_fmt", "yuv420p", str(path),
         ],
@@ -123,21 +138,3 @@ def test_video_file_is_decoded_as_frames(tmp_path):
     assert len(frames) >= 8
     assert frames[0].shape == (PAL.active_lines, PAL.pixels)
     assert frames[0].dtype == np.uint8
-
-
-def test_image_is_converted_to_a_picture(tmp_path):
-    from PySide6.QtGui import QImage
-
-    from sdr_scanner.ui.video_window import VideoPanel
-
-    app = QApplication.instance() or QApplication([])
-    card = make_card(768, 576, 0.0)
-    path = tmp_path / "still.png"
-    buffer = (card * 255).astype(np.uint8).tobytes()
-    image = QImage(buffer, 768, 576, 768, QImage.Format.Format_Grayscale8)
-    assert image.save(str(path), "PNG")
-    rows = VideoPanel._image_rows(path, PAL)
-    assert rows.shape == (PAL.active_lines, PAL.pixels)
-    assert 0.0 <= rows.min() and rows.max() <= 1.0
-    assert rows.max() > 0.8
-    app.processEvents()
